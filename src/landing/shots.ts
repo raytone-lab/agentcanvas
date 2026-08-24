@@ -16,6 +16,12 @@
  *
  * A missing file is not a build error: the video falls back to the poster, and the poster
  * falls back to a labelled frame.
+ *
+ * `scripts/capture-editor-tour.mjs` is a third script and is *not* wired here: it records a
+ * longer pass over every rail module for the README, which needs a GIF because GitHub will
+ * not play a repository-local mp4. Its outputs are `editor-tour.{gif,mp4}`. Changing the
+ * hero means re-running the two scripts above; the tour is regenerated separately with
+ * `npm run capture:tour`.
  */
 
 /** ~18s loop: pick a thinking motion, open the tool group, then recolour three themes. */

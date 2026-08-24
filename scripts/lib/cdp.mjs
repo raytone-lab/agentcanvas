@@ -119,6 +119,47 @@ export async function clickRail(page, label) {
 }
 
 /**
+ * Click a left-rail group tile by its label, matching on `.preset-icon-tile`.
+ *
+ * `clickRail` matches any button whose whole label is the string and takes the last hit,
+ * which is fine for the labels the landing demo uses but gets fragile across the whole
+ * rail: "输出" and "模型" also read as complete labels elsewhere in the editor, and "last
+ * in document order" is not a promise the DOM makes. The rail tiles carry their own class,
+ * so scoping to it is unambiguous.
+ */
+export async function clickRailTile(page, label) {
+  const result = await evaluate(
+    page,
+    `const hits = [...document.querySelectorAll("button.preset-icon-tile")]
+       .filter((el) => (el.textContent || "").trim() === ${JSON.stringify(label)});
+     if (hits.length !== 1) return hits.length === 0 ? "MISS" : "AMBIGUOUS";
+     const el = hits[0];
+     const r = el.getBoundingClientRect();
+     el.click();
+     return { x: r.x + r.width / 2, y: r.y + r.height / 2 };`,
+  );
+  if (result === "MISS") {
+    throw new Error(`No rail tile labelled "${label}" — did the rail copy change?`);
+  }
+  if (result === "AMBIGUOUS") {
+    throw new Error(`More than one rail tile labelled "${label}"`);
+  }
+  return result;
+}
+
+/** Rect of a rail tile without clicking it, for moving a pointer there first. */
+export async function railTileCenter(page, label) {
+  return evaluate(
+    page,
+    `const hits = [...document.querySelectorAll("button.preset-icon-tile")]
+       .filter((el) => (el.textContent || "").trim() === ${JSON.stringify(label)});
+     if (hits.length !== 1) return null;
+     const r = hits[0].getBoundingClientRect();
+     return { x: r.x + r.width / 2, y: r.y + r.height / 2 };`,
+  );
+}
+
+/**
  * Click a preset card by its stable `data-option-id` (e.g. "thinking-shimmer",
  * "warm-graphite"). The card's own text content is empty — the label is a sibling — so
  * matching on the id is both shorter and immune to copy changes.

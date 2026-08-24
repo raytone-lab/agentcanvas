@@ -36,6 +36,7 @@
     "packages:pack": "node scripts/pack-packages.mjs",
     "packages:verify": "npm run packages:build && vitest run packages && node scripts/verify-platform-schema.mjs && node scripts/verify-node-ssr.mjs && node scripts/verify-clean-package-build.mjs && node scripts/verify-clean-consumer.mjs",
     "preview": "vite preview",
+    "capture:tour": "node scripts/capture-editor-tour.mjs",
     "test": "npm run packages:build && vitest run",
     "typecheck": "npm run packages:build && tsc --noEmit",
     "test:export-smoke": "npm run packages:build && RUN_SCAFFOLD_SMOKE=1 vitest run src/export/scaffoldSmoke.test.ts",
