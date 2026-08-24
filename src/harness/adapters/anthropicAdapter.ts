@@ -6,9 +6,9 @@ import { createEventWriter, type AgentUXEventWriter } from "./eventWriter";
 /**
  * Anthropic Messages API adapter.
  *
- * `providerCatalog` declares `protocol: "anthropic"` but `runLiveLlmPreview` throws for it, so
- * picking Anthropic in the configurator failed outright. This translates its SSE stream into
- * our events; the writer handles pairing, so this file only decides what a frame *means*.
+ * Translates the Messages API SSE stream into our events. The writer handles pairing, so this
+ * file only decides what a frame *means*. `runLiveLlmPreview` dispatches here for any provider
+ * declaring `protocol: "anthropic"`.
  *
  * Two shape mismatches drive the non-obvious choices here:
  *
@@ -22,7 +22,9 @@ import { createEventWriter, type AgentUXEventWriter } from "./eventWriter";
  *
  * A tool call is reported as requested-but-not-executed: the Messages API returns the model's
  * intent, it does not run anything. Whoever executes the tool feeds the result back as the
- * next turn, which is a harness concern, not this adapter's.
+ * next turn, which is a harness concern, not this adapter's. `deferToolCompletion` lets a
+ * caller that *does* have a result — live preview, which simulates one — close the call itself
+ * instead of taking the default `cancelled`.
  */
 
 type AnthropicFrame = {
@@ -53,6 +55,39 @@ type TranslateState = {
   reasoningClosed: boolean;
 };
 
+export type ApplyAnthropicFrameOptions = {
+  /**
+   * Leave requested tool calls open at `message_stop`, and skip `run.finished`.
+   *
+   * Default false, which is the harness-import contract: nothing executed the tool, so
+   * `finishAll` marks it `cancelled` and no result is invented. Live preview sets this because
+   * it simulates the result itself — with a delay, so `running` is a state the user sees rather
+   * than a frame overwritten in the same tick — and then closes the run.
+   */
+  deferToolCompletion?: boolean;
+};
+
+export type PendingAnthropicToolCall = {
+  toolCallId: string;
+  name: string;
+  argsText: string;
+};
+
+/**
+ * Tool calls the model requested that no one has finished yet.
+ *
+ * Only meaningful together with `deferToolCompletion`; the caller owns closing them.
+ */
+export function pendingAnthropicToolCalls(state: TranslateState): readonly PendingAnthropicToolCall[] {
+  const pending: PendingAnthropicToolCall[] = [];
+  for (const block of state.blocks.values()) {
+    if (block.kind === "tool" && state.openTools.has(block.toolCallId)) {
+      pending.push({ toolCallId: block.toolCallId, name: block.name, argsText: block.argsText });
+    }
+  }
+  return pending;
+}
+
 export function createAnthropicTranslateState(): TranslateState {
   return { blocks: new Map(), openTools: new Set(), runStarted: false, reasoningClosed: false };
 }
@@ -74,6 +109,7 @@ export function applyAnthropicFrame(
   frame: AnthropicFrame,
   writer: AgentUXEventWriter,
   state: TranslateState,
+  options: ApplyAnthropicFrameOptions = {},
 ): void {
   switch (frame.type) {
     case "message_start": {
@@ -137,11 +173,14 @@ export function applyAnthropicFrame(
         const args = parseJsonObject(block.argsText);
         // args is what turns a generic row into a file/command card, so emit it even when the
         // tool will never run.
-        writer.toolRunning(block.toolCallId, args);
+        // Authored in English so `i18n/previewLocalization.ts` can localize it. A Chinese
+        // literal here showed up untranslated in an English preview, since that dictionary
+        // looks copy up by its English source text.
         writer.toolAwaitingApproval(block.toolCallId, {
-          prompt: "模型请求调用工具，等待执行方回传结果。",
+          prompt: "The model requested a tool call and is waiting for a result.",
           ...(args === undefined ? {} : { argsPreview: args }),
         });
+        writer.toolRunning(block.toolCallId, args);
       }
       break;
     }
@@ -154,6 +193,11 @@ export function applyAnthropicFrame(
     case "message_stop": {
       writer.finishText();
       writer.finishReasoning();
+      if (options.deferToolCompletion) {
+        // The caller closes the tools and the run: it has a result to emit and wants the
+        // `running` state to last long enough to be seen.
+        break;
+      }
       // Every tool the model asked for is still unexecuted. Leaving them open would spin the
       // card forever; `finishAll` marks them cancelled, which is what actually happened.
       writer.finishAll();

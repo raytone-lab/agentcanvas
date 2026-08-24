@@ -92,6 +92,7 @@ const previewTextZh: Record<string, string> = {
   // Live LLM simulated tool calls (`preview-runner/liveToolSimulator.ts`).
   "Approve the simulated tool call? Live LLM preview does not execute tools.": "允许这次模拟工具调用？Live LLM 预览不会真正执行工具。",
   "Live LLM chat preview completed. Tool calls were simulated, not executed.": "Live LLM 对话预览已完成。工具调用为模拟，未真正执行。",
+  "The model requested a tool call and is waiting for a result.": "模型请求调用工具，等待返回结果。",
   "The model sent tool arguments that could not be read.": "模型发送的工具参数无法解析。",
   "This tool has no simulated result in live preview.": "该工具在实时预览中没有对应的模拟结果。",
   "The model asked to run a command but did not provide one.": "模型请求执行命令，但没有提供命令内容。",

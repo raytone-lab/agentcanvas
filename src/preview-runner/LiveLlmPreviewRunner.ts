@@ -10,6 +10,7 @@ import {
   type ProviderConnection,
 } from "../schema/agentuxConfig";
 import {
+  anthropicLiveToolset,
   buildOpenAICompatibleChatBody,
   type ProviderRequestOptions,
 } from "../harness/providerCapabilities";
@@ -17,8 +18,11 @@ import {
   applyAnthropicFrame,
   createAnthropicTranslateState,
   parseSseData,
+  pendingAnthropicToolCalls,
+  type ApplyAnthropicFrameOptions,
+  type PendingAnthropicToolCall,
 } from "../harness/adapters/anthropicAdapter";
-import { createEventWriter } from "../harness/adapters/eventWriter";
+import { createEventWriter, type AgentUXEventWriter } from "../harness/adapters/eventWriter";
 import { simulateLiveToolCall } from "./liveToolSimulator";
 
 export type LiveLlmMessage = {
@@ -220,6 +224,9 @@ async function runAnthropicLivePreview(
     onEvents: input.onEvents,
   });
   const state = createAnthropicTranslateState();
+  // Tool calls stay open past `message_stop` so this function can simulate their results; see
+  // `settleSimulatedToolCalls`. The harness-import path leaves this off and still cancels.
+  const frameOptions: ApplyAnthropicFrameOptions = { deferToolCompletion: true };
 
   const response = await fetcher(providerRequestUrl(provider, "messages", input.fetchMode), {
     method: "POST",
@@ -236,6 +243,10 @@ async function runAnthropicLivePreview(
         ...history.map((message) => ({ role: message.role, content: message.content })),
         { role: "user", content: prompt },
       ],
+      // Without this the model is never told any tool exists, so it never emits a `tool_use`
+      // block and a live Claude session could only ever fill the conversation surface — the
+      // composed tool cards never appeared, on the provider users are most likely to try first.
+      tools: anthropicLiveToolset(),
     }),
   });
 
@@ -257,9 +268,18 @@ async function runAnthropicLivePreview(
       if (lastBreak < 0) continue;
       const ready = buffer.slice(0, lastBreak);
       buffer = buffer.slice(lastBreak + 1);
-      for (const frame of parseSseData(ready)) applyAnthropicFrame(frame, writer, state);
+      for (const frame of parseSseData(ready)) applyAnthropicFrame(frame, writer, state, frameOptions);
     }
-    for (const frame of parseSseData(buffer)) applyAnthropicFrame(frame, writer, state);
+    for (const frame of parseSseData(buffer)) applyAnthropicFrame(frame, writer, state, frameOptions);
+
+    // `deferToolCompletion` left the requested calls open so their results could be simulated
+    // with the running state visible. Same simulator as the openai-compatible path, so Claude's
+    // cards reach the same states as every other provider's.
+    await settleSimulatedToolCalls(writer, pendingAnthropicToolCalls(state), {
+      delayMs: input.toolSimulationDelayMs ?? 0,
+      signal: input.signal,
+    });
+    writer.runFinished({ status: "success" });
   } finally {
     // However the stream ended, no block is left open.
     writer.finishAll();
@@ -815,6 +835,40 @@ function parseJsonObject(value: string): { ok: true; value: Record<string, unkno
 function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) {
     throw createAbortError();
+  }
+}
+
+/**
+ * Close deferred Anthropic tool calls with simulated results.
+ *
+ * The openai-compatible path does the same thing inside its own writer's `finishToolCalls`; the
+ * emit calls differ only because the two paths use different writer APIs. `simulateLiveToolCall`
+ * — the part that decides what a tool call means — is shared, so Claude's cards cannot drift
+ * away from every other provider's.
+ */
+async function settleSimulatedToolCalls(
+  writer: AgentUXEventWriter,
+  pending: readonly PendingAnthropicToolCall[],
+  options: { delayMs?: number; signal?: AbortSignal },
+): Promise<void> {
+  for (const call of pending) {
+    await sleep(options.delayMs ?? 0, options.signal);
+    throwIfAborted(options.signal);
+
+    const args = parseJsonObject(call.argsText);
+    const outcome = simulateLiveToolCall({ name: call.name, args: args.ok ? args.value : undefined });
+    if (outcome.kind === "error") {
+      writer.toolError(call.toolCallId, {
+        code: outcome.code,
+        retryable: outcome.retryable,
+        userMessage: outcome.userMessage,
+        developerMessage: outcome.developerMessage,
+      });
+      writer.toolFinished(call.toolCallId, "error");
+      continue;
+    }
+    writer.toolResult(call.toolCallId, { result: outcome.result, resultPreview: outcome.resultPreview });
+    writer.toolFinished(call.toolCallId, "success");
   }
 }
 

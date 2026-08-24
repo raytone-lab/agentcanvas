@@ -65,7 +65,12 @@ export type AgentUXEventWriter = {
   toolRunning(toolCallId: string, args?: unknown): void;
   toolAwaitingApproval(toolCallId: string, payload?: Record<string, unknown>): void;
   toolResult(toolCallId: string, payload: { result?: unknown; resultPreview?: string }): void;
-  toolError(toolCallId: string, message: string): void;
+  /**
+   * A string is treated as `message`; an object is forwarded as-is so a caller with a real
+   * diagnosis (code, retryability, split user/developer copy) can render the full error card
+   * instead of collapsing it to one line.
+   */
+  toolError(toolCallId: string, error: string | Record<string, unknown>): void;
   toolFinished(toolCallId: string, status: string): void;
 
   artifact(input: ArtifactInput): void;
@@ -210,9 +215,10 @@ export function createEventWriter(options: {
         ...(payload.resultPreview === undefined ? {} : { resultPreview: payload.resultPreview }),
       }));
     },
-    toolError(toolCallId, message) {
+    toolError(toolCallId, error) {
       if (!liveTool(toolCallId)) return;
-      push(agentUXEventBuilders.toolCallError(meta(`tool_error_${toolCallId}`), { toolCallId, message }));
+      const payload = typeof error === "string" ? { message: error } : error;
+      push(agentUXEventBuilders.toolCallError(meta(`tool_error_${toolCallId}`), { toolCallId, ...payload }));
     },
     toolFinished(toolCallId, status) {
       const state = liveTool(toolCallId);

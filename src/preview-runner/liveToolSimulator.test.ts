@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { LIVE_MODEL_TOOLSET } from "../harness/providerCapabilities";
+import { anthropicLiveToolset, LIVE_MODEL_TOOLSET } from "../harness/providerCapabilities";
 import { simulateLiveToolCall } from "./liveToolSimulator";
 
 describe("live tool simulator", () => {
@@ -13,6 +13,19 @@ describe("live tool simulator", () => {
         args: { path: "src/App.tsx", content: "a\nb", old_str: "a", new_str: "b", command: "npm test", query: "useSearch" },
       });
       expect(outcome, `${tool.function.name} has no simulated outcome`).toMatchObject({ kind: "result" });
+    }
+  });
+
+  it("advertises the same tools to Anthropic as to the openai-compatible providers", () => {
+    // The two live paths build their request bodies separately. If these lists diverge, Claude
+    // gets a different toolset than every other provider and the difference is invisible until
+    // someone runs a live session with a real key.
+    expect(anthropicLiveToolset().map((tool) => tool.name)).toEqual(
+      LIVE_MODEL_TOOLSET.map((tool) => tool.function.name),
+    );
+    for (const [index, tool] of anthropicLiveToolset().entries()) {
+      expect(tool.description).toBe(LIVE_MODEL_TOOLSET[index].function.description);
+      expect(tool.input_schema).toEqual(LIVE_MODEL_TOOLSET[index].function.parameters);
     }
   });
 

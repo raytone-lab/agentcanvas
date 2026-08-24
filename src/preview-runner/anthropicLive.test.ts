@@ -130,6 +130,119 @@ describe("Anthropic live preview", () => {
     expect(admission.events).toEqual(result.events);
   });
 
+  it("advertises the live toolset in Anthropic's own tool format", async () => {
+    // Omitting `tools` meant Claude was never told a tool existed, so it never emitted a
+    // `tool_use` block and the composed tool cards never appeared in a live session.
+    const fetcher = vi.fn(async () => anthropicSse(turn));
+
+    await runLiveLlmPreview({
+      prompt: "hi",
+      project: projectWithAnthropic(),
+      sessionKeys: { anthropic: "sk-ant-test" },
+      fetcher: fetcher as unknown as typeof fetch,
+    });
+
+    const body = JSON.parse(String((fetcher.mock.calls[0] as unknown as [string, RequestInit])[1].body));
+    expect(body.tools.map((tool: { name: string }) => tool.name)).toEqual([
+      "read_file",
+      "write_file",
+      "edit_file",
+      "run_command",
+      "search",
+    ]);
+    // Anthropic's flat shape, not OpenAI's `{type:"function", function:{...}}` nesting.
+    expect(body.tools[0]).toMatchObject({
+      name: "read_file",
+      input_schema: { type: "object" },
+    });
+    expect(body.tools[0].function).toBeUndefined();
+  });
+
+  it("walks a Claude tool call to a simulated result instead of cancelling it", async () => {
+    const result = await runLiveLlmPreview({
+      prompt: "read the file",
+      project: projectWithAnthropic(),
+      sessionKeys: { anthropic: "sk-ant-test" },
+      fetcher: (async () => anthropicSse([
+        { type: "message_start", message: { id: "msg_1", role: "assistant", model: "claude-sonnet-4" } },
+        { type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "toolu_01", name: "read_file" } },
+        { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: "{\"path\":" } },
+        { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: "\"src/App.tsx\"}" } },
+        { type: "content_block_stop", index: 0 },
+        { type: "message_stop" },
+      ])) as unknown as typeof fetch,
+      now: () => 1_000,
+    });
+
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "tool.call.started",
+      "tool.call.args.delta",
+      "tool.call.args.delta",
+      "tool.call.awaiting_approval",
+      "tool.call.running",
+      "tool.call.result",
+      "tool.call.finished",
+      "run.finished",
+    ]);
+    expect(result.events.find((event) => event.type === "tool.call.finished")?.payload).toMatchObject({
+      toolCallId: "toolu_01",
+      status: "success",
+    });
+    const toolResult = result.events.find((event) => event.type === "tool.call.result");
+    expect(String(toolResult?.payload.result)).toContain("src/App.tsx");
+    expect(String(toolResult?.payload.result)).toContain("simulated live result");
+  });
+
+  it("reports a structured tool error for a tool Claude invented", async () => {
+    const result = await runLiveLlmPreview({
+      prompt: "ship it",
+      project: projectWithAnthropic(),
+      sessionKeys: { anthropic: "sk-ant-test" },
+      fetcher: (async () => anthropicSse([
+        { type: "message_start", message: { id: "msg_1", role: "assistant", model: "claude-sonnet-4" } },
+        { type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "toolu_01", name: "deploy_to_production" } },
+        { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: "{\"env\":\"prod\"}" } },
+        { type: "content_block_stop", index: 0 },
+        { type: "message_stop" },
+      ])) as unknown as typeof fetch,
+    });
+
+    expect(result.events.find((event) => event.type === "tool.call.error")?.payload).toMatchObject({
+      toolCallId: "toolu_01",
+      code: "LIVE_TOOL_UNSUPPORTED",
+      retryable: false,
+    });
+    expect(result.events.find((event) => event.type === "tool.call.finished")?.payload).toMatchObject({
+      status: "error",
+    });
+  });
+
+  it("keeps Claude's tool cards in the same states the openai-compatible path reaches", async () => {
+    // The two live paths use different writers, so parity is a thing that can silently break.
+    const anthropicEvents = (await runLiveLlmPreview({
+      prompt: "read the file",
+      project: projectWithAnthropic(),
+      sessionKeys: { anthropic: "sk-ant-test" },
+      fetcher: (async () => anthropicSse([
+        { type: "message_start", message: { id: "m", role: "assistant", model: "claude-sonnet-4" } },
+        { type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "t", name: "read_file" } },
+        { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: "{\"path\":\"a.ts\"}" } },
+        { type: "content_block_stop", index: 0 },
+        { type: "message_stop" },
+      ])) as unknown as typeof fetch,
+    })).events.map((event) => event.type).filter((type) => type.startsWith("tool.call."));
+
+    expect(anthropicEvents).toEqual([
+      "tool.call.started",
+      "tool.call.args.delta",
+      "tool.call.awaiting_approval",
+      "tool.call.running",
+      "tool.call.result",
+      "tool.call.finished",
+    ]);
+  });
+
   it("names the protocol when there is genuinely no adapter", async () => {
     const project = projectWithAnthropic();
     const unsupported = {

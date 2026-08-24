@@ -133,13 +133,40 @@ export const LIVE_MODEL_TOOLSET = [
   },
 ] as const;
 
+export type AnthropicToolDefinition = {
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
+};
+
+/**
+ * `LIVE_MODEL_TOOLSET` in the shape the Anthropic Messages API expects.
+ *
+ * Derived from the same constant rather than written out a second time: the two wire formats
+ * differ only in nesting (`{type, function:{...}}` vs a flat `{name, description, input_schema}`),
+ * and a hand-maintained copy would drift the moment a tool is added — leaving Claude advertised
+ * a different toolset than every other provider, which is the bug this whole path already had.
+ */
+export function anthropicLiveToolset(): readonly AnthropicToolDefinition[] {
+  return LIVE_MODEL_TOOLSET.map((tool) => ({
+    name: tool.function.name,
+    description: tool.function.description,
+    input_schema: tool.function.parameters as Record<string, unknown>,
+  }));
+}
+
 export function providerCapabilitiesForConnection(provider: ProviderConnection): ProviderRequestCapabilityLayer {
   const hostedOpenAICompatible = provider.protocol === "openai-compatible" && provider.id !== "local";
   const openAICompatible = provider.protocol === "openai-compatible";
 
+  const anthropic = provider.protocol === "anthropic";
+
   return {
-    textStreaming: openAICompatible,
-    toolCallStreaming: openAICompatible,
+    textStreaming: openAICompatible || anthropic,
+    // Anthropic streams tool calls as `tool_use` blocks with `input_json_delta` fragments, which
+    // `applyAnthropicFrame` has always translated. Reporting false here described the request
+    // body (which used to omit `tools`) rather than the protocol.
+    toolCallStreaming: openAICompatible || anthropic,
     structuredOutput: hostedOpenAICompatible,
     vision: visionCapableProviderIds.has(provider.id),
     requestParams: {
