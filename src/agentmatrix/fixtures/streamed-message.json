@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "scenario": "ephemeral_thinking_and_message_replaced_by_durable_events",
+  "description": "Thinking and message deltas provide live previews. Durable Events with matching stable ordinals replace them.",
+  "events": [
+    {
+      "event_id": "evt_stream_001",
+      "session_id": "ssn_design_stream",
+      "sequence": 1,
+      "type": "user.message",
+      "payload_version": 1,
+      "turn_id": "trn_design_stream_1",
+      "payload": {
+        "content": [{ "type": "text", "text": "Compare the three proposals." }]
+      },
+      "created_at": "2026-08-03T09:00:00Z",
+      "processed_at": "2026-08-03T09:00:01Z",
+      "emitted_at": "2026-08-03T09:00:00Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_stream_002",
+      "session_id": "ssn_design_stream",
+      "sequence": 2,
+      "type": "session.status_running",
+      "payload_version": 1,
+      "cause_event_id": "evt_stream_001",
+      "turn_id": "trn_design_stream_1",
+      "payload": {},
+      "created_at": "2026-08-03T09:00:01Z",
+      "emitted_at": "2026-08-03T09:00:01Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_stream_003",
+      "session_id": "ssn_design_stream",
+      "sequence": 3,
+      "type": "agent.thinking",
+      "payload_version": 1,
+      "cause_event_id": "evt_stream_001",
+      "turn_id": "trn_design_stream_1",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "I compared price, implementation risk, and support coverage."
+          }
+        ]
+      },
+      "created_at": "2026-08-03T09:00:03Z",
+      "emitted_at": "2026-08-03T09:00:03Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_stream_004",
+      "session_id": "ssn_design_stream",
+      "sequence": 4,
+      "type": "agent.message",
+      "payload_version": 1,
+      "cause_event_id": "evt_stream_001",
+      "turn_id": "trn_design_stream_1",
+      "payload": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Proposal B has the best balance of cost and delivery risk."
+          }
+        ]
+      },
+      "created_at": "2026-08-03T09:00:05Z",
+      "emitted_at": "2026-08-03T09:00:05Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_stream_005",
+      "session_id": "ssn_design_stream",
+      "sequence": 5,
+      "type": "session.status_idle",
+      "payload_version": 1,
+      "cause_event_id": "evt_stream_001",
+      "turn_id": "trn_design_stream_1",
+      "payload": { "stop_reason": { "type": "end_turn" } },
+      "created_at": "2026-08-03T09:00:06Z",
+      "emitted_at": "2026-08-03T09:00:06Z",
+      "metadata": {}
+    }
+  ],
+  "live_frames": [
+    {
+      "frame_type": "delta",
+      "session_id": "ssn_design_stream",
+      "turn_id": "trn_design_stream_1",
+      "target_stable_ordinal": "ord_thinking_1",
+      "delta_index": 0,
+      "type": "agent.thinking_delta",
+      "payload_version": 1,
+      "payload": {
+        "block_index": 0,
+        "delta": { "type": "thinking_delta", "thinking": "I compared price" }
+      },
+      "emitted_at": "2026-08-03T09:00:02Z",
+      "metadata": {}
+    },
+    {
+      "frame_type": "delta",
+      "session_id": "ssn_design_stream",
+      "turn_id": "trn_design_stream_1",
+      "target_stable_ordinal": "ord_thinking_1",
+      "delta_index": 1,
+      "type": "agent.thinking_delta",
+      "payload_version": 1,
+      "payload": {
+        "block_index": 0,
+        "delta": {
+          "type": "thinking_delta",
+          "thinking": ", implementation risk, and support coverage."
+        }
+      },
+      "emitted_at": "2026-08-03T09:00:02.500Z",
+      "metadata": {}
+    },
+    {
+      "frame_type": "event",
+      "event": {
+        "event_id": "evt_stream_003",
+        "session_id": "ssn_design_stream",
+        "sequence": 3,
+        "type": "agent.thinking",
+        "payload_version": 1,
+        "cause_event_id": "evt_stream_001",
+        "turn_id": "trn_design_stream_1",
+        "payload": {
+          "content": [
+            {
+              "type": "text",
+              "text": "I compared price, implementation risk, and support coverage."
+            }
+          ]
+        },
+        "created_at": "2026-08-03T09:00:03Z",
+        "emitted_at": "2026-08-03T09:00:03Z",
+        "metadata": {}
+      },
+      "stable_ordinal": "ord_thinking_1"
+    },
+    {
+      "frame_type": "delta",
+      "session_id": "ssn_design_stream",
+      "turn_id": "trn_design_stream_1",
+      "target_stable_ordinal": "ord_message_1",
+      "delta_index": 0,
+      "type": "agent.message_delta",
+      "payload_version": 1,
+      "payload": {
+        "block_index": 0,
+        "delta": { "type": "text_delta", "text": "Proposal B has" }
+      },
+      "emitted_at": "2026-08-03T09:00:04Z",
+      "metadata": {}
+    },
+    {
+      "frame_type": "delta",
+      "session_id": "ssn_design_stream",
+      "turn_id": "trn_design_stream_1",
+      "target_stable_ordinal": "ord_message_1",
+      "delta_index": 1,
+      "type": "agent.message_delta",
+      "payload_version": 1,
+      "payload": {
+        "block_index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " the best balance of cost and delivery risk."
+        }
+      },
+      "emitted_at": "2026-08-03T09:00:04.500Z",
+      "metadata": {}
+    },
+    {
+      "frame_type": "event",
+      "event": {
+        "event_id": "evt_stream_004",
+        "session_id": "ssn_design_stream",
+        "sequence": 4,
+        "type": "agent.message",
+        "payload_version": 1,
+        "cause_event_id": "evt_stream_001",
+        "turn_id": "trn_design_stream_1",
+        "payload": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Proposal B has the best balance of cost and delivery risk."
+            }
+          ]
+        },
+        "created_at": "2026-08-03T09:00:05Z",
+        "emitted_at": "2026-08-03T09:00:05Z",
+        "metadata": {}
+      },
+      "stable_ordinal": "ord_message_1"
+    }
+  ]
+}

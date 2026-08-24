@@ -1,0 +1,6 @@
+{"protocol":"agent-ux","version":"0.1","id":"evt_1","runId":"run_basic","seq":1,"type":"run.started","ts":1760000000000,"payload":{"title":"Basic"}}
+{"protocol":"agent-ux","version":"0.1","id":"evt_2","runId":"run_basic","messageId":"msg_1","seq":2,"type":"text.started","ts":1760000000100,"payload":{"textId":"txt_1","role":"assistant","format":"markdown"}}
+{"protocol":"agent-ux","version":"0.1","id":"evt_3","runId":"run_basic","messageId":"msg_1","seq":3,"type":"text.delta","ts":1760000000200,"payload":{"textId":"txt_1","delta":"Hello"}}
+{"protocol":"agent-ux","version":"0.1","id":"evt_4","runId":"run_basic","messageId":"msg_1","seq":4,"type":"text.delta","ts":1760000000300,"payload":{"textId":"txt_1","delta":" world"}}
+{"protocol":"agent-ux","version":"0.1","id":"evt_5","runId":"run_basic","messageId":"msg_1","seq":5,"type":"text.finished","ts":1760000000400,"payload":{"textId":"txt_1"}}
+{"protocol":"agent-ux","version":"0.1","id":"evt_6","runId":"run_basic","seq":6,"type":"run.finished","ts":1760000000500,"payload":{}}

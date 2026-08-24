@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "scenario": "session_configuration_model_spans_compaction_and_deletion",
+  "description": "Diagnostic and audit-oriented Events that should not become ordinary Transcript rows.",
+  "events": [
+    {
+      "event_id": "evt_diag_001",
+      "session_id": "ssn_design_diag",
+      "sequence": 1,
+      "type": "session.updated",
+      "payload_version": 1,
+      "payload": {
+        "agent_config_revision": 2,
+        "applies_on": "next_turn",
+        "changed_fields": ["tool_permission_mode", "skill_refs"],
+        "changed_summary": {
+          "skill_refs_count": 3,
+          "allowed_tools_count": 6
+        }
+      },
+      "created_at": "2026-08-03T16:00:00Z",
+      "emitted_at": "2026-08-03T16:00:00Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_diag_002",
+      "session_id": "ssn_design_diag",
+      "sequence": 2,
+      "type": "agent.context_compacted",
+      "payload_version": 1,
+      "turn_id": "trn_design_diag_1",
+      "payload": {
+        "pre_compaction_tokens": 91842,
+        "post_compaction_tokens": 28400
+      },
+      "created_at": "2026-08-03T16:05:00Z",
+      "emitted_at": "2026-08-03T16:05:00Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_diag_003",
+      "session_id": "ssn_design_diag",
+      "sequence": 3,
+      "type": "span.model_request_start",
+      "payload_version": 1,
+      "turn_id": "trn_design_diag_1",
+      "payload": {
+        "model": "claude-sonnet-4-20250514",
+        "provider": "anthropic",
+        "speed": "standard"
+      },
+      "created_at": "2026-08-03T16:05:01Z",
+      "emitted_at": "2026-08-03T16:05:01Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_diag_004",
+      "session_id": "ssn_design_diag",
+      "sequence": 4,
+      "type": "span.model_request_end",
+      "payload_version": 1,
+      "cause_event_id": "evt_diag_003",
+      "turn_id": "trn_design_diag_1",
+      "payload": {
+        "model_request_start_id": "evt_diag_003",
+        "is_error": false,
+        "usage_source": "model_gateway",
+        "usage_granularity": "request",
+        "billing_enforcement": "hard_cap",
+        "model_usage": {
+          "input_tokens": 1820,
+          "output_tokens": 244,
+          "cache_read_input_tokens": 960
+        },
+        "latency_ms": 1840
+      },
+      "created_at": "2026-08-03T16:05:03Z",
+      "emitted_at": "2026-08-03T16:05:03Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_diag_005",
+      "session_id": "ssn_design_diag",
+      "sequence": 5,
+      "type": "session.deleted",
+      "payload_version": 1,
+      "payload": {},
+      "created_at": "2026-08-03T17:00:00Z",
+      "emitted_at": "2026-08-03T17:00:00Z",
+      "metadata": {}
+    }
+  ],
+  "live_frames": []
+}

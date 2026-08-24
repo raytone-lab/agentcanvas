@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>心情表情头像预览</title>
+<style>
+  :root { --card:#ffffff; --page:#f4f6fa; --text:#2a3038; --muted:#7c8695; --line:#e7ebf1; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif; color:var(--text); background:var(--page); transition:background .25s,color .25s; }
+  body[data-bg="dark"] { --card:#171b22; --page:#0f1218; --text:#eef1f6; --muted:#9aa6b6; --line:#242a34; }
+  header { padding:40px 24px 4px; text-align:center; }
+  h1 { margin:0 0 6px; font-size:22px; }
+  header p { margin:0; color:var(--muted); font-size:13px; }
+  .toolbar { display:flex; gap:8px; justify-content:center; margin:16px 0; flex-wrap:wrap; }
+  .toolbar button { border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:999px; padding:6px 14px; font-size:13px; cursor:pointer; }
+  .toolbar button[data-active="true"] { background:var(--text); color:var(--page); border-color:var(--text); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:18px; max-width:920px; margin:20px auto 56px; padding:0 24px; }
+  .cell { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px 12px 12px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .av { width:92px; height:92px; display:block; }
+  .name { font-size:14px; color:var(--text); }
+  .sampler { max-width:920px; margin:0 auto 64px; padding:0 24px; }
+  .sampler h2 { font-size:14px; color:var(--muted); font-weight:600; margin:0 0 12px; }
+  .sampler .row { display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+  .sampler .row .av { width:40px; height:40px; }
+  .sampler .row .av.s28 { width:28px; height:28px; }
+</style>
+</head>
+<body data-bg="light">
+<header>
+  <h1>心情表情头像</h1>
+  <p>风格:纯色圆底 · 极简黑色手绘线条表情。原创草案,供选型。</p>
+  <div class="toolbar">
+    <button data-bg-btn="light" data-active="true">浅色背景</button>
+    <button data-bg-btn="dark">深色背景</button>
+  </div>
+</header>
+<main>
+  <section class="grid" id="grid"></section>
+  <section class="sampler">
+    <h2>小尺寸预览(列表 40px / 气泡 28px)</h2>
+    <div class="row" id="row40"></div>
+    <div class="row" id="row28" style="margin-top:12px"></div>
+  </section>
+</main>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="mwob" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+
+  <!-- 开心 -->
+  <symbol id="m-happy" viewBox="0 0 120 120"><g filter="url(#mwob)">
+    <circle cx="60" cy="60" r="58" fill="#F0A24E"/>
+    <circle cx="45" cy="52" r="5" fill="#23252b"/><circle cx="77" cy="50" r="5" fill="#23252b"/>
+    <path d="M40 68 Q60 90 82 66" fill="none" stroke="#23252b" stroke-width="5" stroke-linecap="round"/>
+  </g></symbol>
+
+  <!-- 心动 -->
+  <symbol id="m-love" viewBox="0 0 120 120"><g filter="url(#mwob)">
+    <circle cx="60" cy="60" r="58" fill="#F6C2CE"/>
+    <path d="M44 47 C41 42 34 44 37 50 C39 54 44 58 44 58 C44 58 49 54 51 50 C54 44 47 42 44 47 Z" fill="#E8506B"/>
+    <path d="M76 47 C73 42 66 44 69 50 C71 54 76 58 76 58 C76 58 81 54 83 50 C86 44 79 42 76 47 Z" fill="#E8506B"/>
+    <ellipse cx="34" cy="64" rx="9" ry="5" fill="#EE8FA6" opacity=".55"/><ellipse cx="86" cy="64" rx="9" ry="5" fill="#EE8FA6" opacity=".55"/>
+    <path d="M46 72 Q60 84 74 72" fill="none" stroke="#23252b" stroke-width="5" stroke-linecap="round"/>
+  </g></symbol>
+
+  <!-- 冲冲冲 -->
+  <symbol id="m-charge" viewBox="0 0 120 120"><g filter="url(#mwob)">
+    <circle cx="60" cy="60" r="58" fill="#F6D24E"/>
+    <g fill="none" stroke="#23252b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M36 56 l9 -10 l9 10"/><path d="M66 56 l9 -10 l9 10"/>
+      <path d="M18 40 l12 4 M16 52 l14 2 M20 64 l12 1"/>
+    </g>
+    <ellipse cx="60" cy="80" rx="9" ry="11" fill="#23252b"/>
+  </g></symbol>
+
+  <!-- 幸福 -->
+  <symbol id="m-bliss" viewBox="0 0 120 120"><g filter="url(#mwob)">
+    <circle cx="60" cy="60" r="58" fill="#F3B8D0"/>
+    <g fill="none" stroke="#23252b" stroke-width="5" stroke-linecap="round">
+      <path d="M36 54 Q44 45 52 54"/><path d="M68 54 Q76 45 84 54"/>
+      <path d="M40 70 Q60 92 80 70"/>
+    </g>
+    <ellipse cx="33" cy="66" rx="11" ry="6" fill="#E97FA1" opacity=".5"/><ellipse cx="87" cy="66" rx="11" ry="6" fill="#E97FA1" opacity=".5"/>
+  </g></symbol>
+
+  <!-- 佛系 -->
+  <symbol id="m-zen" viewBox="0 0 120 120"><g filter="url(#mwob)">
+    <circle cx="60" cy="60" r="58" fill="#93CE8E"/>
+    <g fill="#23252b"><circle cx="52" cy="30" r="2.4"/><circle cx="60" cy="27" r="2.4"/><circle cx="68" cy="30" r="2.4"/>
+      <circle cx="45" cy="56" r="5"/><circle cx="77" cy="56" r="5"/></g>
+    <path d="M48 76 h24" fill="none" stroke="#23252b" stroke-width="5" stroke-linecap="round"/>
+  </g></symbol>
+
+  <!-- emmm -->
+  <symbol id="m-emmm" viewBox="0 0 120 120"><g filter="url(#mwob)">
+    <circle cx="60" cy="60" r="58" fill="#B39DDB"/>
+    <g fill="none" stroke="#23252b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M36 44 L52 53"/><path d="M84 44 L68 53"/>
+      <path d="M46 82 Q60 71 74 82"/>
+    </g>
+    <circle cx="46" cy="60" r="4.6" fill="#23252b"/><circle cx="74" cy="60" r="4.6" fill="#23252b"/>
+  </g></symbol>
+
+  <!-- 无语子 -->
+  <symbol id="m-speechless" viewBox="0 0 120 120"><g filter="url(#mwob)">
+    <circle cx="60" cy="60" r="58" fill="#B79268"/>
+    <g fill="none" stroke="#23252b" stroke-width="5" stroke-linecap="round">
+      <path d="M37 54 h14"/><path d="M69 54 h14"/><path d="M52 78 h16"/>
+      <circle cx="88" cy="40" r="6"/>
+    </g>
+  </g></symbol>
+
+  <!-- 困惑 -->
+  <symbol id="m-confused" viewBox="0 0 120 120"><g filter="url(#mwob)">
+    <circle cx="60" cy="60" r="58" fill="#A9B4DE"/>
+    <path d="M68 46 Q76 41 84 46" fill="none" stroke="#23252b" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="45" cy="58" r="5.2" fill="#23252b"/><circle cx="76" cy="57" r="4.2" fill="#23252b"/>
+    <path d="M48 80 q6 -6 12 0 q6 6 12 0" fill="none" stroke="#23252b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="78" y="36" font-family="system-ui" font-weight="800" font-size="20" fill="#23252b">?</text>
+    <text x="92" y="26" font-family="system-ui" font-weight="800" font-size="14" fill="#23252b">?</text>
+  </g></symbol>
+
+  <!-- 委屈 -->
+  <symbol id="m-wronged" viewBox="0 0 120 120"><g filter="url(#mwob)">
+    <circle cx="60" cy="60" r="58" fill="#9FD3DE"/>
+    <g fill="none" stroke="#23252b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M36 48 Q46 42 52 50"/><path d="M84 48 Q74 42 68 50"/>
+      <path d="M48 84 Q54 78 60 84 Q66 90 72 84"/>
+    </g>
+    <circle cx="45" cy="60" r="5" fill="#23252b"/><circle cx="75" cy="60" r="5" fill="#23252b"/>
+    <path d="M43 66 c-3 6 -3 10 2 10 c4 0 3 -5 0 -10 Z" fill="#e9f6fa"/>
+    <path d="M77 66 c-3 6 -3 10 2 10 c4 0 3 -5 0 -10 Z" fill="#e9f6fa"/>
+  </g></symbol>
+
+  <!-- 疲惫 -->
+  <symbol id="m-tired" viewBox="0 0 120 120"><g filter="url(#mwob)">
+    <circle cx="60" cy="60" r="58" fill="#6E9BD6"/>
+    <path d="M34 52 Q45 62 56 52 Q45 66 34 52 Z" fill="#23252b"/>
+    <path d="M64 52 Q75 62 86 52 Q75 66 64 52 Z" fill="#23252b"/>
+    <g fill="none" stroke="#23252b" stroke-width="4" stroke-linecap="round" opacity=".7"><path d="M36 60 Q45 64 54 60"/><path d="M66 60 Q75 64 84 60"/></g>
+    <path d="M50 80 h20" fill="none" stroke="#23252b" stroke-width="5" stroke-linecap="round"/>
+  </g></symbol>
+
+  <!-- 不开心 -->
+  <symbol id="m-sad" viewBox="0 0 120 120"><g filter="url(#mwob)">
+    <circle cx="60" cy="60" r="58" fill="#6E8497"/>
+    <g fill="none" stroke="#22262e" stroke-width="5" stroke-linecap="round">
+      <path d="M38 54 Q44 61 50 54"/><path d="M70 54 Q76 61 82 54"/>
+      <path d="M49 82 Q60 74 71 82"/>
+    </g>
+  </g></symbol>
+
+  <!-- 心情不明 -->
+  <symbol id="m-unknown" viewBox="0 0 120 120"><g filter="url(#mwob)">
+    <circle cx="60" cy="60" r="58" fill="#BFC3C7"/>
+  </g></symbol>
+</defs></svg>
+
+<script>
+  const moods = [
+    ["m-happy","开心"],["m-love","心动"],["m-charge","冲冲冲"],["m-bliss","幸福"],
+    ["m-zen","佛系"],["m-emmm","emmm"],["m-speechless","无语子"],["m-confused","困惑"],
+    ["m-wronged","委屈"],["m-tired","疲惫"],["m-sad","不开心"],["m-unknown","心情不明"],
+  ];
+  const svg = (id,cls) => `<svg class="av ${cls||''}" viewBox="0 0 120 120"><use href="#${id}"/></svg>`;
+  document.getElementById("grid").innerHTML = moods.map(([id,zh]) => `<div class="cell">${svg(id)}<div class="name">${zh}</div></div>`).join("");
+  document.getElementById("row40").innerHTML = moods.map(([id]) => svg(id)).join("");
+  document.getElementById("row28").innerHTML = moods.map(([id]) => svg(id,"s28")).join("");
+  document.querySelectorAll("[data-bg-btn]").forEach(btn => btn.addEventListener("click", () => {
+    document.body.dataset.bg = btn.dataset.bgBtn;
+    document.querySelectorAll("[data-bg-btn]").forEach(b => b.dataset.active = String(b === btn));
+  }));
+</script>
+</body>
+</html>

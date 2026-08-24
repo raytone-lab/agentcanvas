@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>12生肖 · 手绘童趣头像预览</title>
+<style>
+  :root { --card:#fffaf2; --page:#fbf2e6; --text:#3a332b; --muted:#8a7f72; --line:#efe4d4; }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; font:15px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    color:var(--text); background:var(--page); transition:background .25s,color .25s;
+  }
+  body[data-bg="dark"] { --card:#1a1f26; --page:#0f1319; --text:#eef1f6; --muted:#9aa6b6; --line:#252b35; }
+  header { padding:40px 24px 4px; text-align:center; }
+  h1 { margin:0 0 6px; font-size:22px; }
+  header p { margin:0; color:var(--muted); font-size:13px; }
+  .toolbar { display:flex; gap:8px; justify-content:center; margin:16px 0; flex-wrap:wrap; }
+  .toolbar button { border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:999px; padding:6px 14px; font-size:13px; cursor:pointer; }
+  .toolbar button[data-active="true"] { background:var(--text); color:var(--page); border-color:var(--text); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:18px; max-width:960px; margin:20px auto 56px; padding:0 24px; }
+  .cell { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:16px 12px 12px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .av { width:104px; height:104px; display:block; }
+  .name { font-size:13px; color:var(--muted); }
+  .name b { color:var(--text); font-size:15px; margin-right:4px; }
+  .sampler { max-width:960px; margin:0 auto 64px; padding:0 24px; }
+  .sampler h2 { font-size:14px; color:var(--muted); font-weight:600; margin:0 0 12px; }
+  .sampler .row { display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+  .sampler .row .av { width:40px; height:40px; }
+  .sampler .row .av.s28 { width:28px; height:28px; }
+</style>
+</head>
+<body data-bg="light">
+<header>
+  <h1>12 生肖 · 手绘童趣头像</h1>
+  <p>风格:圆角方块底 · 大眼 · 柔白口鼻 · 腮红 · 微手绘边。原创草案,供选型。</p>
+  <div class="toolbar">
+    <button data-bg-btn="light" data-active="true">浅色背景</button>
+    <button data-bg-btn="dark">深色背景</button>
+  </div>
+</header>
+
+<main>
+  <section class="grid" id="grid"></section>
+  <section class="sampler">
+    <h2>小尺寸预览(列表 40px / 气泡 28px)</h2>
+    <div class="row" id="row40"></div>
+    <div class="row" id="row28" style="margin-top:12px"></div>
+  </section>
+</main>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="wob1" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.013" numOctaves="2" seed="4" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="4.5" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="wob2" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="2" seed="11" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="wob3" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="19" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+
+  <!-- 鼠 Rat -->
+  <symbol id="z-rat" viewBox="0 0 120 120"><g filter="url(#wob1)">
+    <rect x="6" y="6" width="108" height="108" rx="34" fill="#F3C64B"/>
+    <circle cx="33" cy="40" r="15" fill="#c9b6a6"/><circle cx="33" cy="40" r="8" fill="#f0b9c4"/>
+    <circle cx="87" cy="40" r="15" fill="#c9b6a6"/><circle cx="87" cy="40" r="8" fill="#f0b9c4"/>
+    <ellipse cx="34" cy="74" rx="8" ry="5.5" fill="#EE7A63" opacity=".6"/><ellipse cx="86" cy="74" rx="8" ry="5.5" fill="#EE7A63" opacity=".6"/>
+    <ellipse cx="60" cy="80" rx="23" ry="18" fill="#FDF7EE"/>
+    <ellipse cx="47" cy="54" rx="11" ry="13" fill="#fff"/><circle cx="49" cy="57" r="6" fill="#24262C"/>
+    <ellipse cx="74" cy="52" rx="12" ry="14" fill="#fff"/><circle cx="76" cy="55" r="6.5" fill="#24262C"/>
+    <ellipse cx="60" cy="74" rx="5" ry="4" fill="#24262C"/>
+    <path d="M60 78 q-5 5 -9 2 M60 78 q5 5 9 2" stroke="#3b342e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    <path d="M22 74 l14 3 M20 82 l16 -1 M98 74 l-14 3 M100 82 l-16 -1" stroke="#c9b6a6" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+  </g></symbol>
+
+  <!-- 牛 Ox -->
+  <symbol id="z-ox" viewBox="0 0 120 120"><g filter="url(#wob2)">
+    <rect x="6" y="6" width="108" height="108" rx="34" fill="#A7D06B"/>
+    <path d="M28 42 C16 34 16 22 26 24 C28 32 30 38 38 42 Z" fill="#efe6d2"/>
+    <path d="M92 42 C104 34 104 22 94 24 C92 32 90 38 82 42 Z" fill="#efe6d2"/>
+    <ellipse cx="34" cy="74" rx="8" ry="5.5" fill="#EE7A63" opacity=".55"/><ellipse cx="86" cy="74" rx="8" ry="5.5" fill="#EE7A63" opacity=".55"/>
+    <ellipse cx="60" cy="82" rx="26" ry="19" fill="#FDF7EE"/>
+    <ellipse cx="47" cy="54" rx="11" ry="13" fill="#fff"/><circle cx="48" cy="57" r="6" fill="#24262C"/>
+    <ellipse cx="74" cy="53" rx="12" ry="14" fill="#fff"/><circle cx="75" cy="56" r="6.5" fill="#24262C"/>
+    <ellipse cx="52" cy="82" rx="3.2" ry="4.2" fill="#24262C"/><ellipse cx="68" cy="82" rx="3.2" ry="4.2" fill="#24262C"/>
+  </g></symbol>
+
+  <!-- 虎 Tiger -->
+  <symbol id="z-tiger" viewBox="0 0 120 120"><g filter="url(#wob3)">
+    <rect x="6" y="6" width="108" height="108" rx="34" fill="#F0A24E"/>
+    <circle cx="33" cy="38" r="13" fill="#F0A24E"/><circle cx="33" cy="38" r="6.5" fill="#f7d1a6"/>
+    <circle cx="87" cy="38" r="13" fill="#F0A24E"/><circle cx="87" cy="38" r="6.5" fill="#f7d1a6"/>
+    <path d="M52 20 l3 12 M60 18 v13 M68 20 l-3 12" stroke="#5a3a1e" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <ellipse cx="34" cy="72" rx="8" ry="5.5" fill="#EE7A63" opacity=".55"/><ellipse cx="86" cy="72" rx="8" ry="5.5" fill="#EE7A63" opacity=".55"/>
+    <ellipse cx="60" cy="80" rx="25" ry="19" fill="#FDF7EE"/>
+    <ellipse cx="47" cy="54" rx="11" ry="13" fill="#fff"/><circle cx="49" cy="57" r="6" fill="#24262C"/>
+    <ellipse cx="74" cy="53" rx="12" ry="14" fill="#fff"/><circle cx="76" cy="56" r="6.5" fill="#24262C"/>
+    <path d="M60 72 l6 5 -6 4 -6 -4 Z" fill="#24262C"/>
+    <path d="M28 80 l16 2 M26 88 l18 -2 M92 80 l-16 2 M94 88 l-18 -2" stroke="#7a6a58" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+  </g></symbol>
+
+  <!-- 兔 Rabbit -->
+  <symbol id="z-rabbit" viewBox="0 0 120 120"><g filter="url(#wob1)">
+    <rect x="6" y="6" width="108" height="108" rx="34" fill="#F2A6B8"/>
+    <rect x="40" y="0" width="15" height="46" rx="7.5" fill="#FDF7EE"/><rect x="43.5" y="5" width="8" height="36" rx="4" fill="#f2b7c6"/>
+    <rect x="65" y="0" width="15" height="46" rx="7.5" fill="#FDF7EE"/><rect x="68.5" y="5" width="8" height="36" rx="4" fill="#f2b7c6"/>
+    <ellipse cx="34" cy="74" rx="8" ry="5.5" fill="#EE7A63" opacity=".6"/><ellipse cx="86" cy="74" rx="8" ry="5.5" fill="#EE7A63" opacity=".6"/>
+    <ellipse cx="60" cy="80" rx="23" ry="18" fill="#FDF7EE"/>
+    <ellipse cx="47" cy="56" rx="11" ry="13" fill="#fff"/><circle cx="49" cy="59" r="6" fill="#24262C"/>
+    <ellipse cx="74" cy="54" rx="12" ry="14" fill="#fff"/><circle cx="76" cy="57" r="6.5" fill="#24262C"/>
+    <ellipse cx="60" cy="74" rx="4" ry="3" fill="#e0788f"/>
+    <path d="M60 77 v4 M60 81 q-4 3 -7 1 M60 81 q4 3 7 1" stroke="#b0687c" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  </g></symbol>
+
+  <!-- 龙 Dragon -->
+  <symbol id="z-dragon" viewBox="0 0 120 120"><g filter="url(#wob2)">
+    <rect x="6" y="6" width="108" height="108" rx="34" fill="#8FD3B6"/>
+    <path d="M40 26 C34 12 30 12 34 26 Z" fill="#f2c94c"/><path d="M80 26 C86 12 90 12 86 26 Z" fill="#f2c94c"/>
+    <path d="M56 22 q4 8 8 0" stroke="#3f8f6f" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <ellipse cx="34" cy="74" rx="8" ry="5.5" fill="#EE7A63" opacity=".5"/><ellipse cx="86" cy="74" rx="8" ry="5.5" fill="#EE7A63" opacity=".5"/>
+    <ellipse cx="60" cy="82" rx="24" ry="18" fill="#c7ebd6"/>
+    <ellipse cx="47" cy="54" rx="11.5" ry="13.5" fill="#fff"/><circle cx="49" cy="57" r="6.2" fill="#24262C"/>
+    <ellipse cx="74" cy="53" rx="12.5" ry="14.5" fill="#fff"/><circle cx="76" cy="56" r="6.7" fill="#24262C"/>
+    <ellipse cx="53" cy="82" rx="3" ry="4" fill="#3f8f6f"/><ellipse cx="67" cy="82" rx="3" ry="4" fill="#3f8f6f"/>
+    <path d="M24 66 q-8 -2 -12 3 M96 66 q8 -2 12 3" stroke="#f2c94c" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+  </g></symbol>
+
+  <!-- 蛇 Snake -->
+  <symbol id="z-snake" viewBox="0 0 120 120"><g filter="url(#wob3)">
+    <rect x="6" y="6" width="108" height="108" rx="34" fill="#C6B7EA"/>
+    <path d="M26 96 q4 -26 28 -26 q20 0 20 -16" fill="none" stroke="#67c07a" stroke-width="14" stroke-linecap="round"/>
+    <ellipse cx="34" cy="70" rx="7" ry="5" fill="#EE7A63" opacity=".5"/><ellipse cx="86" cy="70" rx="7" ry="5" fill="#EE7A63" opacity=".5"/>
+    <ellipse cx="60" cy="60" rx="28" ry="24" fill="#7ecb8c"/>
+    <ellipse cx="47" cy="54" rx="11" ry="13" fill="#fff"/><circle cx="49" cy="56" r="6" fill="#24262C"/>
+    <ellipse cx="74" cy="53" rx="12" ry="14" fill="#fff"/><circle cx="76" cy="55" r="6.5" fill="#24262C"/>
+    <path d="M60 70 v9 M60 79 l-4 5 M60 79 l4 5" stroke="#E8503A" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  </g></symbol>
+
+  <!-- 马 Horse -->
+  <symbol id="z-horse" viewBox="0 0 120 120"><g filter="url(#wob1)">
+    <rect x="6" y="6" width="108" height="108" rx="34" fill="#E8A06B"/>
+    <path d="M34 24 l6 20 -16 -4 Z" fill="#7b5334"/><path d="M86 24 l-6 20 16 -4 Z" fill="#7b5334"/>
+    <path d="M42 26 q18 -10 36 0 q6 12 2 22 l-40 0 q-4 -10 2 -22 Z" fill="#6b482d"/>
+    <ellipse cx="34" cy="74" rx="8" ry="5.5" fill="#EE7A63" opacity=".5"/><ellipse cx="86" cy="74" rx="8" ry="5.5" fill="#EE7A63" opacity=".5"/>
+    <ellipse cx="60" cy="82" rx="22" ry="18" fill="#e9d3b6"/>
+    <ellipse cx="47" cy="54" rx="11" ry="13" fill="#fff"/><circle cx="49" cy="57" r="6" fill="#24262C"/>
+    <ellipse cx="74" cy="53" rx="12" ry="14" fill="#fff"/><circle cx="76" cy="56" r="6.5" fill="#24262C"/>
+    <ellipse cx="53" cy="82" rx="3" ry="4" fill="#8a6748"/><ellipse cx="67" cy="82" rx="3" ry="4" fill="#8a6748"/>
+  </g></symbol>
+
+  <!-- 羊 Goat -->
+  <symbol id="z-goat" viewBox="0 0 120 120"><g filter="url(#wob2)">
+    <rect x="6" y="6" width="108" height="108" rx="34" fill="#C4E28C"/>
+    <path d="M30 40 C14 34 16 54 30 52 C22 46 26 42 34 46 Z" fill="#d9c4a3"/>
+    <path d="M90 40 C106 34 104 54 90 52 C98 46 94 42 86 46 Z" fill="#d9c4a3"/>
+    <ellipse cx="34" cy="74" rx="8" ry="5.5" fill="#EE7A63" opacity=".5"/><ellipse cx="86" cy="74" rx="8" ry="5.5" fill="#EE7A63" opacity=".5"/>
+    <g fill="#FDF7EE"><circle cx="42" cy="60" r="14"/><circle cx="78" cy="60" r="14"/><circle cx="60" cy="52" r="15"/><circle cx="50" cy="80" r="14"/><circle cx="70" cy="80" r="14"/><circle cx="60" cy="76" r="18"/></g>
+    <ellipse cx="60" cy="74" rx="18" ry="15" fill="#efe6d2"/>
+    <ellipse cx="47" cy="56" rx="10.5" ry="12.5" fill="#fff"/><circle cx="49" cy="58" r="5.6" fill="#24262C"/>
+    <ellipse cx="73" cy="55" rx="11.5" ry="13.5" fill="#fff"/><circle cx="75" cy="57" r="6" fill="#24262C"/>
+    <ellipse cx="60" cy="74" rx="4" ry="3" fill="#b7a07f"/>
+  </g></symbol>
+
+  <!-- 猴 Monkey -->
+  <symbol id="z-monkey" viewBox="0 0 120 120"><g filter="url(#wob3)">
+    <rect x="6" y="6" width="108" height="108" rx="34" fill="#F2BE73"/>
+    <circle cx="26" cy="58" r="14" fill="#a17a5c"/><circle cx="26" cy="58" r="7" fill="#e6c8a6"/>
+    <circle cx="94" cy="58" r="14" fill="#a17a5c"/><circle cx="94" cy="58" r="7" fill="#e6c8a6"/>
+    <path d="M60 40 C34 40 34 96 60 96 C86 96 86 40 60 40 Z" fill="#a17a5c"/>
+    <path d="M60 50 C42 50 42 92 60 92 C78 92 78 50 60 50 Z" fill="#f0dcc2"/>
+    <ellipse cx="34" cy="72" rx="7" ry="5" fill="#EE7A63" opacity=".45"/><ellipse cx="86" cy="72" rx="7" ry="5" fill="#EE7A63" opacity=".45"/>
+    <ellipse cx="49" cy="58" rx="10" ry="12" fill="#fff"/><circle cx="51" cy="60" r="5.6" fill="#24262C"/>
+    <ellipse cx="71" cy="57" rx="10.5" ry="12.5" fill="#fff"/><circle cx="73" cy="59" r="6" fill="#24262C"/>
+    <ellipse cx="60" cy="74" rx="4" ry="3" fill="#7d5a41"/>
+    <path d="M53 82 q7 5 14 0" stroke="#7d5a41" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  </g></symbol>
+
+  <!-- 鸡 Rooster -->
+  <symbol id="z-rooster" viewBox="0 0 120 120"><g filter="url(#wob1)">
+    <rect x="6" y="6" width="108" height="108" rx="34" fill="#F1998B"/>
+    <path d="M44 30 q5 -14 10 0 q6 -14 12 0 q6 -12 8 4 l-31 0 Z" fill="#E8503A"/>
+    <ellipse cx="34" cy="74" rx="7" ry="5" fill="#E8503A" opacity=".45"/><ellipse cx="86" cy="74" rx="7" ry="5" fill="#E8503A" opacity=".45"/>
+    <ellipse cx="60" cy="76" rx="24" ry="21" fill="#FDF7EE"/>
+    <ellipse cx="47" cy="56" rx="11" ry="13" fill="#fff"/><circle cx="49" cy="58" r="6" fill="#24262C"/>
+    <ellipse cx="74" cy="55" rx="12" ry="14" fill="#fff"/><circle cx="76" cy="57" r="6.5" fill="#24262C"/>
+    <path d="M60 72 l15 7 -15 7 Z" fill="#F4A11E"/>
+    <path d="M58 92 q6 8 12 2 q-2 8 -12 4 Z" fill="#E8503A"/>
+  </g></symbol>
+
+  <!-- 狗 Dog -->
+  <symbol id="z-dog" viewBox="0 0 120 120"><g filter="url(#wob2)">
+    <rect x="6" y="6" width="108" height="108" rx="34" fill="#ECC65B"/>
+    <path d="M28 36 q-16 4 -16 32 q0 18 16 16 q-6 -26 6 -46 Z" fill="#7b5334"/>
+    <path d="M92 36 q16 4 16 32 q0 18 -16 16 q6 -26 -6 -46 Z" fill="#7b5334"/>
+    <ellipse cx="34" cy="72" rx="8" ry="5.5" fill="#EE7A63" opacity=".5"/><ellipse cx="86" cy="72" rx="8" ry="5.5" fill="#EE7A63" opacity=".5"/>
+    <ellipse cx="60" cy="80" rx="24" ry="19" fill="#FDF7EE"/>
+    <ellipse cx="47" cy="54" rx="11" ry="13" fill="#fff"/><circle cx="49" cy="57" r="6" fill="#24262C"/>
+    <ellipse cx="74" cy="53" rx="12" ry="14" fill="#fff"/><circle cx="76" cy="56" r="6.5" fill="#24262C"/>
+    <ellipse cx="60" cy="74" rx="6" ry="4.6" fill="#24262C"/>
+    <path d="M60 79 v5 M60 84 q-5 3 -8 0 M60 84 q5 3 8 0" stroke="#b58a52" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  </g></symbol>
+
+  <!-- 猪 Pig -->
+  <symbol id="z-pig" viewBox="0 0 120 120"><g filter="url(#wob3)">
+    <rect x="6" y="6" width="108" height="108" rx="34" fill="#F4AAC6"/>
+    <path d="M34 34 l3 18 -16 -4 Z" fill="#f2a9c4"/><path d="M86 34 l-3 18 16 -4 Z" fill="#f2a9c4"/>
+    <ellipse cx="33" cy="72" rx="8" ry="5.5" fill="#EE7A63" opacity=".55"/><ellipse cx="87" cy="72" rx="8" ry="5.5" fill="#EE7A63" opacity=".55"/>
+    <ellipse cx="47" cy="54" rx="11" ry="13" fill="#fff"/><circle cx="49" cy="57" r="6" fill="#24262C"/>
+    <ellipse cx="74" cy="53" rx="12" ry="14" fill="#fff"/><circle cx="76" cy="56" r="6.5" fill="#24262C"/>
+    <ellipse cx="60" cy="80" rx="18" ry="13" fill="#f6bcd2"/>
+    <ellipse cx="53" cy="80" rx="3.2" ry="4.6" fill="#c25a7c"/><ellipse cx="67" cy="80" rx="3.2" ry="4.6" fill="#c25a7c"/>
+  </g></symbol>
+</defs></svg>
+
+<script>
+  const zodiac = [
+    ["z-rat","鼠","Rat"],["z-ox","牛","Ox"],["z-tiger","虎","Tiger"],["z-rabbit","兔","Rabbit"],
+    ["z-dragon","龙","Dragon"],["z-snake","蛇","Snake"],["z-horse","马","Horse"],["z-goat","羊","Goat"],
+    ["z-monkey","猴","Monkey"],["z-rooster","鸡","Rooster"],["z-dog","狗","Dog"],["z-pig","猪","Pig"],
+  ];
+  const svg = (id,cls) => `<svg class="av ${cls||''}" viewBox="0 0 120 120"><use href="#${id}"/></svg>`;
+  document.getElementById("grid").innerHTML = zodiac.map(([id,zh,en]) => `<div class="cell">${svg(id)}<div class="name"><b>${zh}</b>${en}</div></div>`).join("");
+  document.getElementById("row40").innerHTML = zodiac.map(([id]) => svg(id)).join("");
+  document.getElementById("row28").innerHTML = zodiac.map(([id]) => svg(id,"s28")).join("");
+  document.querySelectorAll("[data-bg-btn]").forEach(btn => btn.addEventListener("click", () => {
+    document.body.dataset.bg = btn.dataset.bgBtn;
+    document.querySelectorAll("[data-bg-btn]").forEach(b => b.dataset.active = String(b === btn));
+  }));
+</script>
+</body>
+</html>

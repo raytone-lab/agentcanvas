@@ -1,0 +1,1882 @@
+/*
+ * Landing page styles.
+ *
+ * Every colour, radius, shadow, duration and easing is a semantic token from
+ * `src/styles/app.css :root` (DESIGN.md §2/§4/§5/§7). No raw hex, no raw motion duration,
+ * and nothing here modifies an existing rule — all selectors are `.lp-*`-prefixed and this
+ * file is imported only by `src/landing/main.tsx`.
+ *
+ * Three decisions worth not re-litigating:
+ *
+ * 1. Type scale. The product ladder tops out at `--text-xl: 18px` because the configurator
+ *    is a dense console (DESIGN.md §3.2). Prose read at arm's length needs more, so the
+ *    `--lp-*` steps below are declared here and scoped to `.lp-page`.
+ *
+ * 2. `--text-muted` (#8f90a0) is never used for text. It measures 2.89:1 on
+ *    `--surface-canvas` — below WCAG AA for body copy and below even the 3:1 large-text
+ *    floor. Prose uses `--text-secondary` (8.59:1).
+ *
+ * 3. One vertical rhythm, four steps, used everywhere:
+ *      section padding   --lp-section-gap
+ *      title -> lede     --space-3
+ *      lede  -> content  --space-7
+ *      row padding       --space-4
+ *    Sections previously each invented their own spacing, which is what made the page read
+ *    as unrelated blocks stacked up.
+ */
+
+.lp-page {
+  /*
+   * Five steps, each a clear jump from the one below it. The previous ladder ran
+   * 44 / 27 / 17 / 15: the section heading was only 1.6x its own lede, and the lede only
+   * 1.13x body, so neither pair read as heading-and-supporting-text.
+   *
+   * Now, at the wide end: 52 / 34 / 18 / 15 / 14. Subtitle is its own step so a card's
+   * title stops matching its description.
+   */
+  --lp-display: clamp(32px, 3.8vw, 52px);
+  --lp-title: clamp(24px, 2.4vw, 34px);
+  --lp-subtitle: clamp(17px, 1.3vw, 19px);
+  --lp-lede: clamp(16px, 1.2vw, 18px);
+  --lp-body: clamp(14px, 0.95vw, 15px);
+  --lp-body-sm: clamp(13.5px, 0.9vw, 14px);
+  --lp-mono: 12.5px;
+  --lp-measure: 66ch;
+  --lp-page-max: 1200px;
+  --lp-section-gap: clamp(var(--space-8), 5vw, 72px);
+  --lp-lede-gap: var(--space-7);
+
+  min-height: 100vh;
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--lp-body);
+  line-height: var(--leading-normal);
+}
+
+.lp-shell {
+  width: 100%;
+  max-width: var(--lp-page-max);
+  margin-inline: auto;
+  padding-inline: var(--space-5);
+}
+
+/* Named for assistive tech, absent from the layout. */
+.lp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.lp-skip {
+  position: absolute;
+  left: var(--space-4);
+  top: var(--space-4);
+  z-index: var(--z-overlay);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-md);
+  transform: translateY(calc(-100% - var(--space-6)));
+  transition: transform var(--motion-base) var(--ease-out);
+}
+
+.lp-skip:focus-visible {
+  transform: translateY(0);
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+/* No bar of its own — a wordmark, a switch and a plain link over the page's own ground. The
+   blur is the only thing separating it from the content scrolling under it. */
+.lp-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-dropdown);
+  padding-block: var(--space-3);
+  background: color-mix(in srgb, var(--surface-canvas) 82%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.lp-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: var(--control-lg);
+}
+
+/* Just the wordmark. A pill around a logo is chrome around chrome. */
+.lp-brand {
+  display: inline-flex;
+  align-items: baseline;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-title);
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.lp-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+/* A plain link, not a solid pill. The primary action already lives in the hero. */
+.lp-nav-github {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition: color var(--motion-fast) var(--ease-out);
+}
+
+.lp-nav-github:hover {
+  color: var(--text-primary);
+}
+
+.lp-nav-github:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+}
+
+/* At 390 the wordmark, the switch and a labelled link do not fit on one line. The mark
+   alone stands in for the link; `aria-label` on the anchor keeps the accessible name. */
+@media (max-width: 560px) {
+  .lp-nav {
+    gap: var(--space-4);
+  }
+
+  .lp-nav-github span {
+    display: none;
+  }
+
+  .lp-locale button {
+    min-width: 36px;
+    padding-inline: var(--space-2);
+  }
+
+  .lp-brand {
+    font-size: var(--text-md);
+  }
+}
+
+/* Decorative glyph — the wordmark carries the name. */
+.lp-brand span {
+  color: var(--text-muted);
+}
+
+/*
+ * Two options, so a segmented control rather than a dropdown. DESIGN.md §6.4 bans a bare
+ * <select>, and a Radix popover for two mutually exclusive values is overkill.
+ *
+ * Skinned to match `.lp-tabs` exactly — same track, same dark pill, same inverse label. The
+ * page has one sliding-pill idiom; this used to be a second, quieter version of it (no track,
+ * grey pill, dark label), which read as a different kind of control doing the same job.
+ */
+.lp-locale {
+  position: relative;
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--surface-panel);
+}
+
+/* GSAP slides this behind the active option — see useSlidingPill. */
+.lp-locale-pill {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  height: var(--control-sm);
+  border-radius: var(--radius-full);
+  background: var(--text-primary);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.lp-locale button {
+  position: relative;
+  min-width: 44px;
+  height: var(--control-sm);
+  padding-inline: var(--space-4);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-strong);
+  /* Colour only: the pill behind it carries the movement. */
+  transition: color var(--motion-base) var(--ease-out);
+}
+
+.lp-locale button:hover[aria-pressed="false"] {
+  color: var(--text-primary);
+}
+
+.lp-locale button[aria-pressed="true"] {
+  color: var(--text-inverse);
+}
+
+.lp-locale button:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+}
+
+/* ── Section rhythm ─────────────────────────────────────────────────────── */
+
+.lp-section {
+  padding-block: var(--lp-section-gap);
+}
+
+/* Blocks that continue the one above rather than opening a new subject. */
+.lp-section--tight {
+  padding-top: 0;
+}
+
+.lp-section-title {
+  font-family: var(--font-display);
+  font-size: var(--lp-title);
+  font-weight: var(--weight-title);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.018em;
+  text-wrap: balance;
+}
+
+.lp-section-lede {
+  max-width: var(--lp-measure);
+  margin-top: var(--space-3);
+  font-size: var(--lp-lede);
+  color: var(--text-secondary);
+}
+
+/*
+ * Title block with a fact parked at the far right, baseline-aligned with the title. Wraps under
+ * the title below 720 rather than shrinking, since a right-aligned tail next to a two-line
+ * heading reads as a stray fragment.
+ */
+.lp-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.lp-head-note {
+  flex: none;
+  font-size: var(--lp-body-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .lp-head {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .lp-head-note {
+    order: -1;
+  }
+}
+
+/*
+ * Every section's first content block sits one step below its lede. Declared on each block
+ * rather than as `.lp-section-lede + *`: that universal sibling rule loses to any later
+ * `margin: 0` shorthand in this file, which is exactly how the event table ended up jammed
+ * against its lede.
+ */
+.lp-providers,
+.lp-limits,
+.lp-compare {
+  margin-top: var(--lp-lede-gap);
+}
+
+.lp-note {
+  max-width: var(--lp-measure);
+  margin-top: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* The 66ch measure is sized for latin; CJK glyphs are full-width, so this note broke to a
+   second line holding two characters. Given as a character count rather than `none` so the
+   line still has a ceiling if the copy grows. */
+.lp-note--wide {
+  max-width: 108ch;
+}
+
+/* ── Hero ───────────────────────────────────────────────────────────────── */
+
+/* The bottom padding is what stops the video's caption from sitting on the strip's top
+   rule — the two were about 20px apart and read as one block. */
+.lp-hero {
+  padding-block: clamp(var(--space-8), 6vw, 80px) clamp(var(--space-7), 4vw, 56px);
+}
+
+.lp-hero-title {
+  max-width: 19ch;
+  font-family: var(--font-display);
+  font-size: var(--lp-display);
+  font-weight: var(--weight-title);
+  line-height: 1.16;
+  letter-spacing: -0.024em;
+  text-wrap: balance;
+}
+
+.lp-hero-lede {
+  max-width: var(--lp-measure);
+  margin-top: var(--space-5);
+  font-size: var(--lp-lede);
+  color: var(--text-secondary);
+}
+
+.lp-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-7);
+}
+
+.lp-hero-note {
+  margin-top: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.lp-hero-shot {
+  margin: clamp(var(--space-7), 4vw, var(--space-8)) 0 0;
+}
+
+.lp-hero-shot figcaption {
+  max-width: var(--lp-measure);
+  margin-top: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/*
+ * CTAs reuse `.ui-button` from src/components/ui/button.css for colour, size and state,
+ * and override only the radius. DESIGN.md §6.1 allows `--radius-full` for pill contexts;
+ * a landing page is one, and the pill is the reference's most load-bearing shape.
+ */
+.lp-cta {
+  border-radius: var(--radius-full);
+  text-decoration: none;
+}
+
+.lp-cta svg {
+  flex: none;
+}
+
+/* ── Hero kicker ────────────────────────────────────────────────────────── */
+
+/*
+ * Two facts with a hairline between them. No container, no rule above, no glyphs.
+ *
+ * This replaces a capsule badge whose every part was a stock signature of a generated landing
+ * page: the full radius, the drop shadow, the leading dot, the trailing arrow. Read together
+ * they announced the template rather than the product. A rule above the text replaced it for
+ * one round and went the same way — the heading underneath is already emphatic enough to open
+ * on, so a second mark competing with it was one more thing to remove.
+ *
+ * It is also no longer a link. The arrow pointed at the repository, which the header link and
+ * the hero's own secondary button already both point at — a third route to one URL, existing
+ * only because the badge shape came with an arrow.
+ */
+.lp-kicker {
+  display: inline-flex;
+  align-items: baseline;
+  margin-bottom: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--lp-mono);
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.lp-kicker span + span {
+  margin-left: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--border-strong);
+}
+
+/* ── Centred catalogue sections ─────────────────────────────────────────── */
+
+/* Catalogues centre; narrative sections stay left-aligned. Alternating the two is the
+   reference's alignment system, and it does more for rhythm than any spacing change. */
+.lp-centered {
+  text-align: center;
+}
+
+.lp-centered .lp-section-lede {
+  margin-inline: auto;
+}
+
+/* ── Cards ──────────────────────────────────────────────────────────────── */
+
+.lp-cards {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-4);
+  margin: var(--lp-lede-gap) 0 0;
+  padding: 0;
+}
+
+/*
+ * Left-aligned and typographic: no filled icon tile, no chip. Centred
+ * tile-over-title-over-pill is the stock template card, and the tile was the loudest
+ * thing on the page. Stripped back to a glyph, a name, a filename and one line of prose,
+ * six of these read as a catalogue instead of as marketing furniture.
+ */
+.lp-card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-panel);
+  transition:
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-base) var(--ease-out);
+}
+
+.lp-card:hover {
+  border-color: var(--border-strong);
+  /* shadow-sm, not md: six cards lifting off the page on hover is noise. */
+  box-shadow: var(--shadow-sm);
+}
+
+.lp-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.lp-card-head svg {
+  flex: none;
+  color: var(--text-secondary);
+}
+
+/* 19px against a 14px description, not 15 against 15. The two were the same size, which
+   is what made a left-aligned card read as an undifferentiated block of centred text. */
+.lp-card h3 {
+  font-size: var(--lp-subtitle);
+  font-weight: var(--weight-title);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.01em;
+}
+
+/* The real component file name in plain monospace, keeping its own casing — uppercasing
+   turned `SessionSidebar` into `SESSIONSIDEBAR` and threw away the word boundary. */
+.lp-card-ref {
+  margin-top: var(--space-2);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--lp-mono);
+}
+
+.lp-card p {
+  margin-top: var(--space-4);
+  font-size: var(--lp-body-sm);
+  color: var(--text-secondary);
+}
+
+/* ── Tabs ───────────────────────────────────────────────────────────────── */
+
+/* Skin only. Behaviour and markup come from the project's `src/components/ui/tabs.tsx`
+   (Radix), so keyboard handling and roving focus are already correct. */
+.lp-tabs {
+  margin-top: var(--lp-lede-gap);
+}
+
+/* The single track, and the positioning context for the sliding pill. */
+.lp-tabs-list-wrap {
+  position: relative;
+  display: inline-block;
+  padding: 3px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--surface-panel);
+}
+
+/* GSAP slides this onto the active trigger — see useSlidingPill. */
+.lp-tabs-pill {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  height: var(--control-sm);
+  border-radius: var(--radius-full);
+  background: var(--text-primary);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/*
+ * Reset the shared primitive's own track. `src/components/ui/tabs.css` gives
+ * `.ui-tabs__list` a padding, an inset background and a medium radius of its own, so
+ * leaving those in place nested a second track inside this one. Only the properties this
+ * skin does not otherwise set need clearing, hence the explicit list.
+ */
+.lp-tabs [role="tablist"] {
+  display: inline-flex;
+  gap: 2px;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+
+.lp-tabs [role="tab"] {
+  position: relative;
+  height: var(--control-sm);
+  padding-inline: var(--space-5);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-body);
+  /* Colour only: the pill behind it carries the movement. */
+  transition: color var(--motion-base) var(--ease-out);
+}
+
+.lp-tabs [role="tab"]:hover[data-state="inactive"] {
+  color: var(--text-primary);
+}
+
+/*
+ * The primitive marks its active trigger with a white fill plus a shadow. Here the sliding
+ * pill is what marks it, so that fill has to go — it was painting a light rounded block on
+ * top of the dark pill, which is the stray shape that made this control look broken.
+ */
+.lp-tabs [role="tab"][data-state="active"] {
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-inverse);
+}
+
+/* The primitive nudges a pressed trigger down half a pixel. With a pill tracking the
+   trigger's position, that reads as the two coming apart. */
+.lp-tabs [role="tab"]:active {
+  transform: none;
+}
+
+.lp-tabs [role="tab"]:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+}
+
+.lp-tabs [role="tabpanel"] {
+  margin-top: var(--space-6);
+}
+
+.lp-tabs [role="tabpanel"]:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-md);
+}
+
+/* ── Strip: the three steps ─────────────────────────────────────────────── */
+
+/*
+ * One rule, not five. This block previously drew its own top and bottom borders plus a
+ * hairline over each of the three columns — in a band 150px tall that reads as ruling,
+ * not as structure. The single top rule is all that is needed to end the hero.
+ */
+.lp-strip {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.lp-strip-inner {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-8);
+  /* margin-block only: a blanket `margin: 0` here would override `.lp-shell`'s
+     `margin-inline: auto` on the same element and pin the strip to the viewport edge. */
+  margin-block: 0;
+  padding-block: clamp(var(--space-7), 3vw, var(--space-8));
+}
+
+/* Column separation is the 40px gap, nothing more. */
+.lp-strip-inner h3 {
+  font-size: var(--lp-subtitle);
+  font-weight: var(--weight-title);
+  line-height: var(--leading-tight);
+}
+
+.lp-strip-inner p {
+  margin-top: var(--space-3);
+  font-size: var(--lp-body-sm);
+  color: var(--text-secondary);
+}
+
+/* ── Ledger: the composable parts ──────────────────────────────────────── */
+
+
+
+
+
+/* The bottom rule closes the ledger; with two or three columns the final row is the last
+   n items, so it cannot go on `:last-child` alone. */
+
+
+@media (max-width: 980px) {
+  .lp-defs > li:nth-last-child(-n + 3):not(:nth-last-child(-n + 2)) {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 660px) {
+  .lp-defs > li:nth-last-child(-n + 2):not(:last-child) {
+    border-bottom: 0;
+  }
+}
+
+
+
+
+
+/* ── Event -> interface map ─────────────────────────────────────────────── */
+
+/*
+ * No enclosing panel. A border drawn around a table adds a frame and no information, and
+ * the row rules already group it. The event column is sized to its content so the tokens
+ * pack tight instead of floating in a half-empty half-width column.
+ */
+/* A fixed first column, not `max-content`. Each row is its own grid container, so
+   `max-content` sized every row independently and left the descriptions ragged. Chips wrap
+   inside 320px instead. */
+/* ── Pipeline ───────────────────────────────────────────────────────────── */
+
+/*
+ * An overline for the table, not a competing block.
+ *
+ * This was four bordered boxes about 100px tall, one of them filled black — which gave the
+ * claim more visual weight than the mapping it introduces, and divided the width into four
+ * equal columns that lined up with nothing in the table below. Stripped to one light row,
+ * it reads as the sentence it is.
+ */
+.lp-flow {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+  gap: var(--space-3) var(--space-4);
+  margin: var(--space-6) 0 0;
+  padding: 0;
+}
+
+/*
+ * Stages 2..4 grow, and the rule inside each takes the slack, so the chain spans the
+ * container instead of stopping two thirds of the way across and leaving a void.
+ */
+.lp-flow > li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 0 0 auto;
+}
+
+.lp-flow > li + li {
+  flex: 1 1 auto;
+}
+
+/* An arrow glyph in the gap. Sitting on the same baseline as the labels, it carries the
+   direction without needing a box on either side of it. */
+/* A rule in the gap, per the design: the stages are a chain, and one arrowhead per table
+   row is already enough arrowheads for this section. */
+.lp-flow > li + li::before {
+  content: "";
+  flex: 1 1 auto;
+  min-width: var(--space-6);
+  height: 1px;
+  margin-right: var(--space-2);
+  background: var(--border-strong);
+}
+
+/* Stacked below this, with the rule turned upright so the direction survives. */
+@media (max-width: 760px) {
+  .lp-flow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .lp-flow > li,
+  .lp-flow > li + li {
+    flex: 0 0 auto;
+  }
+
+  .lp-flow > li + li::before {
+    flex: 0 0 auto;
+    width: 1px;
+    min-width: 0;
+    height: var(--space-5);
+    margin: 0 var(--space-5) 0 15px;
+  }
+}
+
+.lp-flow-label {
+  font-size: var(--lp-body-sm);
+  font-weight: var(--weight-title);
+  line-height: var(--leading-tight);
+  white-space: nowrap;
+}
+
+/* The last stage is the terminus, so it is the one in ink. */
+.lp-flow > li:last-child .lp-flow-label {
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--text-primary);
+  color: var(--text-inverse);
+}
+
+.lp-flow code {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+/* `runtime/eventNormalizer.ts` on one unbreakable line is wider than a 320 viewport, which gave
+   the whole page a horizontal scrollbar. Scoped to the narrow end so the paths stay intact on
+   every width anyone actually reviews. */
+@media (max-width: 420px) {
+  .lp-flow code {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* ── Mapping rows ───────────────────────────────────────────────────────── */
+
+/* ── Mapper panel ───────────────────────────────────────────────────────── */
+
+/*
+ * Just the panel. This was a two-column grid from when a rail sat beside the table; left
+ * in place it put the table in the 280px first column and left the second column empty,
+ * which is where the void on the right came from.
+ */
+.lp-mapper {
+  margin-top: var(--space-7);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-panel);
+  overflow: hidden;
+}
+
+/* ── Mapping table ──────────────────────────────────────────────────────── */
+
+.lp-map {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.lp-map th,
+.lp-map td {
+  padding: var(--space-4) var(--space-5);
+  vertical-align: middle;
+}
+
+.lp-map thead th {
+  padding-block: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-eyebrow);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/*
+ * Zebra instead of a rule per row: an arrow spans the middle column, and a hairline would
+ * cut it in half. Parity comes from the index in Landing.tsx — CSS has no nth-of-class.
+ *
+ * Half-strength `--surface-inset`: at full strength the banding was darker than the chips
+ * sitting on it, so the stripe read as a state rather than as a reading aid. No hover
+ * state either — nothing in a row is interactive, so a highlight would promise otherwise.
+ */
+.lp-map tbody tr[data-zebra="true"] {
+  background: color-mix(in srgb, var(--surface-inset) 50%, var(--surface-panel));
+}
+
+/* The family cell doubles as the row header, and its divider is what used to be the
+   border between the two panes. */
+.lp-map tbody th {
+  width: 1%;
+  border-right: 1px solid var(--border-subtle);
+  font-weight: inherit;
+  /* Keeps the glyph beside the name instead of letting the cell wrap it above. */
+  white-space: nowrap;
+}
+
+.lp-map tbody th > * {
+  vertical-align: middle;
+}
+
+/* Outlined, not filled: six filled tiles down a column is the icon-tile stack again. */
+.lp-map-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin-right: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  color: var(--text-secondary);
+}
+
+.lp-map-family {
+  font-size: var(--lp-body-sm);
+  font-weight: var(--weight-title);
+  line-height: var(--leading-tight);
+  white-space: nowrap;
+}
+
+.lp-map-events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.lp-map-events code {
+  padding: 3px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--lp-mono);
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+.lp-map-arrow {
+  width: 1%;
+  color: var(--text-muted);
+}
+
+/* The component column takes the slack so the table fills the panel and the event column
+   is wide enough to group its chips rather than stacking them one per line. */
+.lp-map thead th:last-child,
+.lp-map tbody td:last-child {
+  width: 34%;
+}
+
+.lp-map-arrow svg {
+  display: block;
+}
+
+.lp-map-target {
+  display: block;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--lp-body);
+  font-weight: var(--weight-strong);
+}
+
+.lp-map-note {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--lp-body-sm);
+  color: var(--text-secondary);
+}
+
+/*
+ * Below this the four columns cannot share a line. The table becomes a stack of blocks:
+ * the family reads as each block's heading, the arrow turns upright.
+ */
+@media (max-width: 900px) {
+  .lp-map thead {
+    display: none;
+  }
+
+  .lp-map tbody tr,
+  .lp-map tbody th,
+  .lp-map tbody td {
+    display: block;
+    width: auto;
+  }
+
+  .lp-map tbody tr {
+    padding: var(--space-4) 0;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .lp-map tbody th {
+    border-right: 0;
+    padding-bottom: var(--space-3);
+  }
+
+  .lp-map tbody td {
+    padding-block: var(--space-2);
+  }
+
+  .lp-map-arrow svg {
+    transform: rotate(90deg);
+    transform-origin: 8px center;
+  }
+}
+
+/* ── Providers ──────────────────────────────────────────────────────────── */
+
+/*
+ * One card, three stacked bands: the group ledger, the 3x3 grid, then the two facts.
+ *
+ * It was two cards with the ledger in a left column. That column had three rows sitting beside a
+ * three-row grid, so it left a tall empty well under them; as a strip across the top it has no
+ * spare height to leave empty. Merging the facts in removes the second card entirely.
+ *
+ * Internal rules are painted as insets on the cells rather than as divider elements, so a reflow
+ * at a narrower width cannot leave a line hanging in space.
+ */
+.lp-providers {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-panel);
+  overflow: hidden;
+}
+
+.lp-providers-ledger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.lp-providers-ledger > div {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.lp-providers-ledger dt {
+  font-size: var(--lp-body-sm);
+  color: var(--text-secondary);
+}
+
+/* The largest group reads first on weight alone. The vertical bar that used to mark it was
+   removed: it looked like a selected-tab indicator on a row that does not respond to clicks. */
+.lp-providers-ledger > div:first-child dt {
+  font-weight: var(--weight-strong);
+  color: var(--text-primary);
+}
+
+/* `--text-secondary`, not `--text-muted`: these counts are information, and muted measures
+   3.15:1 on the panel — under AA. Same reason as the note at the top of this file. */
+.lp-providers-ledger dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--lp-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.lp-providers-grid {
+  list-style: none;
+  display: grid;
+  /* `minmax(0, …)`, not `1fr`: a bare `1fr` floors at min-content, which the tag-bearing cells
+     push past the card edge around 1024 — clipped by the overflow above, so it fails silently. */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+}
+
+/*
+ * `space-between` is what aligns the tags. With the mark and name packed left and the tag pushed
+ * to the cell's right edge, every tag in a column lands on the same x — where previously each
+ * tag started wherever its name happened to end, so no two lined up.
+ */
+.lp-providers-grid li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+  min-height: 52px;
+  padding: var(--space-3) var(--space-4);
+  box-shadow:
+    inset -1px 0 0 var(--border-subtle),
+    inset 0 -1px 0 var(--border-subtle);
+}
+
+.lp-providers-grid li:nth-child(3n) {
+  box-shadow: inset 0 -1px 0 var(--border-subtle);
+}
+
+.lp-provider-mark {
+  display: inline-flex;
+  flex: none;
+  color: var(--text-primary);
+}
+
+.lp-provider-mark svg {
+  width: 16px;
+  height: 16px;
+}
+
+.lp-provider-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-right: auto;
+  font-size: var(--lp-body);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lp-provider-protocol {
+  flex: none;
+  padding: 1px var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* The lone anthropic-protocol row. Inverted because it is the one exception in the grid, not
+   because it is selected — there is nothing to select. */
+.lp-providers-grid li[data-outlier] {
+  background: var(--accent);
+  box-shadow: none;
+}
+
+.lp-providers-grid li[data-outlier] .lp-provider-mark,
+.lp-providers-grid li[data-outlier] .lp-provider-name {
+  color: var(--text-inverse);
+}
+
+.lp-providers-grid li[data-outlier] .lp-provider-protocol {
+  border-color: color-mix(in srgb, var(--text-inverse) 32%, transparent);
+  background: color-mix(in srgb, var(--text-inverse) 12%, transparent);
+  color: var(--text-inverse);
+}
+
+/* Third band. Distinct glyphs on purpose — a padlock beside "protocols" reads as a security
+   claim, which it is not. */
+.lp-providers-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* No dividing rule between the two. A 2-up split under a 3-column grid puts that line between
+   column boundaries, matching nothing — and each fact is already fenced off by its own glyph and
+   number. */
+.lp-providers-facts > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-5);
+}
+
+.lp-providers-facts svg {
+  grid-row: 1 / span 2;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  color: var(--text-muted);
+  stroke-width: 1.5;
+}
+
+.lp-providers-facts dt {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--lp-body-sm);
+  font-weight: var(--weight-strong);
+  color: var(--text-primary);
+}
+
+.lp-providers-facts dt span {
+  font-family: var(--font-mono);
+  font-size: var(--lp-mono);
+  font-weight: var(--weight-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.lp-providers-facts dd {
+  margin: 0;
+  font-size: var(--lp-body-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+/*
+ * 3 columns straight to 1, with no 2-column step. Nine is odd, so two columns always leave an
+ * orphan in the last row — an empty half cell with a divider beside it — and the cells get wide
+ * enough that name and tag sit at opposite ends of a gulf. One column reads as a list, which is
+ * what the content is.
+ */
+@media (max-width: 900px) {
+  .lp-providers-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-providers-grid li,
+  .lp-providers-grid li:nth-child(3n) {
+    box-shadow: inset 0 -1px 0 var(--border-subtle);
+  }
+
+  .lp-providers-grid li[data-outlier] {
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .lp-providers-facts {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stacked, the two facts need a horizontal rule between them — a vertical gap alone reads as
+     one block of text. This one spans the full card, so it lines up with the band above it. */
+  .lp-providers-facts > div:first-child {
+    box-shadow: inset 0 -1px 0 var(--border-subtle);
+  }
+}
+
+/* ── Tinted band: themes ────────────────────────────────────────────────── */
+
+.lp-band {
+  padding-block: var(--lp-section-gap);
+  border-block: 1px solid var(--border-subtle);
+  background: var(--surface-inset);
+}
+
+.lp-theme-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-7) var(--space-8);
+  margin-top: var(--lp-lede-gap);
+}
+
+.lp-theme-group-title {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-eyebrow);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.lp-themes {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: var(--space-4) var(--space-3);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+}
+
+.lp-theme {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/*
+ * A paint chip: three flush bands in the proportions the editor uses — canvas, panel,
+ * accent. The previous swatch drew a rounded box with a white bar and a dot floating
+ * inside it, which read as an unfinished placeholder rather than a colour sample.
+ */
+.lp-theme-chip {
+  display: flex;
+  height: 44px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  transition: box-shadow var(--motion-fast) var(--ease-out);
+}
+
+.lp-theme-chip i {
+  display: block;
+  height: 100%;
+}
+
+.lp-theme-chip i[data-band="canvas"] {
+  flex: 2;
+  background: var(--chip-canvas);
+}
+
+.lp-theme-chip i[data-band="accent"] {
+  flex: 1;
+  background: var(--chip-accent);
+}
+
+.lp-theme:hover .lp-theme-chip {
+  box-shadow: var(--shadow-md);
+}
+
+.lp-theme-name {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+/* ── Export ─────────────────────────────────────────────────────────────── */
+
+/* The install commands sit beside the title rather than under the lede, so they do not push
+   the file list further down the page. Below 860 they drop under it — a bordered box next to a
+   wrapping two-line heading reads as a stray fragment. */
+.lp-head--steps {
+  align-items: flex-start;
+}
+
+.lp-runsteps {
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  overflow: hidden;
+}
+
+.lp-runsteps ol {
+  list-style: none;
+  display: flex;
+  margin: 0;
+  padding: 0;
+}
+
+.lp-runsteps li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+/* The arrow between the two steps: an ordered pair, so the direction is worth drawing. Done as
+   a pseudo-element rather than a character in the copy, which would end up in the clipboard. */
+.lp-runsteps li + li::before {
+  content: "→";
+  margin-right: var(--space-3);
+  color: var(--text-secondary);
+}
+
+.lp-runsteps-index {
+  font-family: var(--font-mono);
+  font-size: var(--lp-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.lp-runsteps code {
+  font-family: var(--font-mono);
+  font-size: var(--lp-body-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.lp-runsteps button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-md);
+  border: 0;
+  border-left: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--motion-fast) var(--ease-out),
+    background var(--motion-fast) var(--ease-out);
+}
+
+.lp-runsteps button:hover {
+  background: var(--surface-inset);
+  color: var(--text-primary);
+}
+
+.lp-runsteps button[data-copied="true"] {
+  color: var(--text-primary);
+}
+
+.lp-runsteps button:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+}
+
+/* Core files ------------------------------------------------------------- */
+
+.lp-files {
+  margin-top: var(--lp-lede-gap);
+}
+
+.lp-files-label {
+  font-size: var(--lp-subtitle);
+  font-weight: var(--weight-title);
+  color: var(--text-primary);
+}
+
+.lp-files-list {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Three columns, so the notes form a column of their own instead of trailing each path at
+   whatever x it happens to end. 28ch is sized to the longest path in the list
+   (`adapters/backendAdapter.ts`, 26 characters) — at 22ch that one row wrapped onto two lines
+   while the other four sat on one. `minmax(0, …)` keeps a longer path from widening the track
+   past the container instead. */
+.lp-files-list li {
+  display: grid;
+  grid-template-columns: 3ch minmax(0, 28ch) minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--space-5);
+  padding-block: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.lp-files-index {
+  font-family: var(--font-mono);
+  font-size: var(--lp-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.lp-files-list code {
+  font-family: var(--font-mono);
+  font-size: var(--lp-body);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.lp-files-note {
+  font-size: var(--lp-body-sm);
+  color: var(--text-secondary);
+}
+
+/* Disclosure ------------------------------------------------------------- */
+
+.lp-files-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--motion-fast) var(--ease-out),
+    background var(--motion-fast) var(--ease-out);
+}
+
+/* The one control in this block, so the only thing that reacts to a pointer. */
+.lp-files-toggle:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+}
+
+.lp-files-toggle:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+}
+
+.lp-files-toggle-label {
+  font-size: var(--lp-body);
+  font-weight: var(--weight-strong);
+  color: var(--text-primary);
+}
+
+.lp-files-toggle-sep {
+  color: var(--border-strong);
+}
+
+.lp-files-toggle-count,
+.lp-files-toggle-action {
+  font-size: var(--lp-body-sm);
+  color: var(--text-secondary);
+}
+
+.lp-files-toggle-count {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-files-toggle svg {
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  color: var(--text-secondary);
+  stroke-width: 1.5;
+  transition: transform var(--motion-base) var(--ease-out);
+}
+
+/* 45deg turns the plus into a close mark, so open state needs no second glyph. */
+.lp-files-toggle[aria-expanded="true"] svg {
+  transform: rotate(45deg);
+}
+
+.lp-files-panel {
+  display: none;
+  overflow: hidden;
+}
+
+.lp-tree {
+  margin-top: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--lp-mono);
+  line-height: 1.85;
+  /* `pre`, not the inherited `pre-wrap`: an ASCII tree carries its structure in the leading
+     `│  ├─` runs, and wrapping a long row drops it to column zero where it reads as a new
+     top-level entry. Scrolling the box keeps the shape intact on a phone. */
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* Run scripts ------------------------------------------------------------ */
+
+/*
+ * One dark bar of four commands. They were four label/value pairs on hairlines, which spent a
+ * quarter of the row on `vite` and `tsc --noEmit` — true, but not what anyone reads this for.
+ * The names alone say "these four scripts exist", and the bar gives the section a floor.
+ */
+.lp-scripts {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: var(--space-6) 0 0;
+  padding: 0;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  overflow: hidden;
+}
+
+.lp-scripts li {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--space-3);
+  box-shadow: inset -1px 0 0 color-mix(in srgb, var(--text-inverse) 18%, transparent);
+}
+
+.lp-scripts li:last-child {
+  box-shadow: none;
+}
+
+.lp-scripts code {
+  font-family: var(--font-mono);
+  font-size: var(--lp-body-sm);
+  color: var(--text-inverse);
+  white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+  .lp-head--steps {
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .lp-runsteps {
+    align-self: stretch;
+  }
+
+  .lp-runsteps ol {
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 700px) {
+  /* Notes drop under their path; a third column cannot hold prose at this width. */
+  .lp-files-list li {
+    grid-template-columns: 3ch minmax(0, 1fr);
+    gap: var(--space-1) var(--space-4);
+  }
+
+  .lp-files-note {
+    grid-column: 2;
+  }
+
+  .lp-scripts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lp-scripts li:nth-child(2n) {
+    box-shadow: none;
+  }
+
+  .lp-scripts li:nth-child(-n + 2) {
+    box-shadow:
+      inset -1px 0 0 color-mix(in srgb, var(--text-inverse) 18%, transparent),
+      inset 0 -1px 0 color-mix(in srgb, var(--text-inverse) 18%, transparent);
+  }
+
+  .lp-scripts li:nth-child(2) {
+    box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--text-inverse) 18%, transparent);
+  }
+}
+
+@media (max-width: 420px) {
+  /* `npm run typecheck` is the longest cell and does not wrap, so two columns push the bar past
+     a 320-wide viewport — clipped by the bar's radius, but the page picks up a real horizontal
+     scrollbar. One column per row below this. */
+  .lp-scripts {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-scripts li,
+  .lp-scripts li:nth-child(2n),
+  .lp-scripts li:nth-child(-n + 2),
+  .lp-scripts li:nth-child(2) {
+    box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--text-inverse) 18%, transparent);
+  }
+
+  .lp-scripts li:last-child {
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .lp-runsteps ol {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* Stacked, the arrow points the wrong way; the numbers already carry the order. */
+  .lp-runsteps li + li::before {
+    content: none;
+  }
+}
+
+/* ── Boundaries ─────────────────────────────────────────────────────────── */
+
+/* Label left, prose right, one row each. Three equal columns of running text gave the
+   three boundaries no hierarchy and no rhythm. */
+/* 92ch left the first row's prose breaking with two characters on line two. As with `.lp-note`,
+   the measure was sized for latin and these rows are CJK. */
+.lp-limits {
+  max-width: 112ch;
+}
+
+.lp-limits > div {
+  display: grid;
+  grid-template-columns: minmax(200px, 0.4fr) minmax(0, 1.6fr);
+  gap: var(--space-2) var(--space-7);
+  padding-block: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.lp-limits > div:last-child {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.lp-limits dt {
+  font-size: var(--lp-subtitle);
+  font-weight: var(--weight-title);
+  line-height: var(--leading-tight);
+}
+
+.lp-limits dd {
+  margin: 0;
+  font-size: var(--lp-body-sm);
+  color: var(--text-secondary);
+}
+
+@media (max-width: 660px) {
+  .lp-limits > div {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Closing ────────────────────────────────────────────────────────────── */
+
+.lp-closing {
+  padding-block: var(--lp-section-gap);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.lp-closing h2 {
+  max-width: 22ch;
+  font-family: var(--font-display);
+  font-size: var(--lp-title);
+  font-weight: var(--weight-title);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.018em;
+}
+
+.lp-closing p {
+  max-width: var(--lp-measure);
+  margin-top: var(--space-3);
+  font-size: var(--lp-lede);
+  color: var(--text-secondary);
+}
+
+/* ── Media frames ───────────────────────────────────────────────────────── */
+
+.lp-shot {
+  position: relative;
+  display: block;
+  margin: 0;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-panel);
+  box-shadow: var(--shadow-md);
+  transition: border-color var(--motion-base) var(--ease-out);
+}
+
+/* The hero is the page's only floating surface — DESIGN.md §5 keeps depth scarce. */
+.lp-hero-shot .lp-shot {
+  box-shadow: var(--shadow-lg);
+}
+
+.lp-shot:hover {
+  border-color: var(--border-strong);
+}
+
+.lp-shot img,
+.lp-shot video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.lp-media-toggle {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-sm);
+  height: var(--control-sm);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--surface-panel);
+  color: var(--text-secondary);
+  opacity: 0;
+  transition:
+    opacity var(--motion-base) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out);
+}
+
+/* Revealed on hover or keyboard focus, but always reachable by Tab — the control exists
+   for WCAG 2.2.2, so it must not depend on a pointer. */
+.lp-shot--video:hover .lp-media-toggle,
+.lp-media-toggle:focus-visible {
+  opacity: 1;
+}
+
+.lp-media-toggle:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.lp-media-toggle:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+}
+
+.lp-shot-missing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  height: 100%;
+  background: var(--surface-inset);
+  color: var(--text-secondary);
+}
+
+.lp-shot-missing strong {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-strong);
+}
+
+.lp-shot-missing code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+/* ── Theme wipe ─────────────────────────────────────────────────────────── */
+
+.lp-compare {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-panel);
+  box-shadow: var(--shadow-sm);
+  touch-action: pan-y;
+  cursor: ew-resize;
+}
+
+.lp-compare img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.lp-compare-top {
+  position: absolute;
+  inset: 0;
+  /* No transition: the wipe must track the pointer exactly. */
+  clip-path: inset(0 calc(100% - var(--wipe)) 0 0);
+}
+
+/* Bottom corners: the editor's own topbar lives up top, and badges placed there landed on
+   its wordmark and export button. */
+.lp-compare-badge {
+  position: absolute;
+  bottom: var(--space-3);
+  padding: 3px var(--space-3);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--text-primary) 88%, transparent);
+  color: var(--text-inverse);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.lp-compare-badge[data-side="left"] {
+  left: var(--space-3);
+}
+
+.lp-compare-badge[data-side="right"] {
+  right: var(--space-3);
+}
+
+.lp-compare-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--wipe);
+  width: 2px;
+  margin-left: -1px;
+  background: var(--surface-panel);
+  box-shadow: 0 0 0 1px var(--border-strong);
+}
+
+.lp-compare-handle:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+}
+
+.lp-compare-grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-md);
+  height: var(--control-md);
+  margin: calc(var(--control-md) / -2) 0 0 calc(var(--control-md) / -2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--surface-panel);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-md);
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+
+.lp-footer {
+  border-top: 1px solid var(--border-subtle);
+  padding-block: var(--space-7);
+}
+
+.lp-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.lp-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.lp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition:
+    color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out);
+}
+
+.lp-link:hover {
+  color: var(--text-primary);
+  border-bottom-color: var(--border-strong);
+}
+
+.lp-link:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+.lp-version {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+/*
+ * Scroll entrances are applied by GSAP in Landing.tsx, not here, so a page whose bundle
+ * fails renders as plain visible content rather than a blank column. This block only
+ * covers the hover affordances GSAP does not touch.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .lp-skip,
+  .lp-theme-chip {
+    transition: none;
+  }
+}

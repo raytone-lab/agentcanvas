@@ -1,0 +1,105 @@
+.ui-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+}
+
+.ui-select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-panel);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+  padding-inline: var(--space-3);
+  /* leave room for the chevron */
+  padding-inline-end: var(--space-7);
+  transition: border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out);
+}
+
+.ui-select-wrap[data-size="sm"] .ui-select {
+  height: var(--control-sm);
+  font-size: var(--text-sm);
+}
+.ui-select-wrap[data-size="md"] .ui-select {
+  height: var(--control-md);
+}
+.ui-select-wrap[data-size="lg"] .ui-select {
+  height: var(--control-lg);
+  font-size: var(--text-lg);
+}
+
+.ui-select:hover:not(:disabled) {
+  border-color: var(--text-muted);
+}
+
+.ui-select:focus-visible {
+  outline: 2px solid transparent;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.ui-select-wrap[data-invalid="true"] .ui-select {
+  border-color: var(--danger);
+}
+.ui-select-wrap[data-invalid="true"] .ui-select:focus-visible {
+  box-shadow: 0 0 0 2px var(--surface-panel),
+    0 0 0 4px color-mix(in srgb, var(--danger) 60%, white);
+}
+
+.ui-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.ui-select-chevron {
+  position: absolute;
+  inset-inline-end: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: color var(--motion-fast) var(--ease-out);
+}
+
+.ui-select-wrap:hover:not([data-disabled="true"]) .ui-select-chevron {
+  color: var(--text-secondary);
+}
+
+/* SelectMenu (Radix-backed) trigger reuses the native-select look but is a
+   button, so it needs flex layout + a truncating value. The open popup is
+   fully styled — see .ui-dropdown-menu. Use SelectMenu, never a raw <select>. */
+.ui-select-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-2);
+  text-align: left;
+  cursor: pointer;
+}
+.ui-select-menu-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+.ui-select-menu-trigger[data-state="open"] {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+.ui-select-menu-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ui-select-menu-value[data-placeholder="true"] {
+  color: var(--text-muted);
+}
+/* Popup at least as wide as its trigger. */
+.ui-select-menu-content {
+  min-width: var(--radix-dropdown-menu-trigger-width);
+}

@@ -1,0 +1,214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentmatrix.dev/schemas/agentcanvas-experience-v1.schema.json",
+  "title": "AgentCanvas safe App Template experience v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contractVersion", "template"],
+  "properties": {
+    "contractVersion": { "const": "agentcanvas-experience-v1", "maxLength": 32 },
+    "template": {
+      "enum": ["chat", "coding", "research", "artifact", "tool-heavy", "multi-provider"],
+      "maxLength": 32
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "regions": {
+          "type": "array",
+          "maxItems": 6,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/region" }
+        },
+        "slots": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "region", "component", "enabled"],
+            "properties": {
+              "id": { "$ref": "#/$defs/safeId" },
+              "region": { "$ref": "#/$defs/region" },
+              "component": {
+                "enum": ["SessionSidebar", "ChatFrame", "ComposerFrame", "OutputFrame", "GitFrame", "ExportFrame", "DebugDock", "CapabilityTray"],
+                "maxLength": 32
+              },
+              "enabled": { "type": "boolean" }
+            }
+          }
+        },
+        "mainSize": { "type": "number", "minimum": 1, "maximum": 100 },
+        "rightPanelSize": { "type": "number", "minimum": 0, "maximum": 100 },
+        "bottomDockSize": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "preset": { "enum": ["console-light", "graphite", "oxide", "studio-neutral", "paper-trail", "terminal-green"], "maxLength": 32 },
+        "density": { "enum": ["compact", "comfortable"], "maxLength": 32 },
+        "radius": { "type": "number", "minimum": 0, "maximum": 32 },
+        "motion": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "reasoning": { "enum": ["minimal", "pulse", "wave", "terminal", "shimmer", "bars", "orbit"], "maxLength": 32 },
+            "writing": { "enum": ["smooth-stream", "typewriter", "chunked"], "maxLength": 32 },
+            "toolCall": { "enum": ["card", "timeline", "inline", "drawer"], "maxLength": 32 },
+            "writingParams": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "streamWps": { "type": "number", "minimum": 1, "maximum": 240 },
+                "typeCps": { "type": "number", "minimum": 1, "maximum": 1000 },
+                "chunkSize": { "type": "integer", "minimum": 1, "maximum": 200 },
+                "chunkIntervalMs": { "type": "integer", "minimum": 0, "maximum": 5000 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "composer": { "$ref": "#/$defs/composer" },
+    "conversation": { "$ref": "#/$defs/conversation" },
+    "sidebar": { "$ref": "#/$defs/sidebar" },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "attachmentChips": { "type": "boolean" } }
+    },
+    "toolCalls": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "detail": { "enum": ["full", "output-only", "summary"], "maxLength": 32 },
+        "progress": { "enum": ["status-icon", "bar"], "maxLength": 32 },
+        "approval": { "enum": ["inline", "hidden"], "maxLength": 32 }
+      }
+    },
+    "reasoning": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "show": { "enum": ["status", "summary", "thinking"], "maxLength": 32 },
+        "collapse": { "enum": ["auto", "manual", "summary-first", "expanded"], "maxLength": 32 },
+        "expandable": { "type": "boolean" }
+      }
+    },
+    "blocks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "codeDiff": { "type": "boolean" },
+        "errorCollapse": { "type": "boolean" },
+        "toolLogTail": { "type": "boolean" }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [
+        { "not": { "required": ["artifactRenderer"] } },
+        { "not": { "required": ["supportedArtifactRenderers"] } },
+        { "properties": { "artifactRenderer": { "enum": ["auto"] } } },
+        {
+          "properties": {
+            "artifactRenderer": { "enum": ["code"] },
+            "supportedArtifactRenderers": { "not": { "items": { "not": { "enum": ["code"] } } } }
+          }
+        },
+        {
+          "properties": {
+            "artifactRenderer": { "enum": ["diff"] },
+            "supportedArtifactRenderers": { "not": { "items": { "not": { "enum": ["diff"] } } } }
+          }
+        },
+        {
+          "properties": {
+            "artifactRenderer": { "enum": ["markdown"] },
+            "supportedArtifactRenderers": { "not": { "items": { "not": { "enum": ["markdown"] } } } }
+          }
+        },
+        {
+          "properties": {
+            "artifactRenderer": { "enum": ["preview"] },
+            "supportedArtifactRenderers": { "not": { "items": { "not": { "enum": ["preview"] } } } }
+          }
+        },
+        {
+          "properties": {
+            "artifactRenderer": { "enum": ["data"] },
+            "supportedArtifactRenderers": { "not": { "items": { "not": { "enum": ["data"] } } } }
+          }
+        }
+      ],
+      "properties": {
+        "source": { "enum": ["artifact", "console"], "maxLength": 32 },
+        "artifactRenderer": { "enum": ["auto", "code", "diff", "markdown", "preview", "data"], "maxLength": 32 },
+        "surface": { "enum": ["right-panel", "overlay"], "maxLength": 32 },
+        "supportedArtifactRenderers": {
+          "type": "array",
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": { "enum": ["code", "diff", "markdown", "preview", "data"], "maxLength": 32 }
+        }
+      }
+    },
+    "export": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "target": { "const": "vite-react", "maxLength": 32 },
+        "includeHarnessAdapter": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "safeId": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$", "maxLength": 64 },
+    "region": { "enum": ["sidebar", "main", "composer", "right-panel", "bottom-dock", "overlay"], "maxLength": 32 },
+    "composer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fileUpload": { "type": "boolean" },
+        "mic": { "type": "boolean" },
+        "thinkingBudget": { "type": "boolean" },
+        "modelSwitcher": { "type": "boolean" },
+        "toolToggle": { "type": "boolean" },
+        "promptShortcuts": { "type": "boolean" }
+      }
+    },
+    "conversation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "speakerLabels": { "type": "boolean" },
+        "userAvatar": { "type": "boolean" },
+        "agentAvatar": { "type": "boolean" },
+        "messageActions": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "copy": { "type": "boolean" },
+            "regenerate": { "type": "boolean" },
+            "edit": { "type": "boolean" }
+          }
+        },
+        "emptyState": { "enum": ["minimal", "suggested-prompts", "capability-hints"], "maxLength": 32 }
+      }
+    },
+    "sidebar": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "newButton": { "type": "boolean" },
+        "search": { "type": "boolean" },
+        "grouping": { "type": "boolean" },
+        "footer": { "type": "boolean" }
+      }
+    }
+  }
+}

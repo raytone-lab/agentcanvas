@@ -1,0 +1,18 @@
+node_modules
+dist
+out
+.DS_Store
+*.log
+.tmp/
+.playwright-cli/
+
+# Vendored @agent-ux prebuilt packages. Their paths contain dist/, which the
+# rule above would otherwise swallow.
+#
+# vendor/agent-ux is the build dependency resolved by the `file:` specifiers in
+# package.json; src/export/templates/vendor is the copy the scaffold exporter
+# stamps into generated projects.
+!vendor/**/dist/
+!vendor/**/dist/**
+!src/export/templates/vendor/**/dist/
+!src/export/templates/vendor/**/dist/**

@@ -1,0 +1,23 @@
+{
+  "name": "@agent-ux/react",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "private": true,
+  "dependencies": {
+    "@agent-ux/protocol": "file:../protocol",
+    "@agent-ux/render-core": "file:../render-core",
+    "@agent-ux/runtime": "file:../runtime"
+  },
+  "peerDependencies": {
+    "react": ">=18.3.0 || >=19.0.0"
+  }
+}

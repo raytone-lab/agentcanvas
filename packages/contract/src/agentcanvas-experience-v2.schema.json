@@ -1,0 +1,570 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentmatrix.dev/schemas/agentcanvas-experience-v2.schema.json",
+  "title": "AgentCanvas declarative product interface v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contractVersion", "surface", "brand", "welcome", "canvas"],
+  "properties": {
+    "contractVersion": {
+      "const": "agentcanvas-experience-v2",
+      "maxLength": 32
+    },
+    "surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "properties": {
+        "mode": {
+          "enum": ["agentcanvas", "custom"],
+          "maxLength": 32
+        }
+      }
+    },
+    "brand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["displayName", "mark", "accent", "corners", "showPoweredBy"],
+      "properties": {
+        "displayName": {
+          "$ref": "#/$defs/displayName"
+        },
+        "mark": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "id"],
+              "properties": {
+                "kind": { "const": "builtin" },
+                "id": {
+                  "enum": [
+                    "sparkles",
+                    "messages-square",
+                    "bot",
+                    "terminal",
+                    "search",
+                    "chart"
+                  ],
+                  "maxLength": 32
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "assetId"],
+              "properties": {
+                "kind": { "const": "asset" },
+                "assetId": { "$ref": "#/$defs/safeId" }
+              }
+            }
+          ]
+        },
+        "accent": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind"],
+              "properties": { "kind": { "const": "theme" } }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "color"],
+              "properties": {
+                "kind": { "const": "custom" },
+                "color": { "$ref": "#/$defs/color" }
+              }
+            }
+          ]
+        },
+        "corners": {
+          "enum": ["theme", "rounded", "square"],
+          "maxLength": 32
+        },
+        "showPoweredBy": { "type": "boolean" }
+      }
+    },
+    "welcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "headline",
+        "supportingText",
+        "suggestedPrompts",
+        "showSuggestedPrompts"
+      ],
+      "properties": {
+        "headline": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]+$"
+        },
+        "supportingText": {
+          "type": "string",
+          "maxLength": 512,
+          "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]*$"
+        },
+        "suggestedPrompts": {
+          "type": "array",
+          "maxItems": 6,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 280,
+            "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]+$"
+          }
+        },
+        "showSuggestedPrompts": { "type": "boolean" }
+      }
+    },
+    "canvas": { "$ref": "#/$defs/canvas" },
+    "design": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "colorMode": {
+          "enum": ["theme", "light", "dark", "system"],
+          "maxLength": 32
+        },
+        "colors": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "canvas": { "$ref": "#/$defs/color" },
+            "panel": { "$ref": "#/$defs/color" },
+            "raised": { "$ref": "#/$defs/color" },
+            "inset": { "$ref": "#/$defs/color" },
+            "hover": { "$ref": "#/$defs/color" },
+            "text": { "$ref": "#/$defs/color" },
+            "textSecondary": { "$ref": "#/$defs/color" },
+            "textMuted": { "$ref": "#/$defs/color" },
+            "border": { "$ref": "#/$defs/color" },
+            "borderStrong": { "$ref": "#/$defs/color" },
+            "action": { "$ref": "#/$defs/color" },
+            "actionText": { "$ref": "#/$defs/color" },
+            "success": { "$ref": "#/$defs/color" },
+            "warning": { "$ref": "#/$defs/color" },
+            "danger": { "$ref": "#/$defs/color" },
+            "focus": { "$ref": "#/$defs/color" }
+          }
+        },
+        "typography": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "fontUi": { "$ref": "#/$defs/fontFamily" },
+            "fontDisplay": { "$ref": "#/$defs/fontFamily" },
+            "fontMono": { "$ref": "#/$defs/fontFamily" },
+            "baseSize": { "type": "number", "minimum": 11, "maximum": 20 },
+            "headingScale": {
+              "type": "number",
+              "minimum": 0.9,
+              "maximum": 2
+            }
+          }
+        },
+        "geometry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "spacingScale": {
+              "type": "number",
+              "minimum": 0.75,
+              "maximum": 1.5
+            },
+            "radiusScale": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "borderScale": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2
+            }
+          }
+        }
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stylesheets": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["assetId", "layer"],
+            "properties": {
+              "assetId": { "$ref": "#/$defs/safeId" },
+              "layer": {
+                "enum": ["base", "theme", "overrides"],
+                "maxLength": 32
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "safeId": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$",
+      "maxLength": 64
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]+$"
+    },
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$",
+      "maxLength": 9
+    },
+    "fontFamily": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^(?!.*[;{}@])(?!.*[uU][rR][lL]\\s*\\()[^\\u0000-\\u001f\\u007f]+$"
+    },
+    "region": {
+      "enum": [
+        "sidebar",
+        "main",
+        "composer",
+        "right-panel",
+        "bottom-dock",
+        "overlay"
+      ],
+      "maxLength": 32
+    },
+    "slot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "region", "component", "enabled"],
+      "properties": {
+        "id": { "$ref": "#/$defs/safeId" },
+        "region": { "$ref": "#/$defs/region" },
+        "component": {
+          "enum": [
+            "SessionSidebar",
+            "ChatFrame",
+            "ComposerFrame",
+            "OutputFrame",
+            "GitFrame",
+            "ExportFrame",
+            "DebugDock",
+            "CapabilityTray"
+          ],
+          "maxLength": 32
+        },
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "canvas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["template"],
+      "properties": {
+        "template": {
+          "enum": [
+            "chat",
+            "coding",
+            "research",
+            "artifact",
+            "tool-heavy",
+            "multi-provider"
+          ],
+          "maxLength": 32
+        },
+        "layout": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "regions": {
+              "type": "array",
+              "maxItems": 6,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/region" }
+            },
+            "slots": {
+              "type": "array",
+              "maxItems": 32,
+              "items": { "$ref": "#/$defs/slot" }
+            },
+            "mainSize": { "type": "number", "minimum": 1, "maximum": 100 },
+            "rightPanelSize": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "bottomDockSize": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "theme": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preset": {
+              "enum": [
+                "console-light",
+                "graphite",
+                "oxide",
+                "studio-neutral",
+                "paper-trail",
+                "terminal-green"
+              ],
+              "maxLength": 32
+            },
+            "density": {
+              "enum": ["compact", "comfortable"],
+              "maxLength": 32
+            },
+            "radius": { "type": "number", "minimum": 0, "maximum": 32 },
+            "motion": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "reasoning": {
+                  "enum": [
+                    "minimal",
+                    "pulse",
+                    "wave",
+                    "terminal",
+                    "shimmer",
+                    "bars",
+                    "orbit"
+                  ],
+                  "maxLength": 32
+                },
+                "writing": {
+                  "enum": ["smooth-stream", "typewriter", "chunked"],
+                  "maxLength": 32
+                },
+                "toolCall": {
+                  "enum": ["card", "timeline", "inline", "drawer"],
+                  "maxLength": 32
+                },
+                "writingParams": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "streamWps": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 240
+                    },
+                    "typeCps": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 1000
+                    },
+                    "chunkSize": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 200
+                    },
+                    "chunkIntervalMs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 5000
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "composer": { "$ref": "#/$defs/composer" },
+        "conversation": { "$ref": "#/$defs/conversation" },
+        "sidebar": { "$ref": "#/$defs/sidebar" },
+        "context": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "attachmentChips": { "type": "boolean" } }
+        },
+        "toolCalls": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "detail": {
+              "enum": ["full", "output-only", "summary"],
+              "maxLength": 32
+            },
+            "progress": {
+              "enum": ["status-icon", "bar"],
+              "maxLength": 32
+            },
+            "approval": {
+              "enum": ["inline", "hidden"],
+              "maxLength": 32
+            }
+          }
+        },
+        "reasoning": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "show": {
+              "enum": ["status", "summary", "thinking"],
+              "maxLength": 32
+            },
+            "collapse": {
+              "enum": ["auto", "manual", "summary-first", "expanded"],
+              "maxLength": 32
+            },
+            "expandable": { "type": "boolean" }
+          }
+        },
+        "blocks": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "codeDiff": { "type": "boolean" },
+            "errorCollapse": { "type": "boolean" },
+            "toolLogTail": { "type": "boolean" }
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "anyOf": [
+            { "not": { "required": ["artifactRenderer"] } },
+            { "not": { "required": ["supportedArtifactRenderers"] } },
+            { "properties": { "artifactRenderer": { "enum": ["auto"] } } },
+            {
+              "properties": {
+                "artifactRenderer": { "enum": ["code"] },
+                "supportedArtifactRenderers": {
+                  "contains": { "const": "code" }
+                }
+              }
+            },
+            {
+              "properties": {
+                "artifactRenderer": { "enum": ["diff"] },
+                "supportedArtifactRenderers": {
+                  "contains": { "const": "diff" }
+                }
+              }
+            },
+            {
+              "properties": {
+                "artifactRenderer": { "enum": ["markdown"] },
+                "supportedArtifactRenderers": {
+                  "contains": { "const": "markdown" }
+                }
+              }
+            },
+            {
+              "properties": {
+                "artifactRenderer": { "enum": ["preview"] },
+                "supportedArtifactRenderers": {
+                  "contains": { "const": "preview" }
+                }
+              }
+            },
+            {
+              "properties": {
+                "artifactRenderer": { "enum": ["data"] },
+                "supportedArtifactRenderers": {
+                  "contains": { "const": "data" }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "source": {
+              "enum": ["artifact", "console"],
+              "maxLength": 32
+            },
+            "artifactRenderer": {
+              "enum": ["auto", "code", "diff", "markdown", "preview", "data"],
+              "maxLength": 32
+            },
+            "surface": {
+              "enum": ["right-panel", "overlay"],
+              "maxLength": 32
+            },
+            "supportedArtifactRenderers": {
+              "type": "array",
+              "maxItems": 5,
+              "uniqueItems": true,
+              "items": {
+                "enum": ["code", "diff", "markdown", "preview", "data"],
+                "maxLength": 32
+              }
+            }
+          }
+        },
+        "export": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "target": { "const": "vite-react", "maxLength": 32 },
+            "includeHarnessAdapter": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "composer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fileUpload": { "type": "boolean" },
+        "mic": { "type": "boolean" },
+        "thinkingBudget": { "type": "boolean" },
+        "modelSwitcher": { "type": "boolean" },
+        "toolToggle": { "type": "boolean" },
+        "promptShortcuts": { "type": "boolean" }
+      }
+    },
+    "conversation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "speakerLabels": { "type": "boolean" },
+        "userAvatar": { "type": "boolean" },
+        "agentAvatar": { "type": "boolean" },
+        "messageActions": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "copy": { "type": "boolean" },
+            "regenerate": { "type": "boolean" },
+            "edit": { "type": "boolean" }
+          }
+        },
+        "emptyState": {
+          "enum": ["minimal", "suggested-prompts", "capability-hints"],
+          "maxLength": 32
+        }
+      }
+    },
+    "sidebar": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "newButton": { "type": "boolean" },
+        "search": { "type": "boolean" },
+        "grouping": { "type": "boolean" },
+        "footer": { "type": "boolean" }
+      }
+    }
+  }
+}

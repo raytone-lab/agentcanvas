@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "scenario": "runtime_boot_and_workspace_sync",
+  "description": "Runtime status and operation progress update Activity without becoming Agent speech or changing the authoritative Session lifecycle.",
+  "events": [
+    {
+      "event_id": "evt_runtime_001",
+      "session_id": "ssn_design_runtime",
+      "sequence": 1,
+      "type": "runtime.status",
+      "payload_version": 1,
+      "payload": {
+        "state": "booting",
+        "reason": "boot_started",
+        "dispatchable": false,
+        "runtime_driver": "claude_code",
+        "boot_id": "boot_design_1"
+      },
+      "created_at": "2026-08-03T12:00:00Z",
+      "emitted_at": "2026-08-03T12:00:00Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_runtime_002",
+      "session_id": "ssn_design_runtime",
+      "sequence": 2,
+      "type": "runtime.progress",
+      "payload_version": 1,
+      "payload": {
+        "operation_id": "op_workspace_sync_1",
+        "operation": "workspace_sync",
+        "phase": "hydrate",
+        "status": "started",
+        "runtime_driver": "claude_code",
+        "boot_id": "boot_design_1"
+      },
+      "created_at": "2026-08-03T12:00:01Z",
+      "emitted_at": "2026-08-03T12:00:01Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_runtime_003",
+      "session_id": "ssn_design_runtime",
+      "sequence": 3,
+      "type": "runtime.progress",
+      "payload_version": 1,
+      "payload": {
+        "operation_id": "op_workspace_sync_1",
+        "operation": "workspace_sync",
+        "phase": "hydrate",
+        "status": "running",
+        "items_done": 3,
+        "items_total": 8,
+        "bytes_done": 3145728,
+        "bytes_total": 8388608,
+        "elapsed_ms": 1200,
+        "runtime_driver": "claude_code",
+        "boot_id": "boot_design_1"
+      },
+      "created_at": "2026-08-03T12:00:02Z",
+      "emitted_at": "2026-08-03T12:00:02Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_runtime_004",
+      "session_id": "ssn_design_runtime",
+      "sequence": 4,
+      "type": "runtime.message",
+      "payload_version": 1,
+      "payload": {
+        "severity": "warning",
+        "code": "workspace_optional_resource_skipped",
+        "component": "resources",
+        "content": [
+          {
+            "type": "text",
+            "text": "One optional resource was unavailable and was skipped."
+          }
+        ],
+        "details": {
+          "resource_name": "archived-notes",
+          "reason": "not_found"
+        },
+        "runtime_driver": "claude_code"
+      },
+      "created_at": "2026-08-03T12:00:03Z",
+      "emitted_at": "2026-08-03T12:00:03Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_runtime_005",
+      "session_id": "ssn_design_runtime",
+      "sequence": 5,
+      "type": "runtime.progress",
+      "payload_version": 1,
+      "payload": {
+        "operation_id": "op_workspace_sync_1",
+        "operation": "workspace_sync",
+        "phase": "verify",
+        "status": "completed",
+        "items_done": 8,
+        "items_total": 8,
+        "bytes_done": 8388608,
+        "bytes_total": 8388608,
+        "elapsed_ms": 2800,
+        "runtime_driver": "claude_code",
+        "boot_id": "boot_design_1"
+      },
+      "created_at": "2026-08-03T12:00:04Z",
+      "emitted_at": "2026-08-03T12:00:04Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_runtime_006",
+      "session_id": "ssn_design_runtime",
+      "sequence": 6,
+      "type": "runtime.status",
+      "payload_version": 1,
+      "payload": {
+        "state": "ready",
+        "reason": "boot_completed",
+        "dispatchable": true,
+        "elapsed_ms": 4200,
+        "runtime_driver": "claude_code",
+        "boot_id": "boot_design_1"
+      },
+      "created_at": "2026-08-03T12:00:05Z",
+      "emitted_at": "2026-08-03T12:00:05Z",
+      "metadata": {}
+    }
+  ],
+  "live_frames": []
+}

@@ -1,0 +1,118 @@
+@keyframes ui-dialog-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-dialog-content-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.ui-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  background: color-mix(in srgb, var(--text-primary) 32%, transparent);
+  animation: ui-dialog-overlay-in var(--motion-base) var(--ease-out);
+}
+
+.ui-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: var(--z-modal);
+  width: min(92vw, 480px);
+  max-height: 86vh;
+  overflow: auto;
+  padding: var(--space-5);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
+  animation: ui-dialog-content-in var(--motion-base) var(--ease-out);
+}
+
+.ui-dialog:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--shadow-lg), var(--focus-ring);
+}
+
+.ui-dialog-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-right: var(--space-7);
+  margin-bottom: var(--space-4);
+}
+
+.ui-dialog-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  color: var(--text-primary);
+}
+
+.ui-dialog-description {
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--text-muted);
+}
+
+.ui-dialog-close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  transition: background var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
+}
+
+.ui-dialog-close:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.ui-dialog-close:active {
+  background: var(--surface-inset);
+  transform: translateY(0.5px);
+}
+
+.ui-dialog-close:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+}
+
+.ui-dialog-close-icon {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-dialog-overlay,
+  .ui-dialog {
+    animation: none;
+  }
+  .ui-dialog-close {
+    transition: none;
+  }
+}

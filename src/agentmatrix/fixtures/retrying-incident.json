@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "scenario": "model_rate_limit_automatically_rescheduled",
+  "description": "A retrying model failure anchors an Incident and is followed by an explicitly scheduled retry.",
+  "events": [
+    {
+      "event_id": "evt_retry_001",
+      "session_id": "ssn_design_retry",
+      "sequence": 1,
+      "type": "user.message",
+      "payload_version": 1,
+      "turn_id": "trn_design_retry_1",
+      "payload": {
+        "content": [{ "type": "text", "text": "Generate the launch brief." }]
+      },
+      "created_at": "2026-08-03T13:00:00Z",
+      "processed_at": "2026-08-03T13:00:01Z",
+      "emitted_at": "2026-08-03T13:00:00Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_retry_002",
+      "session_id": "ssn_design_retry",
+      "sequence": 2,
+      "type": "session.status_running",
+      "payload_version": 1,
+      "cause_event_id": "evt_retry_001",
+      "turn_id": "trn_design_retry_1",
+      "payload": {},
+      "created_at": "2026-08-03T13:00:01Z",
+      "emitted_at": "2026-08-03T13:00:01Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_retry_003",
+      "session_id": "ssn_design_retry",
+      "sequence": 3,
+      "type": "session.error",
+      "payload_version": 1,
+      "cause_event_id": "evt_retry_001",
+      "turn_id": "trn_design_retry_1",
+      "payload": {
+        "error": {
+          "type": "model_rate_limited_error",
+          "message": "The model provider is temporarily rate limited.",
+          "retry_status": {
+            "type": "retrying",
+            "deadline": "2026-08-03T13:00:20Z",
+            "estimated_resolution": "2026-08-03T13:00:15Z"
+          }
+        }
+      },
+      "created_at": "2026-08-03T13:00:03Z",
+      "emitted_at": "2026-08-03T13:00:03Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_retry_004",
+      "session_id": "ssn_design_retry",
+      "sequence": 4,
+      "type": "session.status_rescheduled",
+      "payload_version": 1,
+      "cause_event_id": "evt_retry_003",
+      "turn_id": "trn_design_retry_1",
+      "payload": {
+        "retry_status": {
+          "type": "retrying",
+          "deadline": "2026-08-03T13:00:20Z",
+          "estimated_resolution": "2026-08-03T13:00:15Z"
+        }
+      },
+      "created_at": "2026-08-03T13:00:03.100Z",
+      "emitted_at": "2026-08-03T13:00:03.100Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_retry_005",
+      "session_id": "ssn_design_retry",
+      "sequence": 5,
+      "type": "session.status_running",
+      "payload_version": 1,
+      "cause_event_id": "evt_retry_003",
+      "turn_id": "trn_design_retry_1",
+      "payload": {},
+      "created_at": "2026-08-03T13:00:20Z",
+      "emitted_at": "2026-08-03T13:00:20Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_retry_006",
+      "session_id": "ssn_design_retry",
+      "sequence": 6,
+      "type": "agent.message",
+      "payload_version": 1,
+      "cause_event_id": "evt_retry_001",
+      "turn_id": "trn_design_retry_1",
+      "payload": {
+        "content": [{ "type": "text", "text": "The launch brief is ready." }]
+      },
+      "created_at": "2026-08-03T13:00:24Z",
+      "emitted_at": "2026-08-03T13:00:24Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_retry_007",
+      "session_id": "ssn_design_retry",
+      "sequence": 7,
+      "type": "session.status_idle",
+      "payload_version": 1,
+      "cause_event_id": "evt_retry_001",
+      "turn_id": "trn_design_retry_1",
+      "payload": { "stop_reason": { "type": "end_turn" } },
+      "created_at": "2026-08-03T13:00:25Z",
+      "emitted_at": "2026-08-03T13:00:25Z",
+      "metadata": {}
+    }
+  ],
+  "live_frames": []
+}

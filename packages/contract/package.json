@@ -1,0 +1,27 @@
+{
+  "name": "@agentmatrix/agentcanvas-contract",
+  "version": "0.2.0",
+  "description": "Framework-independent AgentCanvas Experience contract.",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schema/agentcanvas-experience-v1.json": "./dist/schema/agentcanvas-experience-v1.json",
+    "./schema/agentcanvas-experience-v2.json": "./dist/schema/agentcanvas-experience-v2.json"
+  },
+  "scripts": {
+    "build": "node ../../scripts/clean-package-dist.mjs contract && tsc -p tsconfig.json && node ../../scripts/copy-package-assets.mjs contract"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "Apache-2.0"
+}

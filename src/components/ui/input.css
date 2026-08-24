@@ -1,0 +1,129 @@
+.ui-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-panel);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+  padding-inline: var(--space-3);
+  transition: border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out);
+}
+
+.ui-input[data-size="sm"] {
+  height: var(--control-sm);
+  font-size: var(--text-sm);
+}
+.ui-input[data-size="md"] {
+  height: var(--control-md);
+}
+.ui-input[data-size="lg"] {
+  height: var(--control-lg);
+  font-size: var(--text-lg);
+}
+
+.ui-input::placeholder {
+  color: var(--text-muted);
+}
+
+.ui-input:hover:not(:disabled) {
+  border-color: var(--text-muted);
+}
+
+.ui-input:focus-visible {
+  outline: 2px solid transparent;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.ui-input[data-invalid="true"] {
+  border-color: var(--danger);
+}
+.ui-input[data-invalid="true"]:focus-visible {
+  box-shadow: 0 0 0 2px var(--surface-panel),
+    0 0 0 4px color-mix(in srgb, var(--danger) 60%, white);
+}
+
+.ui-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+/* Wrapped (prefix/suffix) variant */
+.ui-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  gap: var(--space-2);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-panel);
+  border-radius: var(--radius-sm);
+  padding-inline: var(--space-3);
+  color: var(--text-primary);
+  transition: border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out);
+}
+
+.ui-input-wrap[data-size="sm"] {
+  height: var(--control-sm);
+  font-size: var(--text-sm);
+}
+.ui-input-wrap[data-size="md"] {
+  height: var(--control-md);
+  font-size: var(--text-md);
+}
+.ui-input-wrap[data-size="lg"] {
+  height: var(--control-lg);
+  font-size: var(--text-lg);
+}
+
+.ui-input-wrap:hover:not([data-disabled="true"]) {
+  border-color: var(--text-muted);
+}
+
+.ui-input-wrap:focus-within {
+  outline: 2px solid transparent;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.ui-input-wrap[data-invalid="true"] {
+  border-color: var(--danger);
+}
+.ui-input-wrap[data-invalid="true"]:focus-within {
+  box-shadow: 0 0 0 2px var(--surface-panel),
+    0 0 0 4px color-mix(in srgb, var(--danger) 60%, white);
+}
+
+.ui-input-wrap[data-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.ui-input-affix {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* The inner input drops its own chrome; the wrap owns it. */
+.ui-input.ui-input-inner {
+  flex: 1 1 auto;
+  height: 100%;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  padding-inline: 0;
+  font-size: inherit;
+}
+.ui-input.ui-input-inner:hover,
+.ui-input.ui-input-inner:focus-visible {
+  border-color: transparent;
+  box-shadow: none;
+  outline: 2px solid transparent;
+}

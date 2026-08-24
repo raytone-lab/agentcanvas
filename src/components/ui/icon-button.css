@@ -1,0 +1,61 @@
+.ui-icon-button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  background: transparent;
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+}
+
+.ui-icon-button[data-size="sm"] {
+  width: var(--control-sm);
+  height: var(--control-sm);
+}
+
+.ui-icon-button[data-size="md"] {
+  width: var(--control-md);
+  height: var(--control-md);
+}
+
+/* Variant: ghost */
+.ui-icon-button[data-variant="ghost"] {
+  background: transparent;
+}
+.ui-icon-button[data-variant="ghost"]:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+.ui-icon-button[data-variant="ghost"]:active:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-hover) 92%, black);
+}
+
+/* Variant: secondary */
+.ui-icon-button[data-variant="secondary"] {
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+.ui-icon-button[data-variant="secondary"]:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+.ui-icon-button[data-variant="secondary"]:active:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-hover) 92%, black);
+}
+
+.ui-icon-button:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+}
+
+.ui-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}

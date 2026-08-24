@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "scenario": "runtime_cannot_resume_and_session_terminates",
+  "description": "A terminal resume failure is explicitly linked from the termination Event. The composer becomes read-only.",
+  "events": [
+    {
+      "event_id": "evt_terminal_001",
+      "session_id": "ssn_design_terminal",
+      "sequence": 1,
+      "type": "session.error",
+      "payload_version": 1,
+      "payload": {
+        "error": {
+          "type": "runtime_resume_unrecoverable_error",
+          "message": "The previous sandbox can no longer be resumed.",
+          "retry_status": { "type": "terminal" }
+        }
+      },
+      "created_at": "2026-08-03T15:00:00Z",
+      "emitted_at": "2026-08-03T15:00:00Z",
+      "metadata": {}
+    },
+    {
+      "event_id": "evt_terminal_002",
+      "session_id": "ssn_design_terminal",
+      "sequence": 2,
+      "type": "session.status_terminated",
+      "payload_version": 1,
+      "cause_event_id": "evt_terminal_001",
+      "payload": {
+        "last_error_event_id": "evt_terminal_001"
+      },
+      "created_at": "2026-08-03T15:00:00.100Z",
+      "emitted_at": "2026-08-03T15:00:00.100Z",
+      "metadata": {}
+    }
+  ],
+  "live_frames": []
+}

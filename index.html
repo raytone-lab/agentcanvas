@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>AgentCanvas — 可视化组 Agent 前端界面，导出成可运行的 Vite + React 项目</title>
+    <meta
+      name="description"
+      content="AgentCanvas 是一个可视化编辑器：挑选会话栏、对话区、思考块、工具调用卡、产物预览和输入框，接上事件流实时预览，然后导出成一个能直接跑起来的 Vite + React 项目。"
+    />
+    <!-- The editor lives at /editor.html (Vite's second HTML input). Unlike the editor,
+         this page has no streaming DOM, so it does not need the notranslate guard. -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/landing/main.tsx"></script>
+  </body>
+</html>
