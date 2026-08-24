@@ -93,6 +93,7 @@ import {
   type PreviewScenarioId,
 } from "./preview-runner/PreviewRunner";
 import {
+  LIVE_TOOL_SIMULATION_DELAY_MS,
   providerRequestHeaders,
   providerRequestUrl,
   runLiveLlmPreview,
@@ -1378,7 +1379,14 @@ export function App() {
       const titledViewModel = showStandard
         ? { ...viewModel, title: standardScenarioTitle(standardScenario, locale) }
         : viewModel;
-      return localizePreviewViewModel(titledViewModel, runEventSource === "live" ? "en" : locale);
+      // Live preview localizes like replay, minus the model's own prose: the dictionary is a
+      // substring rewriter over fixture copy, so running a live reply through it would swap
+      // words like "Thinking" mid-sentence. Tool titles, approval prompts and error copy are
+      // ours and do get localized — previously the whole live surface was pinned to English,
+      // which meant a Chinese session flipped to English the moment a real key was used.
+      return localizePreviewViewModel(titledViewModel, locale, {
+        localizeMessageText: runEventSource !== "live",
+      });
     },
     [locale, runEventSource, showStandard, standardScenario, viewModel],
   );
@@ -2607,6 +2615,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
         history,
         fetchMode: "agentcanvas-dev-proxy",
         signal: controller.signal,
+        toolSimulationDelayMs: LIVE_TOOL_SIMULATION_DELAY_MS,
         onEvents(nextEvents) {
           if (controller.signal.aborted || liveAbortControllerRef.current !== controller) {
             return;

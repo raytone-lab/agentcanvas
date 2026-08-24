@@ -19,6 +19,7 @@ import {
   parseSseData,
 } from "../harness/adapters/anthropicAdapter";
 import { createEventWriter } from "../harness/adapters/eventWriter";
+import { simulateLiveToolCall } from "./liveToolSimulator";
 
 export type LiveLlmMessage = {
   role: "user" | "assistant";
@@ -37,7 +38,20 @@ export type LiveLlmPreviewInput = {
   requestOptions?: ProviderRequestOptions;
   now?: () => number;
   onEvents?: (events: readonly AgentUXEvent[]) => void;
+  /**
+   * How long a simulated tool call stays in `running` before its result lands.
+   *
+   * Defaults to 0 so tests observe the full event sequence without waiting. The app passes
+   * `LIVE_TOOL_SIMULATION_DELAY_MS` so the running state is actually visible.
+   */
+  toolSimulationDelayMs?: number;
 };
+
+/**
+ * Long enough for the tool card's running state and its spinner to register as a state the user
+ * saw, short enough that a multi-tool turn does not feel stalled.
+ */
+export const LIVE_TOOL_SIMULATION_DELAY_MS = 260;
 
 export type LiveLlmPreviewResult = {
   events: AgentUXEvent[];
@@ -166,7 +180,10 @@ export async function runLiveLlmPreview(input: LiveLlmPreviewInput): Promise<Liv
   throwIfAborted(input.signal);
   writer.finishReasoning();
   throwIfAborted(input.signal);
-  writer.finishToolCalls();
+  await writer.finishToolCalls({
+    delayMs: input.toolSimulationDelayMs ?? 0,
+    signal: input.signal,
+  });
   throwIfAborted(input.signal);
   writer.finishRun();
 
@@ -546,22 +563,69 @@ function createLiveLlmEventWriter(
         }),
       );
     },
-    finishToolCalls() {
+    /**
+     * Walk each requested tool through approval → running → result/error → finished.
+     *
+     * Nothing is executed; `simulateLiveToolCall` stands in for the result and says so. The
+     * states in between exist because the tool card's `running`, `result` and `error` styles
+     * were composed in the configurator and previously could not be reached with a real key —
+     * the call terminated as `cancelled` straight out of approval.
+     *
+     * `delayMs` is what makes `running` observable rather than a frame that is overwritten in
+     * the same tick. It defaults to 0 so tests stay deterministic; the app passes a real value.
+     */
+    async finishToolCalls(options: { delayMs?: number; signal?: AbortSignal } = {}) {
       for (const state of toolCallStates.values()) {
         if (state.completed) {
           continue;
         }
         state.completed = true;
         const parsedArgs = parseJsonObject(state.argsText);
+        const args = parsedArgs.ok ? parsedArgs.value : undefined;
+        const eventKey = safeEventId(state.toolCallId);
+
         push(
-          agentUXEventBuilders.toolCallAwaitingApproval(meta(`tool_awaiting_${safeEventId(state.toolCallId)}`), {
+          agentUXEventBuilders.toolCallAwaitingApproval(meta(`tool_awaiting_${eventKey}`), {
             toolCallId: state.toolCallId,
-            prompt: "Tool call is ready for a harness adapter. Live LLM preview does not execute tools.",
-            argsPreview: parsedArgs.ok ? parsedArgs.value : undefined,
+            prompt: "Approve the simulated tool call? Live LLM preview does not execute tools.",
+            argsPreview: args,
           }),
-          agentUXEventBuilders.toolCallFinished(meta(`tool_finished_${safeEventId(state.toolCallId)}`), {
+          agentUXEventBuilders.toolCallRunning(meta(`tool_running_${eventKey}`), {
             toolCallId: state.toolCallId,
-            status: "cancelled",
+            args: args ?? {},
+          }),
+        );
+
+        await sleep(options.delayMs ?? 0, options.signal);
+        throwIfAborted(options.signal);
+
+        const outcome = simulateLiveToolCall({ name: state.name, args });
+        if (outcome.kind === "error") {
+          push(
+            agentUXEventBuilders.toolCallError(meta(`tool_error_${eventKey}`), {
+              toolCallId: state.toolCallId,
+              code: outcome.code,
+              retryable: outcome.retryable,
+              userMessage: outcome.userMessage,
+              developerMessage: outcome.developerMessage,
+            }),
+            agentUXEventBuilders.toolCallFinished(meta(`tool_finished_${eventKey}`), {
+              toolCallId: state.toolCallId,
+              status: "error",
+            }),
+          );
+          continue;
+        }
+
+        push(
+          agentUXEventBuilders.toolCallResult(meta(`tool_result_${eventKey}`), {
+            toolCallId: state.toolCallId,
+            result: outcome.result,
+            resultPreview: outcome.resultPreview,
+          }),
+          agentUXEventBuilders.toolCallFinished(meta(`tool_finished_${eventKey}`), {
+            toolCallId: state.toolCallId,
+            status: "success",
           }),
         );
       }
@@ -570,7 +634,7 @@ function createLiveLlmEventWriter(
       push(agentUXEventBuilders.runFinished(meta("run_finished"), {
         assessment: {
           outcome: "success",
-          summary: "Live LLM chat preview completed without harness, tools, artifacts, or git operations.",
+          summary: "Live LLM chat preview completed. Tool calls were simulated, not executed.",
           checks: [
             {
               key: "live_llm_provider",
@@ -728,9 +792,21 @@ function stringValue(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-function parseJsonObject(value: string): { ok: true; value: unknown } | { ok: false } {
+/**
+ * Parse streamed tool arguments, succeeding only for a JSON object.
+ *
+ * The name is load-bearing for the one caller: a model that streams `"123"` or `null` as its
+ * arguments parses fine but is not an argument record, and letting that through put a bare
+ * number into `argsPreview` and into the simulated tool call. Narrowing here means the caller's
+ * `undefined` branch means "unusable arguments" for both cases.
+ */
+function parseJsonObject(value: string): { ok: true; value: Record<string, unknown> } | { ok: false } {
   try {
-    return { ok: true, value: JSON.parse(value) };
+    const parsed: unknown = JSON.parse(value);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { ok: false };
+    }
+    return { ok: true, value: parsed as Record<string, unknown> };
   } catch {
     return { ok: false };
   }
@@ -740,6 +816,28 @@ function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) {
     throw createAbortError();
   }
+}
+
+/**
+ * Abort-aware pause. Stop during a simulated tool call has to settle immediately rather than
+ * after the delay, so the timer is cleared on abort instead of being waited out.
+ */
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  throwIfAborted(signal);
+  if (ms <= 0) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    function onAbort() {
+      clearTimeout(timer);
+      reject(createAbortError());
+    }
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 function createAbortError(): DOMException | Error {

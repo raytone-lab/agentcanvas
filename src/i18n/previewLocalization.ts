@@ -89,7 +89,43 @@ const previewTextZh: Record<string, string> = {
   "Checking how collapsed reasoning, summary order, and long text wrapping behave. ": "正在检查推理折叠、摘要顺序和长文本换行表现。",
   "Long reasoning preview finished after multiple local reasoning updates.": "多段本地推理更新后，长思考预览已完成。",
   "Preparing a mock diff artifact for the Git and output panels. No repository operation is executed.": "正在为 Git 和输出面板准备模拟 diff 产物，不会执行仓库操作。",
+  // Live LLM simulated tool calls (`preview-runner/liveToolSimulator.ts`).
+  "Approve the simulated tool call? Live LLM preview does not execute tools.": "允许这次模拟工具调用？Live LLM 预览不会真正执行工具。",
+  "Live LLM chat preview completed. Tool calls were simulated, not executed.": "Live LLM 对话预览已完成。工具调用为模拟，未真正执行。",
+  "The model sent tool arguments that could not be read.": "模型发送的工具参数无法解析。",
+  "This tool has no simulated result in live preview.": "该工具在实时预览中没有对应的模拟结果。",
+  "The model asked to run a command but did not provide one.": "模型请求执行命令，但没有提供命令内容。",
+  // Deliberately no entries for `resultPreview` values ("6 lines", "2 locations") or for the
+  // simulated result bodies. `localizePreviewText` rewrites substrings across every entry, so a
+  // short generic word added here would be swapped inside unrelated copy. The replay fixtures
+  // leave the same previews in English, so this matches rather than regresses them.
 };
+
+export type LocalizePreviewOptions = {
+  /**
+   * Whether assistant message text goes through the dictionary.
+   *
+   * The dictionary is a substring rewriter over fixture copy, which is exactly right for the
+   * bundled demo and wrong for a live model's prose: a reply that happens to contain "Thinking"
+   * or "lines" would get those words swapped mid-sentence. Live preview therefore localizes the
+   * chrome the configurator authored — tool titles, approval prompts, previews, error copy —
+   * and leaves the model's own words alone.
+   */
+  localizeMessageText?: boolean;
+};
+
+const AUTHORED_TEXT_KEYS = [
+  "title",
+  "summary",
+  "label",
+  "preview",
+  "argsText",
+  "message",
+  "userMessage",
+  "developerMessage",
+] as const;
+
+const MESSAGE_TEXT_KEYS = ["text", "content"] as const;
 
 export function localizePreviewText(value: string | undefined, locale: AppLocale): string | undefined {
   if (!value || locale === "en") {
@@ -104,18 +140,23 @@ export function localizePreviewText(value: string | undefined, locale: AppLocale
   return localized;
 }
 
-export function localizeTimelineItem(item: unknown, locale: AppLocale): unknown {
+export function localizeTimelineItem(
+  item: unknown,
+  locale: AppLocale,
+  options: LocalizePreviewOptions = {},
+): unknown {
   if (locale === "en" || !item || typeof item !== "object" || Array.isArray(item)) {
     return item;
   }
+  const localizeMessageText = options.localizeMessageText ?? true;
+  const keys = localizeMessageText
+    ? [...AUTHORED_TEXT_KEYS, ...MESSAGE_TEXT_KEYS]
+    : AUTHORED_TEXT_KEYS;
   const next: Record<string, unknown> = { ...(item as Record<string, unknown>) };
-  for (const key of ["text", "title", "summary", "label", "preview", "argsText", "message", "userMessage", "developerMessage"]) {
+  for (const key of keys) {
     if (typeof next[key] === "string") {
       next[key] = localizePreviewText(next[key] as string, locale);
     }
-  }
-  if (typeof next.content === "string") {
-    next.content = localizePreviewText(next.content, locale);
   }
   if (next.approval && typeof next.approval === "object") {
     const approval = next.approval as Record<string, unknown>;
@@ -130,6 +171,7 @@ export function localizeTimelineItem(item: unknown, locale: AppLocale): unknown 
 export function localizePreviewViewModel<T extends { title?: string; timeline: readonly unknown[] }>(
   viewModel: T,
   locale: AppLocale,
+  options: LocalizePreviewOptions = {},
 ): T {
   if (locale === "en") {
     return viewModel;
@@ -137,6 +179,6 @@ export function localizePreviewViewModel<T extends { title?: string; timeline: r
   return {
     ...viewModel,
     title: localizePreviewText(viewModel.title, locale),
-    timeline: viewModel.timeline.map((item) => localizeTimelineItem(item, locale)),
+    timeline: viewModel.timeline.map((item) => localizeTimelineItem(item, locale, options)),
   } as T;
 }

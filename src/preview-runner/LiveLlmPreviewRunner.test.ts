@@ -285,6 +285,8 @@ describe("live LLM preview runner", () => {
       "tool.call.args.delta",
       "tool.call.args.delta",
       "tool.call.awaiting_approval",
+      "tool.call.running",
+      "tool.call.result",
       "tool.call.finished",
       "run.finished",
     ]);
@@ -297,7 +299,103 @@ describe("live LLM preview runner", () => {
       toolCallId: "call_1",
       argsPreview: { path: "src/App.tsx" },
     });
+    // The running state carries the parsed args, so the card can render them while it waits.
+    expect(result.events.find((event) => event.type === "tool.call.running")?.payload).toMatchObject({
+      toolCallId: "call_1",
+      args: { path: "src/App.tsx" },
+    });
+    // Simulated, and the result says so rather than implying the file was read.
+    const toolResult = result.events.find((event) => event.type === "tool.call.result");
+    expect(toolResult?.payload).toMatchObject({ toolCallId: "call_1" });
+    expect(String(toolResult?.payload.result)).toContain("src/App.tsx");
+    expect(String(toolResult?.payload.result)).toContain("simulated live result");
+    expect(result.events.find((event) => event.type === "tool.call.finished")?.payload).toMatchObject({
+      toolCallId: "call_1",
+      status: "success",
+    });
     expect(result.messages.at(-1)).toEqual({ role: "assistant", content: "" });
+  });
+
+  it("renders a tool error state when the model streams arguments that are not a JSON object", async () => {
+    const fetcher = vi.fn(async () => sseResponse([
+      { choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "read_file", arguments: "not-json" } }] } }] },
+      { choices: [{ delta: {}, finish_reason: "tool_calls" }] },
+    ]));
+
+    const result = await runLiveLlmPreview({
+      prompt: "Read App",
+      project: defaultCodingAgentProject,
+      sessionKeys: { openai: "sk-test" },
+      fetcher,
+      now: () => 1_760_000_100_000,
+    });
+
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "tool.call.started",
+      "tool.call.args.delta",
+      "tool.call.awaiting_approval",
+      "tool.call.running",
+      "tool.call.error",
+      "tool.call.finished",
+      "run.finished",
+    ]);
+    expect(result.events.find((event) => event.type === "tool.call.error")?.payload).toMatchObject({
+      toolCallId: "call_1",
+      code: "LIVE_TOOL_ARGS_INVALID",
+      retryable: true,
+    });
+    expect(result.events.find((event) => event.type === "tool.call.finished")?.payload).toMatchObject({
+      status: "error",
+    });
+  });
+
+  it("reports an unsupported-tool error when the model invents a tool outside the advertised toolset", async () => {
+    const fetcher = vi.fn(async () => sseResponse([
+      { choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "deploy_to_production", arguments: "{\"env\":\"prod\"}" } }] } }] },
+      { choices: [{ delta: {}, finish_reason: "tool_calls" }] },
+    ]));
+
+    const result = await runLiveLlmPreview({
+      prompt: "Ship it",
+      project: defaultCodingAgentProject,
+      sessionKeys: { openai: "sk-test" },
+      fetcher,
+      now: () => 1_760_000_100_000,
+    });
+
+    expect(result.events.find((event) => event.type === "tool.call.error")?.payload).toMatchObject({
+      toolCallId: "call_1",
+      code: "LIVE_TOOL_UNSUPPORTED",
+      retryable: false,
+    });
+    expect(result.events.find((event) => event.type === "tool.call.result")).toBeUndefined();
+  });
+
+  it("aborts during a simulated tool call instead of waiting out the delay", async () => {
+    const controller = new AbortController();
+    const fetcher = vi.fn(async () => sseResponse([
+      { choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "read_file", arguments: "{\"path\":\"src/App.tsx\"}" } }] } }] },
+      { choices: [{ delta: {}, finish_reason: "tool_calls" }] },
+    ]));
+
+    const pending = runLiveLlmPreview({
+      prompt: "Read App",
+      project: defaultCodingAgentProject,
+      sessionKeys: { openai: "sk-test" },
+      fetcher,
+      now: () => 1_760_000_100_000,
+      toolSimulationDelayMs: 5_000,
+      signal: controller.signal,
+      onEvents(events) {
+        // Abort as soon as the card enters its running state.
+        if (events.some((event) => event.type === "tool.call.running")) {
+          controller.abort();
+        }
+      },
+    });
+
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
   });
 
   it("projects non-stream mixed responses through the same canonical reasoning, tool, text finish order", async () => {
@@ -336,6 +434,8 @@ describe("live LLM preview runner", () => {
       "reasoning.summary",
       "reasoning.finished",
       "tool.call.awaiting_approval",
+      "tool.call.running",
+      "tool.call.result",
       "tool.call.finished",
       "run.finished",
     ]);
