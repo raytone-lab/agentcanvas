@@ -869,6 +869,9 @@ export function AgentApp() {
     // App.tsx always passes a value. The default itself is load-bearing for 16 preset
     // rendering tests, so it stays; the omission here was the actual defect.
     previewPrompt: "",
+    // A shipped scaffold has no session store yet. An explicit empty list keeps the shared
+    // sidebar from presenting localized preview prompts as if they were real user history.
+    sessionPrompts: [],
     showDebugBadges: false,
     gitPreviewState: gitPreviewStateFromEvents(events),
     modelOptions: modelOptionsForProject(activeProject),

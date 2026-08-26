@@ -15,6 +15,7 @@ export function SessionSidebar({
   project,
   onCollapse,
   activePrompt,
+  sessionPrompts = [],
   onSelectSession,
   onNewSession,
 }: {
@@ -22,6 +23,8 @@ export function SessionSidebar({
   onCollapse?: () => void;
   /** The prompt currently shown as the "我" bubble; its session row is highlighted. */
   activePrompt?: string;
+  /** Real session prompts supplied by the host. Omitted means there is no history yet. */
+  sessionPrompts?: readonly string[];
   /** Click a session to load it as the "我" bubble in the canvas. */
   onSelectSession?: (prompt: string) => void;
   onNewSession?: () => void;
@@ -33,11 +36,11 @@ export function SessionSidebar({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchOverlayRoot, setSearchOverlayRoot] = useState<HTMLElement | null>(null);
   const [query, setQuery] = useState("");
-  const sessions = c.sessions;
+  const sessions = onSelectSession ? sessionPrompts : [];
+  const hasSessions = sessions.length > 0;
   const footerLabel = c.footerNote.replace("{version}", appVersionLabel);
-  // Display-only: when nothing matches (e.g. the initial state), fall back to
-  // highlighting the first session so one conversation always reads as the
-  // currently-open one. Does not change what selecting a session does.
+  // Display-only: when the active prompt does not match, highlight the first supplied
+  // session so one conversation always reads as the currently-open one.
   const effectiveActive =
     activePrompt && sessions.includes(activePrompt) ? activePrompt : sessions[0];
   const filteredSessions = useMemo(() => {
@@ -118,7 +121,7 @@ export function SessionSidebar({
       <header className="session-brand">
         <span className="session-brand-name">{locale === "zh" ? "我的Agent" : "My Agent"}</span>
         <span className="session-brand-actions">
-          {search ? (
+          {search && hasSessions ? (
             <div className="session-search-menu">
               <button
                 className="session-search-trigger"
@@ -166,18 +169,20 @@ export function SessionSidebar({
         ) : null}
       </div>
 
-      <nav className="session-list">
-        {grouping ? (
-          <>
-            <SessionGroup label={c.groupToday} items={today} activePrompt={effectiveActive} onSelect={onSelectSession} />
-            {earlier.length > 0 ? (
-              <SessionGroup label={c.groupEarlier} items={earlier} activePrompt={effectiveActive} onSelect={onSelectSession} />
-            ) : null}
-          </>
-        ) : (
-          <SessionGroup items={sessions} activePrompt={effectiveActive} onSelect={onSelectSession} />
-        )}
-      </nav>
+      {hasSessions ? (
+        <nav className="session-list">
+          {grouping ? (
+            <>
+              <SessionGroup label={c.groupToday} items={today} activePrompt={effectiveActive} onSelect={onSelectSession} />
+              {earlier.length > 0 ? (
+                <SessionGroup label={c.groupEarlier} items={earlier} activePrompt={effectiveActive} onSelect={onSelectSession} />
+              ) : null}
+            </>
+          ) : (
+            <SessionGroup items={sessions} activePrompt={effectiveActive} onSelect={onSelectSession} />
+          )}
+        </nav>
+      ) : null}
 
       {footer ? <p className="session-footer">{footerLabel}</p> : null}
     </aside>

@@ -216,6 +216,11 @@ describe("export contract: the exported app's first impression", () => {
     );
   });
 
+  it("does not fabricate conversation history without a session adapter", () => {
+    expect(shell).toContain("sessionPrompts: []");
+    expect(shell).not.toContain("onSelectSession:");
+  });
+
   it("lets the picker return to the welcome screen", () => {
     // Without an empty option the picker is a one-way door: once a stream is chosen there is
     // no way back to the welcome state.

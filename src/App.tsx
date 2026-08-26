@@ -2813,6 +2813,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
     onCloseOutputPanelItem: closeOutputPanelItem,
     onOutputSourceChange: setOutputSource,
     activeSessionPrompt: previewPrompt,
+    sessionPrompts: copy.workspace.sessionSidebar.sessions,
     onSelectSession(prompt) {
       if (isWelcome) {
         // From the welcome state, clicking a session switches back to the

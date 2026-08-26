@@ -44,6 +44,7 @@ export type SlotRenderContext = {
   onCollapseLeft?: () => void;
   onCollapseRight?: () => void;
   activeSessionPrompt?: string;
+  sessionPrompts?: readonly string[];
   onSelectSession?: (prompt: string) => void;
   onOpenArtifact?: (artifact: OutputPanelOpenRequest) => void;
   outputPanelItems?: readonly OutputPanelItem[];
@@ -62,11 +63,12 @@ export type SlotComponent = NonNullable<SlotConfig["component"]>;
 export type SlotRenderer = (context: SlotRenderContext) => ReactNode;
 
 export const slotComponentRegistry: Record<SlotComponent, SlotRenderer> = {
-  SessionSidebar: ({ project, onCollapseLeft, activeSessionPrompt, onSelectSession, onNewSession }) => (
+  SessionSidebar: ({ project, onCollapseLeft, activeSessionPrompt, sessionPrompts, onSelectSession, onNewSession }) => (
     <SessionSidebar
       project={project}
       onCollapse={onCollapseLeft}
       activePrompt={activeSessionPrompt}
+      sessionPrompts={sessionPrompts}
       onSelectSession={onSelectSession}
       onNewSession={onNewSession}
     />
