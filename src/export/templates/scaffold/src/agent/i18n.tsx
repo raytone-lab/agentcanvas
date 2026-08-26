@@ -10,7 +10,7 @@ const dictionaries = {
     run: { idle: "Replay", live: "Live" },
     panels: { conversation: "Conversation", output: "Output", git: "Source control" },
     composer: {
-      placeholder: "我今天能帮你做些什么？",
+      placeholder: "What can I help you with today?",
       provider: "Provider",
       model: "Model",
     },

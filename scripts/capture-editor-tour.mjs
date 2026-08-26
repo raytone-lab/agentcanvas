@@ -19,11 +19,17 @@
  * pointer arrow is an injected overlay, because headless screenshots contain no cursor and
  * without it the UI appears to change on its own; the interactions underneath are genuine.
  *
- * Re-run after any change to the rail copy or the preset ids, and commit both outputs.
+ * The recording is in English: the README is English, so a Chinese UI in its lead asset
+ * makes the project look like it is not for the reader. The editor defaults to zh, so the
+ * locale is seeded into localStorage before the app boots rather than clicked in the
+ * topbar — a click would be the first thing in frame, and it would need its own beat.
+ *
+ * Re-run after any change to the preset group or option ids, and commit both outputs.
  *
  * Options (env):
  *   URL     editor URL       (default http://localhost:5173/editor.html)
  *   ONLY    "mp4" | "gif"    (default both)
+ *   LOCALE  "en" | "zh"      (default "en")
  *   CHROME  browser binary   (default the macOS Google Chrome path)
  *   PORT    devtools port    (default 9225, clear of the other capture scripts)
  *   FFMPEG  encoder path     (default "ffmpeg" on PATH)
@@ -51,61 +57,71 @@ const EDITOR_URL = process.env.URL ?? "http://localhost:5173/editor.html";
 const PORT = Number(process.env.PORT ?? 9225);
 const FFMPEG = process.env.FFMPEG ?? "ffmpeg";
 const ONLY = process.env.ONLY;
+const LOCALE = process.env.LOCALE ?? "en";
+/** Must match LocaleContext's STORAGE_KEY. */
+const LOCALE_STORAGE_KEY = "agentcanvas.locale";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = join(ROOT, "public", "landing");
 
 /**
- * 1000px tall, not 900: the rail's last tile ("主题") sits at y≈911, so at 900 it falls
+ * 1000px tall, not 900: the rail's last tile (theme) sits near y≈911, so at 900 it falls
  * outside the viewport. The click would still land — `el.click()` ignores visibility — but
  * the pointer would glide off-screen and the theme would appear to change by itself.
+ * `assertBeatsVisible` re-checks this at runtime, since the labels are locale-dependent and
+ * a longer one that wraps pushes every tile below it further down.
  */
 const VIEW = { width: 1440, height: 1000, deviceScaleFactor: 1 };
 const FPS = 15;
 const FRAME_MS = Math.round(1000 / FPS);
 
-/** A rail tile, then the option that makes its effect legible in one frame. */
+/**
+ * A rail tile, then the option that makes its effect legible in one frame.
+ *
+ * `rail` is a preset group id, not a visible label: labels are translated, ids are not, so
+ * the same timeline records in either locale.
+ */
 const beat = (at, rail, option, note) => ({ at, rail, option, note });
 
 /**
  * The full pass: every module in rail order.
  *
- * 状态, 模型 and Git carry no preset cards, so those beats only open the group — the panel
- * itself is the thing worth seeing. Theme is last and goes light → warm dark → cool dark:
- * recolouring the whole canvas is the most legible proof that the preview is live, and it
- * reads best as the closing move rather than buried mid-tour.
+ * blocks, provider and git carry no preset cards, so those beats only open the group — the
+ * panel itself is the thing worth seeing. Theme is last and goes light → warm dark → cool
+ * dark: recolouring the whole canvas is the most legible proof that the preview is live, and
+ * it reads best as the closing move rather than buried mid-tour.
  */
 const TOUR = [
-  beat(0.8, "对话", "writing-typewriter", "conversation + typewriter cadence"),
-  beat(4.2, "思考", "thinking-orbit", "reasoning motion"),
-  beat(7.6, "状态", null, "status surface"),
-  beat(10.4, "工具", "timeline-rail", "tool calls as a timeline rail"),
-  beat(14.0, "加载器", "media-video-cinema", "generated-media loaders"),
-  beat(17.6, "输入区", "prompt-shortcuts", "composer controls"),
-  beat(21.0, "左侧栏", "sidebar-search", "session sidebar"),
-  beat(24.4, "输出", "output-source-console", "output panel source"),
-  beat(27.8, "模型", null, "provider + model wiring"),
-  beat(30.6, "Git", null, "git panel"),
-  beat(33.4, "主题", "warm-graphite", "recolour dark warm"),
-  beat(36.6, "主题", "cyan-grid", "recolour dark cool"),
+  beat(0.8, "conversation", "writing-typewriter", "conversation + typewriter cadence"),
+  beat(4.2, "ux-effects", "thinking-orbit", "reasoning motion"),
+  beat(7.6, "blocks", null, "status surface"),
+  beat(10.4, "tool-calls", "timeline-rail", "tool calls as a timeline rail"),
+  beat(14.0, "media-generation", "media-video-cinema", "generated-media loaders"),
+  beat(17.6, "composer", "prompt-shortcuts", "composer controls"),
+  beat(21.0, "sidebar", "sidebar-search", "session sidebar"),
+  beat(24.4, "output", "output-source-console", "output panel source"),
+  beat(27.8, "provider", null, "provider + model wiring"),
+  beat(30.6, "git", null, "git panel"),
+  beat(33.4, "theme", "warm-graphite", "recolour dark warm"),
+  beat(36.6, "theme", "cyan-grid", "recolour dark cool"),
 ];
 const TOUR_S = 39.5;
 
 /**
  * The README cut: the six modules whose change is unmistakable at GIF frame rates.
  *
- * 状态 / 模型 / Git are dropped because opening a panel is a subtle frame-to-frame diff and
- * costs the same seconds as a visible one; 加载器 and 左侧栏 are dropped for length. The
- * mp4 still covers all eleven.
+ * blocks / provider / git are dropped because opening a panel is a subtle frame-to-frame diff
+ * and costs the same seconds as a visible one; media-generation and sidebar are dropped for
+ * length. The mp4 still covers all eleven.
  */
 const README_CUT = [
-  beat(0.8, "对话", "writing-typewriter", "conversation + typewriter cadence"),
-  beat(4.2, "思考", "thinking-orbit", "reasoning motion"),
-  beat(7.6, "工具", "timeline-rail", "tool calls as a timeline rail"),
-  beat(11.0, "输入区", "prompt-shortcuts", "composer controls"),
-  beat(14.4, "输出", "output-source-console", "output panel source"),
-  beat(17.6, "主题", "warm-graphite", "recolour dark warm"),
-  beat(20.2, "主题", "cyan-grid", "recolour dark cool"),
+  beat(0.8, "conversation", "writing-typewriter", "conversation + typewriter cadence"),
+  beat(4.2, "ux-effects", "thinking-orbit", "reasoning motion"),
+  beat(7.6, "tool-calls", "timeline-rail", "tool calls as a timeline rail"),
+  beat(11.0, "composer", "prompt-shortcuts", "composer controls"),
+  beat(14.4, "output", "output-source-console", "output panel source"),
+  beat(17.6, "theme", "warm-graphite", "recolour dark warm"),
+  beat(20.2, "theme", "cyan-grid", "recolour dark cool"),
 ];
 const README_S = 23.0;
 
@@ -218,6 +234,44 @@ async function record(page, timeline, durationS, frameDir) {
   return index;
 }
 
+/**
+ * Put the locale in localStorage, then confirm the reload actually rendered in it.
+ *
+ * Needs a load first: localStorage is per-origin, and there is no origin to write to until
+ * the page has been navigated once. The user-data-dir is persistent across runs, so the
+ * write is unconditional rather than a default — a previous run may have left "zh" there.
+ */
+async function seedLocale(page) {
+  await page.send("Page.navigate", { url: EDITOR_URL });
+  await sleep(1200);
+  await evaluate(
+    page,
+    `window.localStorage.setItem(${JSON.stringify(LOCALE_STORAGE_KEY)}, ${JSON.stringify(LOCALE)});
+     return "ok";`,
+  );
+}
+
+/**
+ * Fail before recording if a tile the tour clicks is missing or below the fold.
+ *
+ * Both failures are near-invisible in the output rather than loud: a missing tile throws
+ * only once its beat comes due, ~30s into a pass, and an off-screen one still clicks, so the
+ * UI changes with the pointer nowhere near it. Locale changes the label lengths and so the
+ * tile positions, which is exactly when this is worth checking.
+ */
+async function assertBeatsVisible(page, timeline) {
+  const groups = [...new Set(timeline.map((b) => b.rail))];
+  const bad = [];
+  for (const group of groups) {
+    const center = await railTileCenter(page, group);
+    if (!center) bad.push(`${group} (no tile)`);
+    else if (center.y > VIEW.height) bad.push(`${group} (y=${Math.round(center.y)} > ${VIEW.height})`);
+  }
+  if (bad.length > 0) {
+    throw new Error(`Rail tiles not usable at ${VIEW.width}x${VIEW.height}: ${bad.join(", ")}`);
+  }
+}
+
 /** Reset to the state a fresh load has, so the second pass does not inherit the first's picks. */
 async function reload(page) {
   await page.send("Page.navigate", { url: EDITOR_URL });
@@ -286,10 +340,13 @@ async function main() {
     await page.send("Page.enable");
     await page.send("Runtime.enable");
     await page.send("Emulation.setDeviceMetricsOverride", { ...VIEW, mobile: false });
+    await seedLocale(page);
+    console.log(`locale: ${LOCALE}`);
 
     if (ONLY !== "gif") {
       console.log("recording the full tour (11 modules)");
       await reload(page);
+      await assertBeatsVisible(page, TOUR);
       const count = await record(page, TOUR, TOUR_S, frames);
       console.log(`  captured ${count} frames`);
       const file = join(OUT, "editor-tour.mp4");
@@ -302,6 +359,7 @@ async function main() {
     if (ONLY !== "mp4") {
       console.log("recording the README cut (6 modules)");
       await reload(page);
+      await assertBeatsVisible(page, README_CUT);
       const count = await record(page, README_CUT, README_S, frames);
       console.log(`  captured ${count} frames`);
       const file = join(OUT, "editor-tour.gif");

@@ -119,42 +119,38 @@ export async function clickRail(page, label) {
 }
 
 /**
- * Click a left-rail group tile by its label, matching on `.preset-icon-tile`.
+ * Click a left-rail group tile by its stable `data-preset-group` id (e.g. "conversation",
+ * "tool-calls", "theme").
  *
- * `clickRail` matches any button whose whole label is the string and takes the last hit,
- * which is fine for the labels the landing demo uses but gets fragile across the whole
- * rail: "输出" and "模型" also read as complete labels elsewhere in the editor, and "last
- * in document order" is not a promise the DOM makes. The rail tiles carry their own class,
- * so scoping to it is unambiguous.
+ * Not by visible label. `clickRail` matches any button whose whole label is the string and
+ * takes the last hit, which is fine for the labels the landing demo uses but gets fragile
+ * across the whole rail: "输出" and "模型" also read as complete labels elsewhere in the
+ * editor, and "last in document order" is not a promise the DOM makes. Worse, a label is
+ * locale-dependent — the same tile reads "对话" or "Chat" — so a label-keyed tour only
+ * records in one language. The group id is the one identifier that is neither.
  */
-export async function clickRailTile(page, label) {
+export async function clickRailTile(page, groupId) {
   const result = await evaluate(
     page,
-    `const hits = [...document.querySelectorAll("button.preset-icon-tile")]
-       .filter((el) => (el.textContent || "").trim() === ${JSON.stringify(label)});
-     if (hits.length !== 1) return hits.length === 0 ? "MISS" : "AMBIGUOUS";
-     const el = hits[0];
+    `const el = document.querySelector('button.preset-icon-tile[data-preset-group="${groupId}"]');
+     if (!el) return "MISS";
      const r = el.getBoundingClientRect();
      el.click();
      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };`,
   );
   if (result === "MISS") {
-    throw new Error(`No rail tile labelled "${label}" — did the rail copy change?`);
-  }
-  if (result === "AMBIGUOUS") {
-    throw new Error(`More than one rail tile labelled "${label}"`);
+    throw new Error(`No rail tile for group "${groupId}" — did the group ids change?`);
   }
   return result;
 }
 
 /** Rect of a rail tile without clicking it, for moving a pointer there first. */
-export async function railTileCenter(page, label) {
+export async function railTileCenter(page, groupId) {
   return evaluate(
     page,
-    `const hits = [...document.querySelectorAll("button.preset-icon-tile")]
-       .filter((el) => (el.textContent || "").trim() === ${JSON.stringify(label)});
-     if (hits.length !== 1) return null;
-     const r = hits[0].getBoundingClientRect();
+    `const el = document.querySelector('button.preset-icon-tile[data-preset-group="${groupId}"]');
+     if (!el) return null;
+     const r = el.getBoundingClientRect();
      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };`,
   );
 }

@@ -9,7 +9,7 @@ const en = {
       fixTest: "Fix failing test",
       explainChange: "Explain this change",
     },
-    placeholder: "我今天能帮你做些什么？",
+    placeholder: "What can I help you with today?",
     attachFiles: "Attach files",
     thinkingBudget: "Thinking budget",
     reasoningStrength: "Reasoning strength",

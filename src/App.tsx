@@ -3097,6 +3097,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
                           <button
                             key={group.id}
                             className="preset-icon-tile"
+                            data-preset-group={group.id}
                             data-active={isActive}
                             type="button"
                             aria-pressed={isActive}
