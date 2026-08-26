@@ -102,6 +102,8 @@ to change SDK behavior, patch it upstream and refresh the vendored `dist`.
 
 - [docs/PRODUCT_TECH_GUIDE.md](docs/PRODUCT_TECH_GUIDE.md) — product scope and
   full technical walkthrough (Chinese)
+- [docs/CONNECTING_AI.md](docs/CONNECTING_AI.md) — driving an exported app with a real
+  model or agent: an agentic CLI's JSONL, a model API, or your own backend
 - [docs/COMPONENT_SYSTEM.md](docs/COMPONENT_SYSTEM.md) — component and slot system
 - [docs/EXPORT_CONTRACT.md](docs/EXPORT_CONTRACT.md) — what the exported project guarantees
 - [docs/EMBEDDABLE_PACKAGES.md](docs/EMBEDDABLE_PACKAGES.md) — package boundaries
