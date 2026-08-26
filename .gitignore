@@ -3,6 +3,9 @@ dist
 out
 .DS_Store
 *.log
+.env
+.env.local
+.env.*.local
 .tmp/
 .playwright-cli/
 
