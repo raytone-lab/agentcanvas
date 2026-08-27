@@ -7,6 +7,39 @@ agent drive it.
 Read [EXPORT_CONTRACT.md](EXPORT_CONTRACT.md) instead if you are changing the configurator
 itself. This page is for the person holding the exported project.
 
+## The editor can call a model. Your export cannot — yet.
+
+This is the single most surprising thing about the export, so it goes first.
+
+**In the editor**, pasting a provider key and running a turn makes a real HTTP call. The key
+lives in memory only: it is gone on reload, is never written to disk, and is never written
+into the export. Live preview there is limited to `openai-compatible` providers, so an
+Anthropic-protocol connection will not run live even in the editor.
+
+**In the export, none of that code comes with you.** What travels is the provider
+*configuration* — base URLs, protocol, default model, the model list, whether auth reads an
+env var. What does not travel is anything that performs a request. There is no `fetch` in the
+exported `src/` at all. The provider settings panel renders and its fields accept input, but
+Test key and Fetch models are inert, and so is the composer's submit.
+
+That is deliberate, not an omission. The model layer is the one part of an agent product that
+cannot be decided for you, because it is a decision about *your* deployment:
+
+- **Who executes tools?** A model API answers messages. It does not read files, run commands
+  or write diffs. The tool-call cards, approval prompts and file diffs you composed can only
+  be filled by something that actually runs an agent loop — and a browser tab cannot do that.
+  Give an exported app nothing but a key and you get a chat window with the agent surfaces
+  sitting empty.
+- **Where does the key live?** In the browser it is the end user's own key and their own risk,
+  and it only works where the provider allows browser calls — Anthropic blocks them by CORS
+  unless an opt-in header is sent, which this package does not send. Behind your own endpoint,
+  the key never reaches the browser and the CORS question disappears.
+
+So plan the model layer for your own situation before writing any of it. The routes below are
+the shapes that plan can take, in increasing order of what you have to build. The seam they
+all pass through is fixed and small, so this is a decision about your architecture, not about
+learning ours.
+
 ## The one seam
 
 Every route below ends in the same place, and it is the only file you have to touch:
@@ -165,6 +198,13 @@ In a fresh export these are deliberate no-ops, not bugs: submitting a prompt, st
 run, committing in the Git panel, and the provider test/fetch buttons. Everything visual is
 real. Wiring a route above makes submit and stop meaningful; the Git panel and provider
 settings are UI surfaces for a backend that reports those things.
+
+One of them deserves a decision rather than a shrug. The provider key field looks operational
+and silently does nothing, which is the worst of the three possible states — a person filling
+it in concludes the product is broken, and a coding agent pointed at the folder tends to
+"fix" it by inventing a client that puts the key in the browser. Before you ship to anyone,
+either wire it to a route above or disable it with the reason on screen. Either is fine;
+leaving it ambiguous is not.
 
 ## Checking your events against the UI
 
