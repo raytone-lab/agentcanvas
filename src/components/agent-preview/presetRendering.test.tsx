@@ -157,6 +157,7 @@ describe("preset-driven preview rendering", () => {
       prompt: "生成一张产品发布会主视觉。",
       project: defaultCodingAgentProject,
       scenarioId: "image-generation",
+      locale: "zh",
     }));
     const viewModel = createAgentUXViewModel(replayAgentUXEvents(events));
     const chatMarkup = render(<ChatFrame project={defaultCodingAgentProject} viewModel={viewModel} />, "zh");
@@ -499,7 +500,7 @@ describe("preset-driven preview rendering", () => {
       </IconSetProvider>,
       "zh",
     );
-    const outputItems = outputPanelItemsFromTool(tool, true);
+    const outputItems = outputPanelItemsFromTool(tool, "zh");
 
     expect(markup).toContain('data-file-tool="true"');
     expect(markup).toContain('class="tool-file-list"');

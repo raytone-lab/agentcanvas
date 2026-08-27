@@ -8,6 +8,7 @@ import {
 import { useEffect, useId, useState, type CSSProperties } from "react";
 
 import { Input, Select, Switch } from "./ui";
+import type { AppLocale } from "../i18n/locales";
 import type { AgentFrontendProject } from "../schema/agentuxConfig";
 
 const markGlyphs: Record<AgentCanvasBuiltinMark, string> = {
@@ -40,14 +41,14 @@ export function ProductBrandSettingsPanel({
   onChange,
 }: {
   project: AgentFrontendProject;
-  locale: "en" | "zh";
+  locale: AppLocale;
   onChange: (product: AgentFrontendProject["product"]) => void;
 }) {
   const product = project.product;
   const brand = product.brand;
   const typography = product.design.typography ?? {};
   const colors = product.design.colors ?? {};
-  const copy = locale === "zh" ? zh : en;
+  const copy = copyByLocale[locale];
 
   const updateBrand = (patch: Partial<typeof brand>) =>
     onChange({ ...product, brand: { ...brand, ...patch } });
@@ -466,7 +467,9 @@ function OptionalColor({
   );
 }
 
-const en: Record<string, string> = {
+// Deliberately unannotated: `Record<string, string>` would widen the keys to `string`, which
+// makes the `keyof typeof en` below vacuous and lets a locale silently miss a key.
+const en = {
   identity: "Identity",
   displayName: "Product display name",
   mark: "Built-in mark",
@@ -502,7 +505,9 @@ const en: Record<string, string> = {
     "Custom stylesheets are stored as logical asset IDs in the v2 contract. The host resolves and isolates their bytes; AgentCanvas never accepts raw scripts, HTML, or remote URLs.",
 };
 
-const zh: Record<keyof typeof en, string> = {
+type BrandSettingsCopy = Record<keyof typeof en, string>;
+
+const zh: BrandSettingsCopy = {
   identity: "产品标识",
   displayName: "产品显示名称",
   mark: "内置标识",
@@ -534,3 +539,39 @@ const zh: Record<keyof typeof en, string> = {
   extensionNote:
     "v2 只保存自定义样式表的逻辑素材 ID，由宿主解析并隔离其内容；AgentCanvas 不接受原始脚本、HTML 或远程 URL。",
 };
+
+/** PENDING NATIVE REVIEW — see the note in src/i18n/copy/shell.ts for the conventions used. */
+const ja: BrandSettingsCopy = {
+  identity: "アイデンティティ",
+  displayName: "製品の表示名",
+  mark: "組み込みマーク",
+  logicalAsset: "論理アセット",
+  useBuiltin: "組み込みマークを使う",
+  brandAsset: "論理ブランドアセット ID",
+  brandAssetHint: "ホストが解決する識別子のみを保存します。URL・パス・画像データはここには保存されません。",
+  invalidAsset: "英数字・アンダースコア・ハイフンで 1〜64 文字、先頭は英字にしてください。",
+  accent: "アクセント",
+  themeAccent: "テーマのアクセント",
+  customColor: "カスタムカラー",
+  presentation: "表示",
+  corners: "角",
+  themeDefault: "テーマの既定",
+  rounded: "角丸",
+  square: "角あり",
+  attribution: "Powered by AgentMatrix を表示",
+  advanced: "詳細な外観",
+  colorMode: "カラーモード",
+  typeface: "書体",
+  canvasColor: "キャンバスのカスタムカラー",
+  textColor: "テキストのカスタムカラー",
+  stylesheets: "スタイルシートのアセット",
+  stylesheetsHint: "任意のホスト解決 CSS アセット。ホスト側の検証と隔離を経てから適用されます。",
+  stylesheetLayer: "カスケードレイヤー",
+  stylesheetAsset: "スタイルシートのアセット ID",
+  addStylesheet: "スタイルシートのアセットを追加",
+  removeStylesheet: "スタイルシートを削除",
+  extensionNote:
+    "カスタムスタイルシートは v2 契約では論理アセット ID として保存されます。実体の解決と隔離はホストが行い、AgentCanvas は生のスクリプト・HTML・リモート URL を受け付けません。",
+};
+
+const copyByLocale = { en, zh, ja } satisfies Record<AppLocale, BrandSettingsCopy>;

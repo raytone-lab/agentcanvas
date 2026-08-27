@@ -706,7 +706,7 @@ import { ProviderFloatingSettings } from "./components/agent-preview/ProviderFlo
 import { RightSidebarRailIcon, SidebarRailIcon } from "./components/common/RailIcons";
 import { SelectMenu } from "./components/ui/select-menu";
 import { gitPreviewStateFromEvents } from "./harness/gitAdapter";
-import { useLocale } from "./i18n/LocaleContext";
+import { useCopy, useLocale } from "./i18n/LocaleContext";
 import { localizePreviewViewModel } from "./i18n/previewLocalization";
 import { createReasoningRenderPolicy } from "./preview/reasoningPreviewPolicy";
 import { modelOptionsForProject, type SlotConfig } from "./schema/agentuxConfig";
@@ -736,6 +736,7 @@ const PREVIEW_RESPONSIVE_WIDTHS = {
  */
 export function AgentApp() {
   const { locale } = useLocale();
+  const copy = useCopy();
   const frameRef = useRef<HTMLDivElement>(null);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
@@ -973,7 +974,7 @@ export function AgentApp() {
               type="button"
               className="rail-icon-btn preview-rail-float"
               data-side="left"
-              aria-label={locale === "zh" ? "展开侧边栏" : "Expand sidebar"}
+              aria-label={copy.shell.editor.expandSidebar}
               onClick={() => setLeftCollapsed(false)}
             >
               <span className="native-rail-icon"><SidebarRailIcon size={15} /></span>
@@ -985,7 +986,7 @@ export function AgentApp() {
               type="button"
               className="rail-icon-btn preview-rail-float"
               data-side="right"
-              aria-label={locale === "zh" ? "展开右侧面板" : "Expand panel"}
+              aria-label={copy.shell.editor.expandPanel}
               onClick={() => setRightCollapsed(false)}
             >
               <span className="native-rail-icon"><RightSidebarRailIcon size={15} /></span>
@@ -1029,17 +1030,17 @@ export function AgentApp() {
           }}
         >
           <span style={{ fontSize: "11px", opacity: 0.55, whiteSpace: "nowrap" }}>
-            {locale === "zh" ? "事件流(仅开发)" : "Event stream (dev)"}
+            {copy.shell.editor.eventStreamLabel}
           </span>
           <SelectMenu
             size="sm"
             value={streamId}
             onValueChange={setStreamId}
-            ariaLabel={locale === "zh" ? "选择事件流" : "Select event stream"}
+            ariaLabel={copy.shell.editor.eventStreamAria}
             // The empty option is what "new conversation" returns to, and what the app opens
             // on. Without it the picker could never get back to the welcome screen.
             options={[
-              { value: "", label: locale === "zh" ? "欢迎页(无事件)" : "Welcome (no events)" },
+              { value: "", label: copy.shell.editor.eventStreamWelcome },
               ...streams.map((item) => ({ value: item.id, label: item.label })),
             ]}
           />

@@ -3,7 +3,8 @@ import {
   type AgentFrontendProject,
   type ProviderConnection,
 } from "../schema/agentuxConfig";
-import type { AppLocale } from "../i18n/uiCopy";
+import { shellCopy } from "../i18n/copy/shell";
+import type { AppLocale } from "../i18n/locales";
 
 export type PreviewRunMode = "replay" | "live" | "harness";
 export type LivePreviewState = "idle" | "streaming" | "finished" | "stopped" | "error";
@@ -24,6 +25,7 @@ export function previewModeStatusLine(input: {
   liveState?: LivePreviewState;
 }): PreviewModeStatusLine {
   const locale = input.locale ?? "en";
+  const copy = shellCopy[locale].runMode;
   if (input.mode === "live") {
     const providerLabel = input.provider?.label ?? "Provider";
     const model = input.model ?? input.provider?.defaultModel ?? "model";
@@ -31,7 +33,7 @@ export function previewModeStatusLine(input: {
     return {
       modeLabel: "Live LLM",
       tone: "live",
-      detail: `${providerLabel} · ${model} · ${liveStateLabel(state, locale)}`,
+      detail: `${providerLabel} · ${model} · ${copy.liveState[state]}`,
     };
   }
 
@@ -39,33 +41,15 @@ export function previewModeStatusLine(input: {
     return {
       modeLabel: "Harness",
       tone: "planned",
-      detail: locale === "zh" ? "adapter 未接入" : "adapter not wired",
+      detail: copy.harnessDetail,
     };
   }
 
   return {
-    modeLabel: locale === "zh" ? "回放模拟" : "Replay mock",
+    modeLabel: copy.replayLabel,
     tone: "mock",
-    detail: input.scenarioLabel ?? (locale === "zh" ? "本地 fixture" : "local fixture"),
+    detail: input.scenarioLabel ?? copy.replayDetail,
   };
-}
-
-function liveStateLabel(state: LivePreviewState, locale: AppLocale): string {
-  if (locale === "en") {
-    return state;
-  }
-  switch (state) {
-    case "idle":
-      return "空闲";
-    case "streaming":
-      return "生成中";
-    case "finished":
-      return "完成";
-    case "stopped":
-      return "已停止";
-    case "error":
-      return "错误";
-  }
 }
 
 export function runButtonControlState(input: {

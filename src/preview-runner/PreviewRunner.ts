@@ -6,6 +6,9 @@ import {
   type TerminalStatus,
 } from "@agent-ux/protocol";
 
+import { chatCopy } from "../i18n/copy/chat";
+import { previewCopy } from "../i18n/copy/preview";
+import type { AppLocale } from "../i18n/locales";
 import { defaultProviderConnection, type AgentFrontendProject } from "../schema/agentuxConfig";
 import {
   commitGitPreviewState,
@@ -97,6 +100,15 @@ export type PreviewRunInput = {
   project: AgentFrontendProject;
   runId?: string;
   scenarioId?: PreviewScenarioId;
+  /**
+   * UI locale for the generated demo prose.
+   *
+   * Previously inferred by testing the prompt for Han characters. That stood in for a locale
+   * this type did not carry, and it cannot tell Japanese from Chinese — both use kanji — so
+   * the caller passes it now. A Chinese prompt typed into an English UI therefore produces
+   * English demo output, where it used to switch to Chinese.
+   */
+  locale?: AppLocale;
 };
 
 export type PreviewInputAttachment = {
@@ -171,6 +183,7 @@ type PreviewRunEventOptions = {
 
 type PreviewEventBuilder = {
   prompt: string;
+  locale: AppLocale;
   attachments: readonly PreviewInputAttachment[];
   project: AgentFrontendProject;
   scenarioId: PreviewScenarioId;
@@ -194,6 +207,7 @@ function createPreviewRunEvents(input: PreviewRunInput, options: PreviewRunEvent
 
   const builder: PreviewEventBuilder = {
     prompt,
+    locale: input.locale ?? "en",
     attachments: input.attachments ?? [],
     project: input.project,
     scenarioId: options.scenarioId,
@@ -302,8 +316,7 @@ type MediaGenerationKind = "image" | "audio" | "video";
 function mediaGenerationScenario(builder: PreviewEventBuilder, kind: MediaGenerationKind): AgentUXEvent[] {
   const reasoningId = `${builder.runId}_${kind}_reasoning`;
   const toolCallId = `${builder.runId}_generate_${kind}`;
-  const zh = hasChinese(builder.prompt);
-  const spec = mediaGenerationSpec(builder, kind, zh);
+  const spec = mediaGenerationSpec(builder, kind, builder.locale);
   const artifact: PreviewArtifactSpec = {
     artifactId: `${builder.runId}_${kind}_artifact`,
     kind,
@@ -365,23 +378,20 @@ function mediaGenerationScenario(builder: PreviewEventBuilder, kind: MediaGenera
   ];
 }
 
-function mediaGenerationSpec(builder: PreviewEventBuilder, kind: MediaGenerationKind, zh: boolean) {
+function mediaGenerationSpec(builder: PreviewEventBuilder, kind: MediaGenerationKind, locale: AppLocale) {
+  const m = previewCopy[locale].mediaGeneration;
   const prompt = truncate(builder.prompt, 96);
   if (kind === "image") {
     return {
-      runTitle: zh ? "图片生成事件流预览" : "Image generation event-flow preview",
-      reasoningLabel: zh ? "分析投影仪产品主视觉" : "Analyzing projector product visual",
-      reasoningDelta: zh
-        ? "识别到白色便携投影仪是视觉中心，镜头高光和金色提手建立产品记忆点。"
-        : `For "${prompt}", keep the white portable projector as the focal point with the lens highlight and gold handle as signature cues.`,
-      reasoningSummary: zh
-        ? "加载阶段保留居中产品轮廓、米金布料背景和柔和光线，完成后显影为完整产品主视觉。"
-        : "During loading, preserve the centered silhouette, warm fabric backdrop, and soft light before revealing the complete product hero visual.",
-      toolTitle: zh ? "正在生成图片 GeneratedMoodboard.png" : "Generating image GeneratedMoodboard.png",
+      runTitle: m.image.runTitle,
+      reasoningLabel: m.image.reasoningLabel,
+      reasoningDelta: m.image.reasoningDelta.replace("{prompt}", prompt),
+      reasoningSummary: m.image.reasoningSummary,
+      toolTitle: m.image.toolTitle,
       toolDescription: "Simulates a local image-generation provider response for UI preview only.",
       args: { prompt: builder.prompt, aspectRatio: "16:10", variants: 4, dynamicSkeleton: true },
       result: { asset: "GeneratedMoodboard.png", kind, variants: 4, preview: "animated-image-loading" },
-      resultPreview: zh ? "4 张候选图 · 动态加载" : "4 candidates · animated loading",
+      resultPreview: m.image.resultPreview,
       title: "GeneratedMoodboard.png",
       mimeType: "image/png",
       content: [
@@ -396,19 +406,15 @@ function mediaGenerationSpec(builder: PreviewEventBuilder, kind: MediaGeneration
 
   if (kind === "audio") {
     return {
-      runTitle: zh ? "音频生成事件流预览" : "Audio generation event-flow preview",
-      reasoningLabel: zh ? "设计音频加载" : "Designing audio loading",
-      reasoningDelta: zh
-        ? `为「${prompt}」生成音频时，先展示音频骨架或波形加载，再进入音频播放 demo。`
-        : `For "${prompt}", show an audio skeleton or waveform loader first, then reveal an audio player demo. `,
-      reasoningSummary: zh
-        ? "音频生成场景保留骨架加载和动态波形两种模式，完成后呈现更宽更矮的播放控件。"
-        : "Audio generation keeps two modes: skeleton loading and animated waveform, then resolves into a wider, shorter playback control.",
-      toolTitle: zh ? "正在生成音频 NarrationMix.wav" : "Generating audio NarrationMix.wav",
+      runTitle: m.audio.runTitle,
+      reasoningLabel: m.audio.reasoningLabel,
+      reasoningDelta: m.audio.reasoningDelta.replace("{prompt}", prompt),
+      reasoningSummary: m.audio.reasoningSummary,
+      toolTitle: m.audio.toolTitle,
       toolDescription: "Simulates a local audio-generation provider response for UI preview only.",
       args: { prompt: builder.prompt, format: "wav", durationSeconds: 18, waveformLoading: true },
       result: { asset: "NarrationMix.wav", kind, durationSeconds: 18, preview: "audio-waveform-card" },
-      resultPreview: zh ? "18 秒音频 · 播放 demo" : "18s audio · playback demo",
+      resultPreview: m.audio.resultPreview,
       title: "NarrationMix.wav",
       mimeType: "audio/wav",
       content: [
@@ -422,19 +428,15 @@ function mediaGenerationSpec(builder: PreviewEventBuilder, kind: MediaGeneration
   }
 
   return {
-    runTitle: zh ? "视频生成事件流预览" : "Video generation event-flow preview",
-    reasoningLabel: zh ? "设计视频加载" : "Designing video loading",
-    reasoningDelta: zh
-      ? `为「${prompt}」生成视频时，先复用图片加载视觉，再进入视频播放 demo。`
-      : `For "${prompt}", reuse the image loading visual first, then reveal a video player demo. `,
-    reasoningSummary: zh
-      ? "视频生成场景保持加载器一致性，完成后呈现带播放按钮和进度条的视频画面。"
-      : "Video generation keeps loader visuals consistent, then resolves into a video frame with play and progress affordances.",
-    toolTitle: zh ? "正在生成视频 LaunchTeaser.mp4" : "Generating video LaunchTeaser.mp4",
+    runTitle: m.video.runTitle,
+    reasoningLabel: m.video.reasoningLabel,
+    reasoningDelta: m.video.reasoningDelta.replace("{prompt}", prompt),
+    reasoningSummary: m.video.reasoningSummary,
+    toolTitle: m.video.toolTitle,
     toolDescription: "Simulates a local video-generation provider response for UI preview only.",
     args: { prompt: builder.prompt, aspectRatio: "16:9", durationSeconds: 8, storyboardFrames: 5 },
     result: { asset: "LaunchTeaser.mp4", kind, durationSeconds: 8, preview: "video-frame-loading" },
-    resultPreview: zh ? "8 秒视频 · 播放 demo" : "8s video · playback demo",
+    resultPreview: m.video.resultPreview,
     title: "LaunchTeaser.mp4",
     mimeType: "video/mp4",
     content: [
@@ -655,7 +657,7 @@ type PreviewInputReference = {
 };
 
 function previewToolPlans(builder: PreviewEventBuilder): PreviewToolPlan[] {
-  const zh = hasChinese(builder.prompt) || builder.attachments.some((attachment) => hasChinese(attachment.name));
+  const locale = builder.locale;
   const references = previewInputReferences(builder.prompt, builder.attachments);
   const imageRefs = references.filter((reference) => reference.isImage);
   const imageRef = imageRefs[0];
@@ -665,27 +667,27 @@ function previewToolPlans(builder: PreviewEventBuilder): PreviewToolPlan[] {
   const plans: PreviewToolPlan[] = [];
 
   if (imageRefs.length > 0) {
-    plans.push(readImagePlan(imageRefs, zh));
+    plans.push(readImagePlan(imageRefs, locale));
   }
 
   if (fileRef) {
-    plans.push(fileActionPlan(fileRef, builder.prompt, zh));
+    plans.push(fileActionPlan(fileRef, builder.prompt, locale));
   }
 
   if (searchQuery) {
-    plans.push(searchPlan(searchQuery, zh));
+    plans.push(searchPlan(searchQuery, locale));
   }
 
-  plans.splice(Math.min(1, plans.length), 0, inspectConfigPlan(builder, zh));
+  plans.splice(Math.min(1, plans.length), 0, inspectConfigPlan(builder, locale));
 
   if (shouldValidate(builder.prompt, fileRef, imageRef)) {
-    plans.push(validatePlan(fileRef?.name ?? "PreviewResponse.tsx", zh));
+    plans.push(validatePlan(fileRef?.name ?? "PreviewResponse.tsx", locale));
   }
 
   if (command) {
-    plans.push(commandPlan(command, zh));
+    plans.push(commandPlan(command, locale));
   } else if (plans.length < 3) {
-    plans.push(searchPlan(imageRef ? imageRef.name : fileRef?.name ?? "artifactRenderer", zh));
+    plans.push(searchPlan(imageRef ? imageRef.name : fileRef?.name ?? "artifactRenderer", locale));
   }
 
   return uniquePlans(plans).slice(0, 5);
@@ -724,11 +726,11 @@ function previewToolActionEvents(builder: PreviewEventBuilder, plan: PreviewTool
   ];
 }
 
-function inspectConfigPlan(builder: PreviewEventBuilder, zh: boolean): PreviewToolPlan {
+function inspectConfigPlan(builder: PreviewEventBuilder, locale: AppLocale): PreviewToolPlan {
   return {
     id: "read_saved_config",
     name: "preview.read_file",
-    title: toolTitle(zh ? "正在读取文件" : "Reading file", "AgentCanvas.saved-ui.json"),
+    title: toolTitle(chatCopy[locale].toolCard.runningAction.readFile, "AgentCanvas.saved-ui.json"),
     description: "Reads the saved AgentCanvas schema in memory.",
     args: { path: "AgentCanvas.saved-ui.json", source: "saved-project", externalIO: false },
     result: previewConfigSummary(builder),
@@ -772,7 +774,7 @@ function previewConfigSummary(builder: PreviewEventBuilder) {
   };
 }
 
-function readImagePlan(references: readonly PreviewInputReference[], zh: boolean): PreviewToolPlan {
+function readImagePlan(references: readonly PreviewInputReference[], locale: AppLocale): PreviewToolPlan {
   const [reference] = references;
   const images = references.map((item) => ({
     name: item.name,
@@ -782,7 +784,7 @@ function readImagePlan(references: readonly PreviewInputReference[], zh: boolean
   return {
     id: `read_image_${safeId(reference.name)}`,
     name: "preview.read_image",
-    title: toolTitle(zh ? "正在读取图片" : "Reading image", reference.name),
+    title: toolTitle(chatCopy[locale].toolCard.runningAction.readImage, reference.name),
     description: "Reads an uploaded screenshot or image attachment in memory.",
     args: { path: reference.name, attachment: reference.fromAttachment, images: images.map(({ name }) => name) },
     result: {
@@ -795,9 +797,9 @@ function readImagePlan(references: readonly PreviewInputReference[], zh: boolean
   };
 }
 
-function fileActionPlan(reference: PreviewInputReference, prompt: string, zh: boolean): PreviewToolPlan {
+function fileActionPlan(reference: PreviewInputReference, prompt: string, locale: AppLocale): PreviewToolPlan {
   const edit = /(改|修改|编辑|重构|补充|修复|edit|modify|fix|update|refactor)/i.test(prompt);
-  const label = edit ? (zh ? "正在编辑文件" : "Editing file") : (zh ? "正在读取文件" : "Reading file");
+  const label = edit ? chatCopy[locale].toolCard.runningAction.editFile : chatCopy[locale].toolCard.runningAction.readFile;
   return {
     id: `${edit ? "edit_file" : "read_file"}_${safeId(reference.name)}`,
     name: edit ? "preview.edit_file" : "preview.read_file",
@@ -811,11 +813,11 @@ function fileActionPlan(reference: PreviewInputReference, prompt: string, zh: bo
   };
 }
 
-function searchPlan(query: string, zh: boolean): PreviewToolPlan {
+function searchPlan(query: string, locale: AppLocale): PreviewToolPlan {
   return {
     id: `search_${safeId(query)}`,
     name: "preview.search",
-    title: toolTitle(zh ? "正在搜索" : "Searching", query),
+    title: toolTitle(chatCopy[locale].toolCard.runningAction.search, query),
     description: "Searches the saved preview configuration and mock source map.",
     args: { pattern: query },
     result: {
@@ -826,12 +828,12 @@ function searchPlan(query: string, zh: boolean): PreviewToolPlan {
   };
 }
 
-function validatePlan(target: string, zh: boolean): PreviewToolPlan {
+function validatePlan(target: string, locale: AppLocale): PreviewToolPlan {
   const testTarget = target.endsWith(".test.tsx") || target.endsWith(".test.ts") ? target : testFileName(target);
   return {
     id: `validate_${safeId(testTarget)}`,
     name: "preview.validate",
-    title: toolTitle(zh ? "正在验证" : "Validating", testTarget),
+    title: toolTitle(chatCopy[locale].toolCard.runningAction.validate, testTarget),
     description: "Runs a mock local validation pass for the saved UI preview.",
     args: { cmd: `npm test -- ${testTarget}` },
     result: "PASS preview rendering\nPASS saved interaction flow",
@@ -839,11 +841,11 @@ function validatePlan(target: string, zh: boolean): PreviewToolPlan {
   };
 }
 
-function commandPlan(command: string, zh: boolean): PreviewToolPlan {
+function commandPlan(command: string, locale: AppLocale): PreviewToolPlan {
   return {
     id: `run_command_${safeId(command)}`,
     name: "shell.exec",
-    title: toolTitle(zh ? "正在运行命令" : "Running command", command),
+    title: toolTitle(chatCopy[locale].toolCard.runningAction.runCommand, command),
     description: "Runs a mock command transcript without invoking a real process.",
     args: { cmd: command },
     result: `> ${command}\n✓ mock build completed\n✓ saved preview assets checked`,
@@ -942,10 +944,6 @@ function uniquePlans(plans: PreviewToolPlan[]): PreviewToolPlan[] {
     seen.add(key);
     return true;
   });
-}
-
-function hasChinese(value: string): boolean {
-  return /[\u3400-\u9fff]/.test(value);
 }
 
 function artifactEvents(builder: PreviewEventBuilder, artifact: PreviewArtifactSpec): AgentUXEvent[] {

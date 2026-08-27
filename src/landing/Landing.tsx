@@ -319,9 +319,7 @@ export function Landing() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => {
-    document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
-  }, [locale]);
+  // `<html lang>` is set by LocaleProvider, which covers both entry points.
 
   return (
     <div className="lp-page" ref={rootRef}>
@@ -343,7 +341,7 @@ export function Landing() {
               locale={locale}
               onChange={setLocale}
               ariaLabel={copy.nav.localeAria}
-              labels={{ zh: copy.nav.localeZh, en: copy.nav.localeEn }}
+              labels={{ zh: copy.nav.localeZh, en: copy.nav.localeEn, ja: copy.nav.localeJa }}
             />
             <a
               className="lp-nav-github"

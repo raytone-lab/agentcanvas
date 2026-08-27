@@ -1,3 +1,4 @@
+import type { AppLocale } from "../../i18n/locales";
 import { Slider } from "../ui/slider";
 import { useLocale } from "../../i18n/LocaleContext";
 import type { AgentFrontendProject } from "../../schema/agentuxConfig";
@@ -5,18 +6,18 @@ import type { AgentFrontendProject } from "../../schema/agentuxConfig";
 type WritingParams = AgentFrontendProject["theme"]["motion"]["writingParams"];
 type ParamKey = keyof WritingParams;
 
-type ParamSpec = { key: ParamKey; min: number; max: number; step: number; unit: string; label: { en: string; zh: string } };
+type ParamSpec = { key: ParamKey; min: number; max: number; step: number; unit: string; label: Record<AppLocale, string> };
 
 const WRITING_PARAM_SPECS: Record<string, ParamSpec[]> = {
   "writing-smooth": [
-    { key: "streamWps", min: 10, max: 120, step: 1, unit: "wps", label: { en: "Stream speed", zh: "流速" } },
+    { key: "streamWps", min: 10, max: 120, step: 1, unit: "wps", label: { en: "Stream speed", zh: "流速", ja: "ストリーム速度" } },
   ],
   "writing-typewriter": [
-    { key: "typeCps", min: 5, max: 60, step: 1, unit: "cps", label: { en: "Typing speed", zh: "打字速度" } },
+    { key: "typeCps", min: 5, max: 60, step: 1, unit: "cps", label: { en: "Typing speed", zh: "打字速度", ja: "タイピング速度" } },
   ],
   "writing-chunked": [
-    { key: "chunkSize", min: 2, max: 12, step: 1, unit: "w", label: { en: "Chunk size", zh: "块大小" } },
-    { key: "chunkIntervalMs", min: 80, max: 600, step: 10, unit: "ms", label: { en: "Chunk interval", zh: "块间隔" } },
+    { key: "chunkSize", min: 2, max: 12, step: 1, unit: "w", label: { en: "Chunk size", zh: "块大小", ja: "チャンクサイズ" } },
+    { key: "chunkIntervalMs", min: 80, max: 600, step: 10, unit: "ms", label: { en: "Chunk interval", zh: "块间隔", ja: "チャンク間隔" } },
   ],
 };
 

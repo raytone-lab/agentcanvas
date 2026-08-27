@@ -1,4 +1,5 @@
 import { Textarea, Switch } from "./ui";
+import type { AppLocale } from "../i18n/locales";
 import type { AgentFrontendProject } from "../schema/agentuxConfig";
 
 export function ProductWelcomeSettingsPanel({
@@ -7,12 +8,12 @@ export function ProductWelcomeSettingsPanel({
   onChange,
 }: {
   project: AgentFrontendProject;
-  locale: "en" | "zh";
+  locale: AppLocale;
   onChange: (product: AgentFrontendProject["product"]) => void;
 }) {
   const product = project.product;
   const welcome = product.welcome;
-  const copy = locale === "zh" ? zh : en;
+  const copy = copyByLocale[locale];
   const updateWelcome = (patch: Partial<typeof welcome>) =>
     onChange({ ...product, welcome: { ...welcome, ...patch } });
 
@@ -71,7 +72,9 @@ export function ProductWelcomeSettingsPanel({
   );
 }
 
-const en: Record<string, string> = {
+// Deliberately unannotated: `Record<string, string>` would widen the keys to `string`, which
+// makes the `keyof typeof en` below vacuous and lets a locale silently miss a key.
+const en = {
   copy: "Welcome copy",
   headline: "Headline",
   supporting: "Supporting text",
@@ -81,7 +84,9 @@ const en: Record<string, string> = {
   promptHelp: "One prompt per line, up to 6. Selecting a prompt only fills the composer in exported products.",
 };
 
-const zh: Record<keyof typeof en, string> = {
+type WelcomeSettingsCopy = Record<keyof typeof en, string>;
+
+const zh: WelcomeSettingsCopy = {
   copy: "欢迎文案",
   headline: "标题",
   supporting: "辅助说明",
@@ -90,3 +95,16 @@ const zh: Record<keyof typeof en, string> = {
   prompts: "提示词",
   promptHelp: "每行一个，最多 6 条。导出产品中选择建议只会填入输入框，不会自动发送。",
 };
+
+/** PENDING NATIVE REVIEW — see the note in src/i18n/copy/shell.ts for the conventions used. */
+const ja: WelcomeSettingsCopy = {
+  copy: "ウェルカム文",
+  headline: "見出し",
+  supporting: "補足テキスト",
+  suggestions: "おすすめのタスク",
+  showSuggestions: "おすすめのプロンプトを表示",
+  prompts: "プロンプト",
+  promptHelp: "1 行に 1 件、最大 6 件。エクスポートした製品では、選んだプロンプトは入力欄に挿入されるだけで送信はされません。",
+};
+
+const copyByLocale = { en, zh, ja } satisfies Record<AppLocale, WelcomeSettingsCopy>;

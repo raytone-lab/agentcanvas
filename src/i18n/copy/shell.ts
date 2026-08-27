@@ -1,5 +1,8 @@
 // Shell domain copy: topbar, preset rail, run status, command menu, toasts.
-// en is the source of truth; zh must mirror its shape exactly.
+// en is the source of truth; every other locale must mirror its shape exactly — the
+// `satisfies` at the bottom is what enforces that.
+
+import type { AppLocale } from "../locales";
 
 const en = {
   brand: {
@@ -23,6 +26,17 @@ const en = {
     languageSwitchAria: "Switch language",
     languageEn: "EN",
     languageZh: "中文",
+    /**
+     * Keyed by locale so the switcher can map over APP_LOCALES instead of growing a hardcoded
+     * button per language. Each label is written in its own language, which is the convention
+     * language pickers follow — a reader who cannot read the current UI language still finds
+     * their own.
+     */
+    languageLabels: {
+      en: "EN",
+      zh: "中文",
+      ja: "日本語",
+    },
   },
   presetRail: {
     title: "UX Presets",
@@ -81,6 +95,50 @@ const en = {
         label: "Theme",
         description: "Font and color systems for the generated AgentUX scaffold.",
       },
+    },
+  },
+  /** Editor chrome that used to be inline ternaries in App.tsx. */
+  editor: {
+    noSelectedComponents: "No selected components yet",
+    selectedComponentCount: "{count} selected components",
+    chooseStyle: "Choose style",
+    underConstruction: "Under construction…",
+    expandSidebar: "Expand sidebar",
+    expandPanel: "Expand panel",
+    // Dev-only event-stream picker in the exported shell.
+    eventStreamLabel: "Event stream (dev)",
+    eventStreamAria: "Select event stream",
+    eventStreamWelcome: "Welcome (no events)",
+    styleSwitch: {
+      gotIt: "Got it",
+      cancel: "Cancel",
+      confirm: "Switch",
+      unbuiltTitle: "{style} is under construction",
+      unbuiltDescription: "This style is still being built and can't be switched to yet.",
+      confirmTitle: "Switch to {style}?",
+      confirmDescription:
+        "Your configuration and functionality stay intact — only the visual style changes to {style}.",
+    },
+    messageActions: {
+      sentTitle: "Sent message actions",
+      generatedTitle: "Generated message actions",
+      copy: "Copy",
+      edit: "Edit",
+      time: "Time",
+      regenerate: "Regenerate",
+    },
+  },
+  runMode: {
+    replayLabel: "Replay mock",
+    replayDetail: "local fixture",
+    harnessDetail: "adapter not wired",
+    // English reads the raw state name, which is what the previous inline branch returned.
+    liveState: {
+      idle: "idle",
+      streaming: "streaming",
+      finished: "finished",
+      stopped: "stopped",
+      error: "error",
     },
   },
   welcomePanel: {
@@ -142,6 +200,11 @@ const zh: typeof en = {
     languageSwitchAria: "切换语言",
     languageEn: "EN",
     languageZh: "中文",
+    languageLabels: {
+      en: "EN",
+      zh: "中文",
+      ja: "日本語",
+    },
   },
   presetRail: {
     title: "UX 预设",
@@ -202,6 +265,46 @@ const zh: typeof en = {
       },
     },
   },
+  editor: {
+    noSelectedComponents: "还没有选择组件",
+    selectedComponentCount: "已选组件 {count} 套",
+    chooseStyle: "选择风格",
+    underConstruction: "正在搭建中…",
+    expandSidebar: "展开侧边栏",
+    expandPanel: "展开右侧面板",
+    eventStreamLabel: "事件流(仅开发)",
+    eventStreamAria: "选择事件流",
+    eventStreamWelcome: "欢迎页(无事件)",
+    styleSwitch: {
+      gotIt: "知道了",
+      cancel: "取消",
+      confirm: "确认更换",
+      unbuiltTitle: "「{style}」正在搭建中",
+      unbuiltDescription: "该风格还在搭建中,暂时无法切换,敬请期待。",
+      confirmTitle: "确定切换为「{style}」?",
+      confirmDescription: "切换后不影响任何功能和已有配置,只有界面视觉风格会变为「{style}」。",
+    },
+    messageActions: {
+      sentTitle: "发送内容操作",
+      generatedTitle: "生成消息操作",
+      copy: "复制",
+      edit: "修改",
+      time: "时间",
+      regenerate: "重新生成",
+    },
+  },
+  runMode: {
+    replayLabel: "回放模拟",
+    replayDetail: "本地 fixture",
+    harnessDetail: "adapter 未接入",
+    liveState: {
+      idle: "空闲",
+      streaming: "生成中",
+      finished: "完成",
+      stopped: "已停止",
+      error: "错误",
+    },
+  },
   welcomePanel: {
     title: "欢迎语",
     greetingLabel: "问候语文本",
@@ -239,4 +342,180 @@ const zh: typeof en = {
   },
 };
 
-export const shellCopy = { en, zh };
+/**
+ * PENDING NATIVE REVIEW. Written to the conventions in docs, not verified by a Japanese
+ * speaker: katakana for settled dev loanwords (ツール / ストリーム / プレビュー), sentences in
+ * です・ます, labels and buttons in noun form, and product nouns left untranslated
+ * (AgentCanvas / AgentUX / Agent / Git / MCP / Vite / SSE / fixture).
+ *
+ * Chinese kanji that misread in Japanese are deliberately not carried over: 工具 → ツール,
+ * 运行 → 実行, 产物 → アーティファクト, 输入框 → 入力欄.
+ */
+const ja: typeof en = {
+  brand: {
+    title: "AgentCanvas",
+    subtitleBuilder: "スキーマ駆動の AgentUX スキャフォールド構成ツール",
+    subtitleSavedPreview: "保存済み Agent フロントエンドの実行プレビュー",
+  },
+  topbar: {
+    workspaceViewAria: "ワークスペース表示",
+    viewPreview: "プレビュー",
+    viewDebug: "デバッグ",
+    editUiUx: "UI/UX を編集",
+    runModeLabel: "実行モード",
+    runModeReplay: "リプレイモック",
+    runModeLive: "ライブ LLM",
+    scenarioLabel: "シナリオ",
+    save: "保存",
+    run: "実行",
+    stop: "停止",
+    exportScaffold: "Agent をダウンロード",
+    languageSwitchAria: "言語を切り替える",
+    languageEn: "EN",
+    languageZh: "中文",
+    languageLabels: {
+      en: "EN",
+      zh: "中文",
+      ja: "日本語",
+    },
+  },
+  presetRail: {
+    title: "UX プリセット",
+    defaultSection: "オプション",
+    activeBadge: "有効",
+    groups: {
+      conversation: {
+        label: "チャット",
+        description: "文章の出力リズム、メッセージ操作、初回表示の状態。",
+      },
+      "media-generation": {
+        label: "ローダー",
+        description: "画像・音声・動画の生成中に表示するローディングコンポーネント。",
+      },
+      sidebar: {
+        label: "左レール",
+        description: "左側の会話履歴：表示の有無、新規チャット、検索、グループ化、バージョン表記。",
+      },
+      "ux-effects": {
+        label: "思考",
+        description: "推論のモーション、要約の表示順、折りたたみの挙動。",
+      },
+      "tool-calls": {
+        label: "ツール",
+        description: "ファイルの読み取り・編集・検証・検索・コマンド実行などのツール動作。",
+      },
+      approval: {
+        label: "権限",
+        description: "入力欄からの承認導線と、承認待ち操作をカード内か会話中のどこに置くか。",
+      },
+      blocks: {
+        label: "ステータス",
+        description: "完了・失敗・キャンセル・リトライ・リトライ上限・停止といった結果と障害の状態。",
+      },
+      composer: {
+        label: "入力欄",
+        description: "ファイル、思考予算、モデル、ツール、プロンプトの入力コントロール。",
+      },
+      provider: {
+        label: "モデル",
+        description: "スキャフォールドが使うホスト型およびローカルのモデルプロバイダー既定値。",
+      },
+      output: {
+        label: "出力",
+        description: "出力のソースとパネルの挙動。",
+      },
+      render: {
+        label: "レンダリング",
+        description: "生成された出力に使うアーティファクトレンダラーの既定値。",
+      },
+      git: {
+        label: "Git",
+        description: "ブランチの状態、変更ファイル、差分レビュー、コミット操作。",
+      },
+      theme: {
+        label: "テーマ",
+        description: "生成される AgentUX スキャフォールドのフォントと配色システム。",
+      },
+    },
+  },
+  editor: {
+    noSelectedComponents: "コンポーネントが選択されていません",
+    selectedComponentCount: "選択中のコンポーネント {count} 件",
+    chooseStyle: "スタイルを選ぶ",
+    underConstruction: "準備中…",
+    expandSidebar: "サイドバーを開く",
+    expandPanel: "右パネルを開く",
+    eventStreamLabel: "イベントストリーム（開発用）",
+    eventStreamAria: "イベントストリームを選択",
+    eventStreamWelcome: "ウェルカム（イベントなし）",
+    styleSwitch: {
+      gotIt: "了解",
+      cancel: "キャンセル",
+      confirm: "切り替える",
+      unbuiltTitle: "「{style}」は準備中です",
+      unbuiltDescription: "このスタイルはまだ準備中のため、切り替えられません。",
+      confirmTitle: "「{style}」に切り替えますか？",
+      confirmDescription: "設定や機能はそのまま保たれ、変わるのは見た目のスタイルだけです（「{style}」になります）。",
+    },
+    messageActions: {
+      sentTitle: "送信メッセージの操作",
+      generatedTitle: "生成メッセージの操作",
+      copy: "コピー",
+      edit: "編集",
+      time: "時刻",
+      regenerate: "再生成",
+    },
+  },
+  runMode: {
+    replayLabel: "リプレイモック",
+    replayDetail: "ローカル fixture",
+    harnessDetail: "adapter 未接続",
+    liveState: {
+      idle: "待機中",
+      streaming: "生成中",
+      finished: "完了",
+      stopped: "停止",
+      error: "エラー",
+    },
+  },
+  welcomePanel: {
+    title: "ウェルカム",
+    greetingLabel: "あいさつ文",
+    greetingPlaceholder: "Meet My Agent ~",
+    hint: "新しいチャットを始めたときに入力欄の上に表示されます。サイドバーの「新規チャット」で確認できます。",
+  },
+  commandMenu: {
+    placeholder: "fixture を切り替える、または画面へ移動…",
+    empty: "コマンドが見つかりません。",
+    replayFixtures: "リプレイ fixture",
+  },
+  toast: {
+    replayFixtureLoaded: "リプレイ fixture を読み込みました",
+    providerSettingsSaved: "プロバイダー設定をスキャフォールド構成に保存しました",
+    uiUxSaved: "UI/UX を保存しました。実行プレビューの準備ができています。",
+    saveBeforeLocalPreview: "ローカルプレビューを実行する前に UI/UX を保存してください。",
+    pureFrontendComplete: "フロントエンドのみのプレビュー実行が完了しました",
+    saveBeforeLiveLlm: "ライブ LLM を実行する前に UI/UX を保存してください。",
+    liveLlmStopped: "ライブ LLM のリクエストを停止しました",
+    liveLlmFailed: "ライブ LLM のプレビューに失敗しました",
+    enterDevSessionKeyBeforeTesting: "{provider} をテストする前に開発用セッションキーを入力してください。",
+    providerKeyWorks: "{provider} のキーは有効です",
+    modelsCountSuffix: "件のモデル",
+    providerTestFailed: "{provider} のテストに失敗しました：{message}",
+    enterDevSessionKeyBeforeFetchingModels: "{provider} のモデルを取得する前に開発用セッションキーを入力してください。",
+    providerReturnedNoModels: "{provider} からモデルが返されませんでした。",
+    fetchedModelsForProvider: "{provider} のモデルを {count} 件取得しました",
+    providerModelFetchFailed: "{provider} のモデル取得に失敗しました：{message}",
+    liveLlmResponseReceived: "{provider} のライブ LLM 応答を受信しました",
+    unknownError: "不明なエラー",
+    runGitDiffBeforeCommit: "コミットする前に Git 差分プレビューのシナリオを実行してください。",
+    mockCommitRecorded: "モックコミットをローカルに記録しました",
+    exportDownloaded: "{name} をエクスポートしました",
+    scaffoldExportFailed: "スキャフォールドのエクスポートに失敗しました",
+  },
+};
+
+/** Read off `en`, so every other locale is checked against it rather than trusted. */
+export type ShellCopy = typeof en;
+
+export const shellCopy = { en, zh, ja } satisfies Record<AppLocale, ShellCopy>;

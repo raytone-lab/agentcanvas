@@ -74,7 +74,9 @@ import {
   translatePresetOptionLabel,
   translatePresetSection,
 } from "./i18n/presetCopy";
-import type { AppLocale } from "./i18n/uiCopy";
+import { previewCopy } from "./i18n/copy/preview";
+import { APP_LOCALES } from "./i18n/locales";
+import { uiCopy, type AppLocale, type UiCopy } from "./i18n/uiCopy";
 import { downloadScaffold } from "./export/scaffoldDownload";
 import { createScaffoldExportSnapshot, type ScaffoldExportSnapshot } from "./export/scaffoldManifest";
 import { parsePreviewFixture, previewFixtures, type PreviewFixtureId } from "./preview/fixtures";
@@ -171,11 +173,11 @@ type MessageActionKey = keyof AgentFrontendProject["conversation"]["messageActio
 
 const presetStyleOptions: Array<{
   id: PresetStyleId;
-  label: { en: string; zh: string };
+  label: Record<AppLocale, string>;
 }> = [
-  { id: "native", label: { en: "Native", zh: "原生风" } },
-  { id: "illustrated", label: { en: "Minimal", zh: "极简风" } },
-  { id: "studio", label: { en: "Illustrated", zh: "插画风" } },
+  { id: "native", label: { en: "Native", zh: "原生风", ja: "ネイティブ" } },
+  { id: "illustrated", label: { en: "Minimal", zh: "极简风", ja: "ミニマル" } },
+  { id: "studio", label: { en: "Illustrated", zh: "插画风", ja: "イラスト" } },
 ];
 
 // Every standard scenario is demoed under the existing UX preset group it
@@ -281,7 +283,7 @@ function mediaScenarioForPresetOption(optionId: string): PreviewScenarioId | und
 // AgentMatrix standard verbatim.
 type RawStateCard = {
   slot: IconSlot;
-  title: { en: string; zh: string };
+  title: Record<AppLocale, string>;
   code: string;
   anim?: StateCardAnim;
   tone?: StateCardTone;
@@ -290,88 +292,88 @@ type RawStateCard = {
 
 const groupStateCards: Partial<Record<PresetGroupId, RawStateCard[]>> = {
   conversation: [
-    { slot: "author.user", title: { en: "User avatar", zh: "用户头像" }, code: "avatar · user", tone: "neutral", toggleKey: "userAvatar" },
-    { slot: "author.agent", title: { en: "Agent avatar", zh: "Agent 头像" }, code: "avatar · agent", tone: "info", toggleKey: "agentAvatar" },
+    { slot: "author.user", title: { en: "User avatar", zh: "用户头像", ja: "ユーザーのアバター" }, code: "avatar · user", tone: "neutral", toggleKey: "userAvatar" },
+    { slot: "author.agent", title: { en: "Agent avatar", zh: "Agent 头像", ja: "Agent のアバター" }, code: "avatar · agent", tone: "info", toggleKey: "agentAvatar" },
     // Note: streaming (agent.message_delta) is controlled by the existing
     // "书写 / Writing" options, so it is not duplicated as a state card here.
     // Session lifecycle drives the conversation-header status pill.
-    { slot: "session.running", title: { en: "Session running", zh: "会话运行中" }, code: "session.status_running", anim: "spin", tone: "info" },
-    { slot: "session.idle", title: { en: "Session idle", zh: "会话空闲" }, code: "session.status_idle", tone: "success" },
-    { slot: "session.idle", title: { en: "End turn", zh: "回合结束" }, code: "stop_reason: end_turn", tone: "success" },
-    { slot: "session.requires_action", title: { en: "Requires action", zh: "待操作" }, code: "stop_reason: requires_action", tone: "warning" },
-    { slot: "incident.exhausted", title: { en: "Retries exhausted", zh: "重试耗尽" }, code: "stop_reason: retries_exhausted", tone: "danger" },
-    { slot: "session.rescheduling", title: { en: "Rescheduling", zh: "重新调度" }, code: "session.status_rescheduled", anim: "spin", tone: "warning" },
-    { slot: "session.terminated", title: { en: "Terminated", zh: "已终止" }, code: "session.status_terminated", tone: "danger" },
-    { slot: "session.deleted", title: { en: "Deleted", zh: "已删除" }, code: "session.deleted", tone: "danger" },
+    { slot: "session.running", title: { en: "Session running", zh: "会话运行中", ja: "セッション実行中" }, code: "session.status_running", anim: "spin", tone: "info" },
+    { slot: "session.idle", title: { en: "Session idle", zh: "会话空闲", ja: "セッション待機中" }, code: "session.status_idle", tone: "success" },
+    { slot: "session.idle", title: { en: "End turn", zh: "回合结束", ja: "ターン終了" }, code: "stop_reason: end_turn", tone: "success" },
+    { slot: "session.requires_action", title: { en: "Requires action", zh: "待操作", ja: "対応が必要" }, code: "stop_reason: requires_action", tone: "warning" },
+    { slot: "incident.exhausted", title: { en: "Retries exhausted", zh: "重试耗尽", ja: "リトライ上限に到達" }, code: "stop_reason: retries_exhausted", tone: "danger" },
+    { slot: "session.rescheduling", title: { en: "Rescheduling", zh: "重新调度", ja: "再スケジュール中" }, code: "session.status_rescheduled", anim: "spin", tone: "warning" },
+    { slot: "session.terminated", title: { en: "Terminated", zh: "已终止", ja: "終了" }, code: "session.status_terminated", tone: "danger" },
+    { slot: "session.deleted", title: { en: "Deleted", zh: "已删除", ja: "削除済み" }, code: "session.deleted", tone: "danger" },
   ],
   // 思考 (ux-effects): thinking visualization is already the existing 动效
   // options, so no duplicate state cards here.
   "tool-calls": [
-    { slot: "tool.file_read", title: { en: "Read file", zh: "读取文件" }, code: "tool: read_file", tone: "info" },
-    { slot: "content.image", title: { en: "Read image", zh: "读取图片" }, code: "tool: read_image", tone: "neutral" },
-    { slot: "tool.file_modified", title: { en: "Modify file", zh: "修改文件" }, code: "tool: modify_file", tone: "info" },
-    { slot: "tool.file_edit", title: { en: "Edit file", zh: "编辑文件" }, code: "tool: edit_file", tone: "info" },
-    { slot: "tool.validate", title: { en: "Validate", zh: "验证" }, code: "tool: validate", tone: "info" },
-    { slot: "tool.search", title: { en: "Search", zh: "搜索/检索" }, code: "tool: search", tone: "neutral" },
-    { slot: "content.terminal", title: { en: "Run command", zh: "运行命令" }, code: "tool: run_command", tone: "neutral" },
+    { slot: "tool.file_read", title: { en: "Read file", zh: "读取文件", ja: "ファイルを読む" }, code: "tool: read_file", tone: "info" },
+    { slot: "content.image", title: { en: "Read image", zh: "读取图片", ja: "画像を読む" }, code: "tool: read_image", tone: "neutral" },
+    { slot: "tool.file_modified", title: { en: "Modify file", zh: "修改文件", ja: "ファイルを変更" }, code: "tool: modify_file", tone: "info" },
+    { slot: "tool.file_edit", title: { en: "Edit file", zh: "编辑文件", ja: "ファイルを編集" }, code: "tool: edit_file", tone: "info" },
+    { slot: "tool.validate", title: { en: "Validate", zh: "验证", ja: "検証" }, code: "tool: validate", tone: "info" },
+    { slot: "tool.search", title: { en: "Search", zh: "搜索/检索", ja: "検索" }, code: "tool: search", tone: "neutral" },
+    { slot: "content.terminal", title: { en: "Run command", zh: "运行命令", ja: "コマンド実行" }, code: "tool: run_command", tone: "neutral" },
   ],
   // 内容块 = incidents + all session errors + diagnostics/audit facts.
   // (Provider group is intentionally left as pure provider/model config.)
   blocks: [
-    { slot: "tool.completed", title: { en: "Completed", zh: "完成" }, code: "status: completed", tone: "success" },
-    { slot: "tool.failed", title: { en: "Failed", zh: "失败" }, code: "status: failed", tone: "danger" },
-    { slot: "tool.cancelled", title: { en: "Cancelled", zh: "已取消" }, code: "status: cancelled", tone: "neutral" },
-    { slot: "incident.retrying", title: { en: "Retrying", zh: "重试中" }, code: "retry_status: retrying", anim: "spin", tone: "warning" },
-    { slot: "incident.exhausted", title: { en: "Exhausted", zh: "重试耗尽" }, code: "retry_status: exhausted", tone: "danger" },
-    { slot: "incident.terminal", title: { en: "Terminal", zh: "终止" }, code: "retry_status: terminal", tone: "danger" },
-    { slot: "tool.partial", title: { en: "Partial", zh: "部分完成" }, code: "partial_lifecycle", tone: "neutral" },
-    { slot: "error.model", title: { en: "Model rate limited", zh: "模型限流" }, code: "session.error · model_rate_limited_error", anim: "spin", tone: "warning" },
-    { slot: "error.model", title: { en: "Model overloaded", zh: "模型过载" }, code: "model_overloaded_error", tone: "warning" },
-    { slot: "error.model", title: { en: "Model request failed", zh: "模型请求失败" }, code: "model_request_failed_error", tone: "danger" },
-    { slot: "error.mcp", title: { en: "MCP connection failed", zh: "MCP 连接失败" }, code: "mcp_connection_failed_error", tone: "danger" },
-    { slot: "error.mcp", title: { en: "MCP auth failed", zh: "MCP 认证失败" }, code: "mcp_authentication_failed_error", tone: "danger" },
-    { slot: "error.billing", title: { en: "Billing", zh: "账单错误" }, code: "billing_error", tone: "warning" },
-    { slot: "error.budget", title: { en: "Budget exceeded", zh: "预算超限" }, code: "budget_exceeded_error", tone: "warning" },
-    { slot: "error.resource", title: { en: "Resource quota", zh: "资源配额" }, code: "resource_quota_exceeded_error", tone: "warning" },
-    { slot: "error.sandbox", title: { en: "Sandbox failed", zh: "沙箱失败" }, code: "sandbox_failed_error", tone: "danger" },
-    { slot: "error.timeout", title: { en: "Dispatch timeout", zh: "分发超时" }, code: "dispatch_execution_timeout", tone: "danger" },
-    { slot: "error.sandbox", title: { en: "Runtime resume unrecoverable", zh: "运行时无法恢复" }, code: "runtime_resume_unrecoverable_error", tone: "danger" },
-    { slot: "error.unknown", title: { en: "Unknown error", zh: "未知错误" }, code: "unknown_error", tone: "neutral" },
-    { slot: "surface.model_span", title: { en: "Model request start", zh: "模型请求开始" }, code: "span.model_request_start", tone: "info" },
-    { slot: "surface.model_span", title: { en: "Model request end", zh: "模型请求结束" }, code: "span.model_request_end", tone: "info" },
-    { slot: "surface.config", title: { en: "Config updated", zh: "配置更新" }, code: "session.updated", tone: "info" },
-    { slot: "surface.compaction", title: { en: "Context compacted", zh: "上下文压缩" }, code: "agent.context_compacted", tone: "neutral" },
+    { slot: "tool.completed", title: { en: "Completed", zh: "完成", ja: "完了" }, code: "status: completed", tone: "success" },
+    { slot: "tool.failed", title: { en: "Failed", zh: "失败", ja: "失敗" }, code: "status: failed", tone: "danger" },
+    { slot: "tool.cancelled", title: { en: "Cancelled", zh: "已取消", ja: "キャンセル" }, code: "status: cancelled", tone: "neutral" },
+    { slot: "incident.retrying", title: { en: "Retrying", zh: "重试中", ja: "リトライ中" }, code: "retry_status: retrying", anim: "spin", tone: "warning" },
+    { slot: "incident.exhausted", title: { en: "Exhausted", zh: "重试耗尽", ja: "リトライ上限" }, code: "retry_status: exhausted", tone: "danger" },
+    { slot: "incident.terminal", title: { en: "Terminal", zh: "终止", ja: "停止" }, code: "retry_status: terminal", tone: "danger" },
+    { slot: "tool.partial", title: { en: "Partial", zh: "部分完成", ja: "一部完了" }, code: "partial_lifecycle", tone: "neutral" },
+    { slot: "error.model", title: { en: "Model rate limited", zh: "模型限流", ja: "モデルのレート制限" }, code: "session.error · model_rate_limited_error", anim: "spin", tone: "warning" },
+    { slot: "error.model", title: { en: "Model overloaded", zh: "模型过载", ja: "モデルの過負荷" }, code: "model_overloaded_error", tone: "warning" },
+    { slot: "error.model", title: { en: "Model request failed", zh: "模型请求失败", ja: "モデルのリクエスト失敗" }, code: "model_request_failed_error", tone: "danger" },
+    { slot: "error.mcp", title: { en: "MCP connection failed", zh: "MCP 连接失败", ja: "MCP の接続失敗" }, code: "mcp_connection_failed_error", tone: "danger" },
+    { slot: "error.mcp", title: { en: "MCP auth failed", zh: "MCP 认证失败", ja: "MCP の認証失敗" }, code: "mcp_authentication_failed_error", tone: "danger" },
+    { slot: "error.billing", title: { en: "Billing", zh: "账单错误", ja: "課金エラー" }, code: "billing_error", tone: "warning" },
+    { slot: "error.budget", title: { en: "Budget exceeded", zh: "预算超限", ja: "予算超過" }, code: "budget_exceeded_error", tone: "warning" },
+    { slot: "error.resource", title: { en: "Resource quota", zh: "资源配额", ja: "リソース割り当て" }, code: "resource_quota_exceeded_error", tone: "warning" },
+    { slot: "error.sandbox", title: { en: "Sandbox failed", zh: "沙箱失败", ja: "サンドボックスの失敗" }, code: "sandbox_failed_error", tone: "danger" },
+    { slot: "error.timeout", title: { en: "Dispatch timeout", zh: "分发超时", ja: "ディスパッチのタイムアウト" }, code: "dispatch_execution_timeout", tone: "danger" },
+    { slot: "error.sandbox", title: { en: "Runtime resume unrecoverable", zh: "运行时无法恢复", ja: "ランタイム再開が回復不能" }, code: "runtime_resume_unrecoverable_error", tone: "danger" },
+    { slot: "error.unknown", title: { en: "Unknown error", zh: "未知错误", ja: "不明なエラー" }, code: "unknown_error", tone: "neutral" },
+    { slot: "surface.model_span", title: { en: "Model request start", zh: "模型请求开始", ja: "モデルリクエスト開始" }, code: "span.model_request_start", tone: "info" },
+    { slot: "surface.model_span", title: { en: "Model request end", zh: "模型请求结束", ja: "モデルリクエスト終了" }, code: "span.model_request_end", tone: "info" },
+    { slot: "surface.config", title: { en: "Config updated", zh: "配置更新", ja: "設定を更新" }, code: "session.updated", tone: "info" },
+    { slot: "surface.compaction", title: { en: "Context compacted", zh: "上下文压缩", ja: "コンテキストを圧縮" }, code: "agent.context_compacted", tone: "neutral" },
   ],
   output: [
-    { slot: "runtime.booting", title: { en: "Booting", zh: "启动中" }, code: "runtime.status · booting", anim: "spin", tone: "info" },
-    { slot: "runtime.ready", title: { en: "Ready", zh: "就绪" }, code: "runtime.status · ready", tone: "success" },
-    { slot: "runtime.degraded", title: { en: "Degraded", zh: "降级" }, code: "runtime.status · degraded", tone: "warning" },
-    { slot: "runtime.error", title: { en: "Error", zh: "错误" }, code: "runtime.status · error", tone: "danger" },
-    { slot: "runtime.recovering", title: { en: "Recovering", zh: "恢复中" }, code: "runtime.status · recovering", anim: "spin", tone: "warning" },
-    { slot: "runtime.op", title: { en: "Operation started", zh: "操作开始" }, code: "runtime.progress: started", tone: "info" },
-    { slot: "runtime.op", title: { en: "Operation running", zh: "操作进行中" }, code: "runtime.progress: running", anim: "spin", tone: "info" },
-    { slot: "runtime.op_done", title: { en: "Operation done", zh: "操作完成" }, code: "runtime.progress: completed", tone: "success" },
-    { slot: "runtime.op_failed", title: { en: "Operation failed", zh: "操作失败" }, code: "runtime.progress: failed", tone: "danger" },
-    { slot: "runtime.op_skipped", title: { en: "Operation skipped", zh: "操作跳过" }, code: "runtime.progress: skipped", tone: "neutral" },
-    { slot: "severity.info", title: { en: "Notice (info)", zh: "通知（info）" }, code: "runtime.message: info", tone: "info" },
-    { slot: "severity.warning", title: { en: "Notice (warning)", zh: "通知（warning）" }, code: "runtime.message: warning", tone: "warning" },
-    { slot: "severity.error", title: { en: "Notice (error)", zh: "通知（error）" }, code: "runtime.message: error", tone: "danger" },
+    { slot: "runtime.booting", title: { en: "Booting", zh: "启动中", ja: "起動中" }, code: "runtime.status · booting", anim: "spin", tone: "info" },
+    { slot: "runtime.ready", title: { en: "Ready", zh: "就绪", ja: "準備完了" }, code: "runtime.status · ready", tone: "success" },
+    { slot: "runtime.degraded", title: { en: "Degraded", zh: "降级", ja: "機能低下" }, code: "runtime.status · degraded", tone: "warning" },
+    { slot: "runtime.error", title: { en: "Error", zh: "错误", ja: "エラー" }, code: "runtime.status · error", tone: "danger" },
+    { slot: "runtime.recovering", title: { en: "Recovering", zh: "恢复中", ja: "復旧中" }, code: "runtime.status · recovering", anim: "spin", tone: "warning" },
+    { slot: "runtime.op", title: { en: "Operation started", zh: "操作开始", ja: "操作を開始" }, code: "runtime.progress: started", tone: "info" },
+    { slot: "runtime.op", title: { en: "Operation running", zh: "操作进行中", ja: "操作を実行中" }, code: "runtime.progress: running", anim: "spin", tone: "info" },
+    { slot: "runtime.op_done", title: { en: "Operation done", zh: "操作完成", ja: "操作が完了" }, code: "runtime.progress: completed", tone: "success" },
+    { slot: "runtime.op_failed", title: { en: "Operation failed", zh: "操作失败", ja: "操作が失敗" }, code: "runtime.progress: failed", tone: "danger" },
+    { slot: "runtime.op_skipped", title: { en: "Operation skipped", zh: "操作跳过", ja: "操作をスキップ" }, code: "runtime.progress: skipped", tone: "neutral" },
+    { slot: "severity.info", title: { en: "Notice (info)", zh: "通知（info）", ja: "通知（info）" }, code: "runtime.message: info", tone: "info" },
+    { slot: "severity.warning", title: { en: "Notice (warning)", zh: "通知（warning）", ja: "通知（warning）" }, code: "runtime.message: warning", tone: "warning" },
+    { slot: "severity.error", title: { en: "Notice (error)", zh: "通知（error）", ja: "通知（error）" }, code: "runtime.message: error", tone: "danger" },
   ],
   composer: [
-    { slot: "surface.interrupt", title: { en: "Interrupt", zh: "打断" }, code: "user.interrupt", tone: "warning" },
-    { slot: "permission.allow", title: { en: "Allow once", zh: "允许一次" }, code: "user.tool_confirmation · allow_once", tone: "success" },
-    { slot: "permission.allow_always", title: { en: "Allow always", zh: "始终允许" }, code: "user.tool_confirmation · allow_always", tone: "success" },
-    { slot: "permission.deny", title: { en: "Deny", zh: "拒绝" }, code: "user.tool_confirmation · deny", tone: "danger" },
-    { slot: "permission.cancel", title: { en: "Cancel", zh: "取消" }, code: "user.tool_confirmation · cancel", tone: "neutral" },
+    { slot: "surface.interrupt", title: { en: "Interrupt", zh: "打断", ja: "中断" }, code: "user.interrupt", tone: "warning" },
+    { slot: "permission.allow", title: { en: "Allow once", zh: "允许一次", ja: "今回だけ許可" }, code: "user.tool_confirmation · allow_once", tone: "success" },
+    { slot: "permission.allow_always", title: { en: "Allow always", zh: "始终允许", ja: "常に許可" }, code: "user.tool_confirmation · allow_always", tone: "success" },
+    { slot: "permission.deny", title: { en: "Deny", zh: "拒绝", ja: "拒否" }, code: "user.tool_confirmation · deny", tone: "danger" },
+    { slot: "permission.cancel", title: { en: "Cancel", zh: "取消", ja: "キャンセル" }, code: "user.tool_confirmation · cancel", tone: "neutral" },
   ],
   render: [
-    { slot: "content.text", title: { en: "Text / Markdown", zh: "文本 / Markdown" }, code: "content: text", tone: "neutral" },
-    { slot: "content.diff", title: { en: "Diff", zh: "差异" }, code: "content: diff", tone: "info" },
-    { slot: "content.image", title: { en: "Image", zh: "图片" }, code: "content: image", tone: "neutral" },
-    { slot: "content.audio", title: { en: "Audio", zh: "音频" }, code: "content: audio", tone: "neutral" },
-    { slot: "content.terminal", title: { en: "Terminal", zh: "终端" }, code: "content: terminal", tone: "neutral" },
-    { slot: "content.resource", title: { en: "Resource / link", zh: "资源 / 引用" }, code: "resource_link · resource", tone: "neutral" },
-    { slot: "content.location", title: { en: "Locations", zh: "位置" }, code: "locations", tone: "neutral" },
+    { slot: "content.text", title: { en: "Text / Markdown", zh: "文本 / Markdown", ja: "テキスト / Markdown" }, code: "content: text", tone: "neutral" },
+    { slot: "content.diff", title: { en: "Diff", zh: "差异", ja: "差分" }, code: "content: diff", tone: "info" },
+    { slot: "content.image", title: { en: "Image", zh: "图片", ja: "画像" }, code: "content: image", tone: "neutral" },
+    { slot: "content.audio", title: { en: "Audio", zh: "音频", ja: "音声" }, code: "content: audio", tone: "neutral" },
+    { slot: "content.terminal", title: { en: "Terminal", zh: "终端", ja: "ターミナル" }, code: "content: terminal", tone: "neutral" },
+    { slot: "content.resource", title: { en: "Resource / link", zh: "资源 / 引用", ja: "リソース / リンク" }, code: "resource_link · resource", tone: "neutral" },
+    { slot: "content.location", title: { en: "Locations", zh: "位置", ja: "該当箇所" }, code: "locations", tone: "neutral" },
   ],
 };
 
@@ -402,14 +404,14 @@ function visibleStateCards(groupId: PresetGroupId): RawStateCard[] {
 
 function stateSectionTitle(groupId: PresetGroupId, locale: AppLocale): string {
   const titles: Partial<Record<PresetGroupId, Record<AppLocale, string>>> = {
-    conversation: { zh: "头像", en: "Avatars" },
-    "tool-calls": { zh: "工具动作", en: "Tool actions" },
-    blocks: { zh: "状态展示", en: "States" },
-    composer: { zh: "交互状态", en: "Interaction states" },
-    output: { zh: "运行状态", en: "Runtime states" },
-    render: { zh: "内容类型", en: "Content types" },
+    conversation: { zh: "头像", en: "Avatars", ja: "アバター" },
+    "tool-calls": { zh: "工具动作", en: "Tool actions", ja: "ツールの動作" },
+    blocks: { zh: "状态展示", en: "States", ja: "ステータス表示" },
+    composer: { zh: "交互状态", en: "Interaction states", ja: "操作の状態" },
+    output: { zh: "运行状态", en: "Runtime states", ja: "実行時の状態" },
+    render: { zh: "内容类型", en: "Content types", ja: "コンテンツの種類" },
   };
-  return titles[groupId]?.[locale] ?? (locale === "zh" ? "状态" : "States");
+  return titles[groupId]?.[locale] ?? previewCopy[locale].stateCardFallbackTitle;
 }
 
 function rawStateCardToStateCard(card: RawStateCard, locale: AppLocale): StateCard {
@@ -432,12 +434,12 @@ type ToolActionDemoSpec = {
 };
 
 function toolActionDemoSpec(card: StateCard, locale: AppLocale): ToolActionDemoSpec {
-  const zh = locale === "zh";
+  const c = previewCopy[locale].toolAction;
   switch (card.code) {
     case "tool: read_image":
       return {
         name: "read_image",
-        title: zh ? "正在读取图片" : "Reading image",
+        title: c.readImage,
         args: { path: "assets/chart.png" },
         result: "image/png · 1280x720 · support volume trend",
         resultPreview: "1280x720 image",
@@ -445,7 +447,7 @@ function toolActionDemoSpec(card: StateCard, locale: AppLocale): ToolActionDemoS
     case "tool: modify_file":
       return {
         name: "apply_patch",
-        title: zh ? "正在修改文件" : "Modifying file",
+        title: c.modifyFile,
         args: { path: "src/SearchInput.tsx" },
         result: { changed: true, insertions: 18, deletions: 4 },
         resultPreview: "+18 -4",
@@ -453,7 +455,7 @@ function toolActionDemoSpec(card: StateCard, locale: AppLocale): ToolActionDemoS
     case "tool: edit_file":
       return {
         name: "edit_file",
-        title: zh ? "正在编辑文件" : "Editing file",
+        title: c.editFile,
         args: { path: "src/components/ComposerFrame.tsx" },
         result: { changed: true, insertions: 9, deletions: 9 },
         resultPreview: "+9 -9",
@@ -461,7 +463,7 @@ function toolActionDemoSpec(card: StateCard, locale: AppLocale): ToolActionDemoS
     case "tool: validate":
       return {
         name: "validate",
-        title: zh ? "正在验证 SearchInput.test.tsx" : "Validating SearchInput.test.tsx",
+        title: c.validate,
         args: { path: "src/SearchInput.test.tsx", cmd: "npm test -- SearchInput" },
         result: "SearchInput.test.tsx\n✓ validates short queries\n✓ shows loading state",
         resultPreview: "2 passed",
@@ -469,7 +471,7 @@ function toolActionDemoSpec(card: StateCard, locale: AppLocale): ToolActionDemoS
     case "tool: search":
       return {
         name: "search",
-        title: zh ? "正在搜索 useSearch" : "Searching useSearch",
+        title: c.search,
         args: { pattern: "useSearch" },
         result: "src/SearchInput.tsx:42\nsrc/hooks/useSearch.ts:10",
         resultPreview: "2 locations",
@@ -477,7 +479,7 @@ function toolActionDemoSpec(card: StateCard, locale: AppLocale): ToolActionDemoS
     case "tool: run_command":
       return {
         name: "run_command",
-        title: zh ? "正在运行命令 npm run build" : "Running command npm run build",
+        title: c.runCommand,
         args: { cmd: "npm run build" },
         result: "> npm run build\n✓ built in 8.4s",
         resultPreview: "build passed",
@@ -486,7 +488,7 @@ function toolActionDemoSpec(card: StateCard, locale: AppLocale): ToolActionDemoS
     default:
       return {
         name: "read_file",
-        title: zh ? "正在读取文件" : "Reading file",
+        title: c.readFile,
         args: { path: "src/SearchInput.tsx" },
         result: "import { useState } from \"react\";\n\nexport function SearchInput() {\n  const [query, setQuery] = useState(\"\");\n  return <input value={query} onChange={(event) => setQuery(event.target.value)} />;\n}",
         resultPreview: "7 lines",
@@ -495,7 +497,7 @@ function toolActionDemoSpec(card: StateCard, locale: AppLocale): ToolActionDemoS
 }
 
 function toolActionsOverviewEvents(cards: readonly StateCard[], title: string, locale: AppLocale): AgentUXEvent[] {
-  const zh = locale === "zh";
+  const c = previewCopy[locale];
   const runId = "tool-actions-overview";
   let seq = 0;
   const push = (type: string, payload: Record<string, unknown>, messageId?: string): AgentUXEvent => {
@@ -518,7 +520,7 @@ function toolActionsOverviewEvents(cards: readonly StateCard[], title: string, l
     push("text.started", { textId: "user_tool_actions", role: "user", format: "plain" }, "message_user_tool_actions"),
     push("text.delta", {
       textId: "user_tool_actions",
-      delta: zh ? "展示所有工具动作的默认样式。" : "Show the default style for all tool actions.",
+      delta: c.toolActionsOverview.prompt,
     }, "message_user_tool_actions"),
     push("text.finished", { textId: "user_tool_actions" }, "message_user_tool_actions"),
   ];
@@ -538,17 +540,7 @@ function toolActionsOverviewEvents(cards: readonly StateCard[], title: string, l
     push("text.started", { textId: "assistant_tool_actions_demo", role: "assistant", format: "plain" }, "message_assistant_tool_actions_demo"),
     push("text.delta", {
       textId: "assistant_tool_actions_demo",
-      delta: zh
-        ? [
-            "我会把关键步骤收拢成简短结果，方便你快速判断进展。",
-            "需要细看时，可以展开对应动作查看输入、输出和关联文件。",
-            "完成后我会把可审核的产物放到这里，继续复制、重试或调整。",
-          ].join("\n")
-        : [
-            "I will condense key steps into short results so you can quickly judge progress.",
-            "When you need detail, expand an action to inspect inputs, outputs, and linked files.",
-            "When work is done, reviewable artifacts will appear here for copying, retrying, or adjusting.",
-          ].join("\n"),
+      delta: c.toolActionsOverview.reply.join("\n"),
     }, "message_assistant_tool_actions_demo"),
     push("text.finished", { textId: "assistant_tool_actions_demo" }, "message_assistant_tool_actions_demo"),
   );
@@ -558,7 +550,7 @@ function toolActionsOverviewEvents(cards: readonly StateCard[], title: string, l
 }
 
 function conversationWritingPreviewEvents(locale: AppLocale): AgentUXEvent[] {
-  const zh = locale === "zh";
+  const c = previewCopy[locale];
   const runId = "conversation-writing-output-preview";
   let seq = 0;
   const push = (type: string, payload: Record<string, unknown>, messageId?: string): AgentUXEvent => {
@@ -577,27 +569,17 @@ function conversationWritingPreviewEvents(locale: AppLocale): AgentUXEvent[] {
   };
 
   return [
-    push("run.started", { title: zh ? "消息输出模式" : "Message output mode" }),
+    push("run.started", { title: c.writing.runTitle }),
     push("text.started", { textId: "user_conversation_output_mode", role: "user", format: "plain" }, "message_user_conversation_output_mode"),
     push("text.delta", {
       textId: "user_conversation_output_mode",
-      delta: zh ? "你都有什么功能?" : "What can you do?",
+      delta: c.writing.userPrompt,
     }, "message_user_conversation_output_mode"),
     push("text.finished", { textId: "user_conversation_output_mode" }, "message_user_conversation_output_mode"),
     push("text.started", { textId: "assistant_conversation_output_mode", role: "assistant", format: "plain" }, "message_assistant_conversation_output_mode"),
     push("text.delta", {
       textId: "assistant_conversation_output_mode",
-      delta: zh
-        ? [
-            "我可以回答问题、总结信息，并起草清晰内容。",
-            "我可以查看文件、解释代码，并协助规划或应用修改。",
-            "我可以跟踪任务、提示错误，并在完成后展示输出或产物。",
-          ].join("\n")
-        : [
-            "I can answer questions, summarize information, and draft clear content.",
-            "I can inspect files, explain code, and help plan or apply changes.",
-            "I can track tasks, surface errors, and show outputs or artifacts when work is done.",
-          ].join("\n"),
+      delta: c.writing.reply.join("\n"),
     }, "message_assistant_conversation_output_mode"),
     push("text.finished", { textId: "assistant_conversation_output_mode" }, "message_assistant_conversation_output_mode"),
     push("run.finished", { status: "success" }),
@@ -621,18 +603,15 @@ function thinkingPreviewEvents(locale: AppLocale): AgentUXEvent[] {
       payload,
     };
   };
-  const summary =
-    locale === "zh"
-      ? "正在梳理用户目标、界面状态和组件联动，确认这次只调整思考展示，不切到工具或消息内容。"
-      : "Reviewing the user goal, canvas state, and component links so this preview only shows thinking content.";
+  const c = previewCopy[locale].thinking;
 
   return [
-    push("run.started", { title: locale === "zh" ? "思考预览" : "Thinking preview" }),
+    push("run.started", { title: c.runTitle }),
     push("text.started", { textId: "user_thinking_preview", role: "user", format: "plain" }, "message_user_thinking_preview"),
-    push("text.delta", { textId: "user_thinking_preview", delta: locale === "zh" ? "先帮我梳理一下这次要改什么。" : "Help me think through what needs to change first." }, "message_user_thinking_preview"),
+    push("text.delta", { textId: "user_thinking_preview", delta: c.userPrompt }, "message_user_thinking_preview"),
     push("text.finished", { textId: "user_thinking_preview" }, "message_user_thinking_preview"),
-    push("reasoning.status", { reasoningId: "thinking-preview", status: "planning", label: locale === "zh" ? "思考中" : "Thinking" }),
-    push("reasoning.delta", { reasoningId: "thinking-preview", kind: "summary", delta: summary, format: "plain", open: false }),
+    push("reasoning.status", { reasoningId: "thinking-preview", status: "planning", label: c.statusLabel }),
+    push("reasoning.delta", { reasoningId: "thinking-preview", kind: "summary", delta: c.summary, format: "plain", open: false }),
   ];
 }
 
@@ -687,62 +666,64 @@ type WritingMode = AgentFrontendProject["theme"]["motion"]["writing"];
 const defaultPreviewPrompt = {
   en: "Add validation to the search input and show a loading state while results are fetched.",
   zh: "给搜索框加校验，并在获取结果时显示加载状态。",
+  ja: "検索欄にバリデーションを追加し、結果の取得中はローディング状態を表示してください。",
 } satisfies Record<AppLocale, string>;
 
 const livePreviewFallbackPrompt = {
   en: "Test this AgentCanvas UI/UX.",
   zh: "测试这个 AgentCanvas UI/UX。",
+  ja: "この AgentCanvas の UI/UX をテストします。",
 } satisfies Record<AppLocale, string>;
 
 const standardScenarioCopy: Record<ScenarioId, { title: Record<AppLocale, string>; summary: Record<AppLocale, string> }> = {
   "normal-turn": {
-    title: { en: "Normal turn", zh: "普通回合" },
-    summary: { en: "User message with a file reference and one final agent answer.", zh: "用户消息包含文件引用，Agent 给出最终回答。" },
+    title: { en: "Normal turn", zh: "普通回合", ja: "通常のターン" },
+    summary: { en: "User message with a file reference and one final agent answer.", zh: "用户消息包含文件引用，Agent 给出最终回答。", ja: "ファイル参照を含むユーザーメッセージと、Agent の最終回答が 1 件。" },
   },
   "streamed-message": {
-    title: { en: "Streaming thinking + message", zh: "流式思考 + 消息" },
-    summary: { en: "Live deltas preview a thinking block and message, then durable Events replace them.", zh: "实时增量预览思考块和消息，随后由持久事件替换。" },
+    title: { en: "Streaming thinking + message", zh: "流式思考 + 消息", ja: "ストリーミング思考 + メッセージ" },
+    summary: { en: "Live deltas preview a thinking block and message, then durable Events replace them.", zh: "实时增量预览思考块和消息，随后由持久事件替换。", ja: "ライブの差分が思考ブロックとメッセージを先に見せ、その後に永続イベントが置き換えます。" },
   },
   "tool-approval": {
-    title: { en: "Tool approval + completion", zh: "工具审批 + 完成" },
-    summary: { en: "A native write pauses for confirmation, is allowed once, and completes with a diff.", zh: "原生写入暂停等待确认，允许一次后完成并生成 diff。" },
+    title: { en: "Tool approval + completion", zh: "工具审批 + 完成", ja: "ツールの承認 + 完了" },
+    summary: { en: "A native write pauses for confirmation, is allowed once, and completes with a diff.", zh: "原生写入暂停等待确认，允许一次后完成并生成 diff。", ja: "ネイティブの書き込みが確認のため一旦止まり、今回だけ許可され、差分付きで完了します。" },
   },
   "mcp-and-interrupt": {
-    title: { en: "MCP success + interrupt", zh: "MCP 成功 + 打断" },
-    summary: { en: "An MCP call returns a terminal reference; a later pending call is interrupted.", zh: "MCP 调用返回终端引用，后续待处理调用被打断。" },
+    title: { en: "MCP success + interrupt", zh: "MCP 成功 + 打断", ja: "MCP 成功 + 中断" },
+    summary: { en: "An MCP call returns a terminal reference; a later pending call is interrupted.", zh: "MCP 调用返回终端引用，后续待处理调用被打断。", ja: "MCP 呼び出しが終端の参照を返し、その後の保留中の呼び出しが中断されます。" },
   },
   "runtime-lifecycle": {
-    title: { en: "Runtime boot + sync", zh: "Runtime 启动 + 同步" },
-    summary: { en: "Runtime status and one folded progress operation, plus an optional-resource warning.", zh: "Runtime 状态、折叠进度操作，以及可选资源 warning。" },
+    title: { en: "Runtime boot + sync", zh: "Runtime 启动 + 同步", ja: "Runtime 起動 + 同期" },
+    summary: { en: "Runtime status and one folded progress operation, plus an optional-resource warning.", zh: "Runtime 状态、折叠进度操作，以及可选资源 warning。", ja: "ランタイムの状態と折りたたまれた進行中の操作 1 件、加えて任意リソースの警告。" },
   },
   "retrying-incident": {
-    title: { en: "Retrying incident", zh: "重试中的事件" },
-    summary: { en: "A rate-limit error auto-reschedules; the incident resolves on recovery.", zh: "限流错误自动重新调度，恢复后事件解决。" },
+    title: { en: "Retrying incident", zh: "重试中的事件", ja: "リトライ中の障害" },
+    summary: { en: "A rate-limit error auto-reschedules; the incident resolves on recovery.", zh: "限流错误自动重新调度，恢复后事件解决。", ja: "レート制限のエラーが自動で再スケジュールされ、復旧すると障害は解消します。" },
   },
   "exhausted-incident": {
-    title: { en: "Exhausted incident", zh: "重试耗尽事件" },
-    summary: { en: "Retries exhausted but the Session stays usable for a new turn.", zh: "重试耗尽，但 Session 仍可用于新回合。" },
+    title: { en: "Exhausted incident", zh: "重试耗尽事件", ja: "リトライ上限の障害" },
+    summary: { en: "Retries exhausted but the Session stays usable for a new turn.", zh: "重试耗尽，但 Session 仍可用于新回合。", ja: "リトライ上限に達しても、セッションは次のターンに使えるままです。" },
   },
   "terminal-incident": {
-    title: { en: "Terminal incident", zh: "终止事件" },
-    summary: { en: "An unrecoverable runtime resume terminates the Session; composer is read-only.", zh: "不可恢复的 runtime 恢复错误会终止 Session，输入区只读。" },
+    title: { en: "Terminal incident", zh: "终止事件", ja: "停止した障害" },
+    summary: { en: "An unrecoverable runtime resume terminates the Session; composer is read-only.", zh: "不可恢复的 runtime 恢复错误会终止 Session，输入区只读。", ja: "回復不能なランタイム再開でセッションが終了し、入力欄は読み取り専用になります。" },
   },
   "diagnostics-and-update": {
-    title: { en: "Config, spans, deletion", zh: "配置、span、删除" },
-    summary: { en: "Configuration audit, compaction, paired model spans, and session deletion.", zh: "配置审计、上下文压缩、模型 span 配对和 Session 删除。" },
+    title: { en: "Config, spans, deletion", zh: "配置、span、删除", ja: "設定・span・削除" },
+    summary: { en: "Configuration audit, compaction, paired model spans, and session deletion.", zh: "配置审计、上下文压缩、模型 span 配对和 Session 删除。", ja: "設定の監査、コンパクション、対になるモデル span、セッションの削除。" },
   },
 };
 
 const previewScenarioLabels: Record<PreviewScenarioId, Record<AppLocale, string>> = {
-  "simple-chat": { en: "Simple chat", zh: "简单对话" },
-  "coding-with-artifact": { en: "Coding with artifact", zh: "编码 + 产物" },
-  "image-generation": { en: "Image generation", zh: "生成图片" },
-  "audio-generation": { en: "Audio generation", zh: "生成音频" },
-  "video-generation": { en: "Video generation", zh: "生成视频" },
-  "tool-approval": { en: "Tool approval", zh: "工具审批" },
-  "error-state": { en: "Error state", zh: "错误状态" },
-  "long-reasoning": { en: "Long reasoning", zh: "长思考" },
-  "git-diff-preview": { en: "Git diff preview", zh: "Git diff 预览" },
+  "simple-chat": { en: "Simple chat", zh: "简单对话", ja: "シンプルなチャット" },
+  "coding-with-artifact": { en: "Coding with artifact", zh: "编码 + 产物", ja: "コーディング + アーティファクト" },
+  "image-generation": { en: "Image generation", zh: "生成图片", ja: "画像生成" },
+  "audio-generation": { en: "Audio generation", zh: "生成音频", ja: "音声生成" },
+  "video-generation": { en: "Video generation", zh: "生成视频", ja: "動画生成" },
+  "tool-approval": { en: "Tool approval", zh: "工具审批", ja: "ツールの承認" },
+  "error-state": { en: "Error state", zh: "错误状态", ja: "エラー状態" },
+  "long-reasoning": { en: "Long reasoning", zh: "长思考", ja: "長い推論" },
+  "git-diff-preview": { en: "Git diff preview", zh: "Git diff 预览", ja: "Git 差分のプレビュー" },
 };
 
 function defaultPreviewPromptForLocale(locale: AppLocale): string {
@@ -783,10 +764,10 @@ function demoExternalApprovalTool(locale: AppLocale): AgentUXToolTimelineItem {
     kind: "tool",
     id: "composer-external-approval-demo",
     name: "read_file",
-    title: locale === "zh" ? "读取项目说明" : "Read project instructions",
+    title: previewCopy[locale].approvalDemo.toolTitle,
     status: "awaiting_approval",
     approval: {
-      prompt: locale === "zh" ? "允许编辑前读取 AGENTS.md？" : "Allow reading AGENTS.md before editing?",
+      prompt: previewCopy[locale].approvalDemo.prompt,
       argsPreview: { path: "AGENTS.md" },
     },
   } as AgentUXToolTimelineItem;
@@ -799,54 +780,16 @@ function InlineApprovalPrompt({
   locale: AppLocale;
   onDismiss: () => void;
 }) {
-  const zh = locale === "zh";
-  const options = zh
-    ? [
-      {
-        title: "统一缩小为 28px",
-        body: "头像容器统一 28x28px，线性图标保持约 16px 居中，自定义大头像填满 28px。与整体紧凑密度一致。",
-      },
-      {
-        title: "统一缩小为 30px",
-        body: "头像容器 30x30px，图标按比例调整，保留一点呼吸感。",
-      },
-      {
-        title: "保持 40px 但修一致性",
-        body: "容器不变，只把 Bot / Sparkles 等线性图标统一成相同小尺寸居中，自定义大头像继续填满。",
-      },
-      {
-        title: "输入你的答案...",
-        body: "",
-      },
-    ]
-    : [
-      {
-        title: "Normalize to 28px",
-        body: "Avatar containers become 28x28px, linear icons stay around 16px centered, and custom avatars fill 28px.",
-      },
-      {
-        title: "Normalize to 30px",
-        body: "Avatar containers become 30x30px, with icon scale adjusted proportionally.",
-      },
-      {
-        title: "Keep 40px, fix consistency",
-        body: "Container size stays, while Bot / Sparkles and similar line icons share one centered size.",
-      },
-      {
-        title: "Type your answer...",
-        body: "",
-      },
-    ];
+  const c = previewCopy[locale].inlineApproval;
+  const options = c.options;
 
   return (
-    <aside className="inline-approval-panel" data-preview-anchor="external-approval" aria-label={zh ? "内联审批" : "Inline approval"}>
+    <aside className="inline-approval-panel" data-preview-anchor="external-approval" aria-label={c.ariaLabel}>
       <div className="inline-approval-head">
         <div>
-          <span>{zh ? "icon 太大" : "Icon too large"}</span>
+          <span>{c.kicker}</span>
           <strong>
-            {zh
-              ? "我诊断发现：native 风格下头像容器是 40px，但 Bot（默认）被撑满到 40px，Sparkles 却只有 15px，尺寸严重不一致且偏大。你希望我怎么调？"
-              : "I found that native avatar containers are 40px, but Bot fills 40px while Sparkles is only 15px. How should I adjust it?"}
+            {c.question}
           </strong>
         </div>
       </div>
@@ -866,14 +809,14 @@ function InlineApprovalPrompt({
       <footer className="inline-approval-footer">
         <span>
           <span className="inline-approval-info" aria-hidden="true">i</span>
-          {zh ? "使用 Tab / 上下键选择，回车或空格选中" : "Use Tab / arrow keys to choose, Enter or Space to select"}
+          {c.hint}
         </span>
         <div>
           <button type="button" className="inline-approval-secondary" onClick={onDismiss}>
-            {zh ? "忽略" : "Ignore"}
+            {c.ignore}
           </button>
           <button type="button" className="inline-approval-primary" onClick={onDismiss}>
-            {zh ? "继续" : "Continue"}
+            {c.continueLabel}
           </button>
         </div>
       </footer>
@@ -1066,13 +1009,13 @@ function outputMediaStyleFromTitle(title: string, project: AgentFrontendProject)
 
 function collectDefaultOutputPanelItems(
   timeline: readonly (AgentUXArtifactTimelineItem | AgentUXToolTimelineItem | { kind: string })[],
-  zh: boolean,
+  locale: AppLocale,
   project: AgentFrontendProject,
 ): OutputPanelItem[] {
   const items: OutputPanelItem[] = [];
   for (const item of timeline) {
     if (item.kind === "tool") {
-      items.push(...outputPanelItemsFromTool(item as AgentUXToolTimelineItem, zh));
+      items.push(...outputPanelItemsFromTool(item as AgentUXToolTimelineItem, locale));
       continue;
     }
     if (item.kind === "artifact") {
@@ -1116,22 +1059,41 @@ const hiddenSelectedComponentOptionIds = new Set([
   "error-collapse",
 ]);
 
+/**
+ * Built from the dictionary rather than carrying its own copy.
+ *
+ * These seven labels are the same strings the message-action preset cards show, which the
+ * editor now reads from `shell.editor.messageActions`. Duplicating them inline meant every
+ * new locale had to be added in two places and could disagree with itself.
+ */
 const selectedMessageActionComponents: Array<{
   key: MessageActionKey;
   label: Record<AppLocale, string>;
   section: Record<AppLocale, string>;
-}> = [
-  { key: "userCopy", label: { zh: "复制", en: "Copy" }, section: { zh: "发送内容操作", en: "Sent message actions" } },
-  { key: "userEdit", label: { zh: "修改", en: "Edit" }, section: { zh: "发送内容操作", en: "Sent message actions" } },
-  { key: "userTime", label: { zh: "时间", en: "Time" }, section: { zh: "发送内容操作", en: "Sent message actions" } },
-  { key: "agentCopy", label: { zh: "复制", en: "Copy" }, section: { zh: "生成消息操作", en: "Generated message actions" } },
-  { key: "agentRegenerate", label: { zh: "重新生成", en: "Regenerate" }, section: { zh: "生成消息操作", en: "Generated message actions" } },
-  { key: "agentEdit", label: { zh: "修改", en: "Edit" }, section: { zh: "生成消息操作", en: "Generated message actions" } },
-  { key: "agentTime", label: { zh: "时间", en: "Time" }, section: { zh: "生成消息操作", en: "Generated message actions" } },
-];
+}> = (() => {
+  const byLocale = <T,>(pick: (actions: UiCopy["shell"]["editor"]["messageActions"]) => T) =>
+    Object.fromEntries(APP_LOCALES.map((locale) => [locale, pick(uiCopy[locale].shell.editor.messageActions)])) as Record<AppLocale, T>;
+
+  const sentSection = byLocale((a) => a.sentTitle);
+  const generatedSection = byLocale((a) => a.generatedTitle);
+  const copyLabel = byLocale((a) => a.copy);
+  const editLabel = byLocale((a) => a.edit);
+  const timeLabel = byLocale((a) => a.time);
+  const regenerateLabel = byLocale((a) => a.regenerate);
+
+  return [
+    { key: "userCopy", label: copyLabel, section: sentSection },
+    { key: "userEdit", label: editLabel, section: sentSection },
+    { key: "userTime", label: timeLabel, section: sentSection },
+    { key: "agentCopy", label: copyLabel, section: generatedSection },
+    { key: "agentRegenerate", label: regenerateLabel, section: generatedSection },
+    { key: "agentEdit", label: editLabel, section: generatedSection },
+    { key: "agentTime", label: timeLabel, section: generatedSection },
+  ];
+})();
 
 function componentSummaryLabel(count: number, locale: AppLocale): string {
-  return locale === "zh" ? `已选组件 ${count} 套` : `${count} selected components`;
+  return uiCopy[locale].shell.editor.selectedComponentCount.replace("{count}", String(count));
 }
 
 function isEffectiveSelectedComponent(project: AgentFrontendProject, groupId: PresetGroupId, optionId: string): boolean {
@@ -1188,7 +1150,7 @@ export function selectedComponentItemsForProject(
   locale: AppLocale,
 ): SelectedComponentItem[] {
   const items = new Map<string, SelectedComponentItem>();
-  const zh = locale === "zh";
+  const c = previewCopy[locale];
 
   const addSelectedOption = (group: ReturnType<typeof presetGroupsForProject>[number], option: PresetOption) => {
     if (!isEffectiveSelectedComponent(project, group.id, option.id)) {
@@ -1212,7 +1174,7 @@ export function selectedComponentItemsForProject(
         items.set("state:author.user", {
           id: "state:author.user",
           group: groupName,
-          label: zh ? "我的头像" : "My avatar",
+          label: c.avatarLabels.user,
           section: avatarSection,
         });
       }
@@ -1220,7 +1182,7 @@ export function selectedComponentItemsForProject(
         items.set("state:author.agent", {
           id: "state:author.agent",
           group: groupName,
-          label: zh ? "Agent 头像" : "Agent avatar",
+          label: c.avatarLabels.agent,
           section: avatarSection,
         });
       }
@@ -1277,6 +1239,11 @@ export function App() {
   const [styleSwitching, setStyleSwitching] = useState(false);
   // Style switch is confirmed via a dialog (it also resets the theme set).
   const [pendingStyle, setPendingStyle] = useState<PresetStyleId | null>(null);
+  // Resolved once rather than re-found inside each dialog string: the confirm copy names the
+  // style twice, and the previous version looked it up separately in every branch.
+  const pendingStyleLabel = pendingStyle
+    ? presetStyleOptions.find((style) => style.id === pendingStyle)?.label[locale] ?? pendingStyle
+    : "";
   const pendingStyleButtonRef = useRef<HTMLButtonElement | null>(null);
   // Canvas rails (left session sidebar / right output panel) can be collapsed.
   const [leftCollapsed, setLeftCollapsed] = useState(false);
@@ -1391,7 +1358,7 @@ export function App() {
     [locale, runEventSource, showStandard, standardScenario, viewModel],
   );
   const defaultOutputPanelItems = useMemo(
-    () => collectDefaultOutputPanelItems(displayViewModel.timeline, locale === "zh", activeProject),
+    () => collectDefaultOutputPanelItems(displayViewModel.timeline, locale, activeProject),
     [displayViewModel.timeline, locale, activeProject],
   );
   const defaultOutputPanelSignature = useMemo(
@@ -1931,14 +1898,15 @@ export function App() {
     standardStreamRef.current?.cancel();
     const prompt =
       scenarioId === "image-generation"
-        ? locale === "zh" ? "生成一张产品发布会主视觉。" : "Generate a launch hero image."
+        ? previewCopy[locale].mediaPrompt.image
         : scenarioId === "audio-generation"
-          ? locale === "zh" ? "生成一段产品介绍旁白音频。" : "Generate a product intro narration."
-          : locale === "zh" ? "生成一段功能演示短视频。" : "Generate a feature demo video.";
+          ? previewCopy[locale].mediaPrompt.audio
+          : previewCopy[locale].mediaPrompt.video;
     const nextEvents = await collectPreviewRunEvents(previewRunner.run({
       prompt,
       project: nextProject,
       scenarioId,
+      locale,
     }));
     setShowStandard(false);
     setActiveStateCode(null);
@@ -2153,7 +2121,7 @@ export function App() {
       if (optionId === "command-cards") {
         setToolCollapseSignal((value) => value + 1);
       }
-      setRunEvents(stateDemoEvents("tool.cancelled", "status: cancelled", locale === "zh" ? "已取消" : "Cancelled") as AgentUXEvent[]);
+      setRunEvents(stateDemoEvents("tool.cancelled", "status: cancelled", previewCopy[locale].cancelledLabel) as AgentUXEvent[]);
       bumpPreviewRefresh();
       scrollPreviewToAnchorAfterPreviewUpdate("tool-call");
       return;
@@ -2506,6 +2474,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
       attachments,
       project: saved,
       scenarioId,
+      locale,
     }));
     setPreviewPrompt(normalizedPrompt);
     streamSavedReplayEvents(nextEvents, successMessage);
@@ -2873,37 +2842,27 @@ function selectPresetGroup(groupId: PresetGroupId) {
                 aria-expanded={languageMenuOpen}
                 onClick={() => setLanguageMenuOpen((open) => !open)}
               >
-                <span>{locale === "zh" ? copy.shell.topbar.languageZh : copy.shell.topbar.languageEn}</span>
+                <span>{copy.shell.topbar.languageLabels[locale]}</span>
                 <ChevronDown size={14} aria-hidden="true" />
               </button>
               {languageMenuOpen ? (
                 <div className="language-menu" role="menu">
-                  <button
-                    className="language-option"
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={locale === "zh"}
-                    data-active={locale === "zh"}
-                    onClick={() => {
-                      setLocale("zh");
-                      setLanguageMenuOpen(false);
-                    }}
-                  >
-                    {copy.shell.topbar.languageZh}
-                  </button>
-                  <button
-                    className="language-option"
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={locale === "en"}
-                    data-active={locale === "en"}
-                    onClick={() => {
-                      setLocale("en");
-                      setLanguageMenuOpen(false);
-                    }}
-                  >
-                    {copy.shell.topbar.languageEn}
-                  </button>
+                  {APP_LOCALES.map((option) => (
+                    <button
+                      key={option}
+                      className="language-option"
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={locale === option}
+                      data-active={locale === option}
+                      onClick={() => {
+                        setLocale(option);
+                        setLanguageMenuOpen(false);
+                      }}
+                    >
+                      {copy.shell.topbar.languageLabels[option]}
+                    </button>
+                  ))}
                 </div>
               ) : null}
             </div>
@@ -2993,7 +2952,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
                         </div>
                       ) : (
                         <div className="selected-components-empty">
-                          {locale === "zh" ? "还没有选择组件" : "No selected components yet"}
+                          {copy.shell.editor.noSelectedComponents}
                         </div>
                       )}
                     </div>
@@ -3011,7 +2970,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
         <div className="workspace-layout" data-mode={surfaceMode} data-drawer-open={surfaceMode === "builder" ? presetDrawerOpen : undefined}>
           {surfaceMode === "builder" ? (
             <div className="preset-nav" data-open={presetDrawerOpen}>
-              <div className="preset-style-cards" role="tablist" aria-label={locale === "zh" ? "选择风格" : "Choose style"}>
+              <div className="preset-style-cards" role="tablist" aria-label={copy.shell.editor.chooseStyle}>
                 {presetStyleOptions.map((style) => (
                   <button
                     key={style.id}
@@ -3038,44 +2997,28 @@ function selectPresetGroup(groupId: PresetGroupId) {
               >
                 {pendingStyle === "studio" ? (
                   <DialogContent
-                    title={
-                      locale === "zh"
-                        ? `「${presetStyleOptions.find((s) => s.id === pendingStyle)?.label.zh}」正在搭建中`
-                        : `${presetStyleOptions.find((s) => s.id === pendingStyle)?.label.en} is under construction`
-                    }
-                    description={
-                      locale === "zh"
-                        ? "该风格还在搭建中,暂时无法切换,敬请期待。"
-                        : "This style is still being built and can't be switched to yet."
-                    }
+                    title={copy.shell.editor.styleSwitch.unbuiltTitle.replace("{style}", pendingStyleLabel)}
+                    description={copy.shell.editor.styleSwitch.unbuiltDescription}
                     width={380}
                   >
                     <div className="style-switch-actions">
                       <DialogClose className="primary-button">
-                        {locale === "zh" ? "知道了" : "Got it"}
+                        {copy.shell.editor.styleSwitch.gotIt}
                       </DialogClose>
                     </div>
                   </DialogContent>
                 ) : pendingStyle ? (
                   <DialogContent
-                    title={
-                      locale === "zh"
-                        ? `确定切换为「${presetStyleOptions.find((s) => s.id === pendingStyle)?.label.zh}」?`
-                        : `Switch to ${presetStyleOptions.find((s) => s.id === pendingStyle)?.label.en}?`
-                    }
-                    description={
-                      locale === "zh"
-                        ? `切换后不影响任何功能和已有配置,只有界面视觉风格会变为「${presetStyleOptions.find((s) => s.id === pendingStyle)?.label.zh}」。`
-                        : `Your configuration and functionality stay intact — only the visual style changes to ${presetStyleOptions.find((s) => s.id === pendingStyle)?.label.en}.`
-                    }
+                    title={copy.shell.editor.styleSwitch.confirmTitle.replace("{style}", pendingStyleLabel)}
+                    description={copy.shell.editor.styleSwitch.confirmDescription.replaceAll("{style}", pendingStyleLabel)}
                     width={380}
                   >
                     <div className="style-switch-actions">
                       <DialogClose className="secondary-button">
-                        {locale === "zh" ? "取消" : "Cancel"}
+                        {copy.shell.editor.styleSwitch.cancel}
                       </DialogClose>
                       <button type="button" className="primary-button" onClick={confirmStyleSwitch}>
-                        {locale === "zh" ? "确认更换" : "Switch"}
+                        {copy.shell.editor.styleSwitch.confirm}
                       </button>
                     </div>
                   </DialogContent>
@@ -3139,7 +3082,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
                       <span className="preset-skel-card" />
                     </div>
                   ) : selectedPresetStyle === "studio" ? (
-                    <div className="preset-panel-building">{locale === "zh" ? "正在搭建中…" : "Under construction…"}</div>
+                    <div className="preset-panel-building">{copy.shell.editor.underConstruction}</div>
                   ) : (
                     <>
                   {stateCards.length && selectedPresetGroup.id === "tool-calls" ? (
@@ -3262,20 +3205,20 @@ function selectPresetGroup(groupId: PresetGroupId) {
                       {(
                         [
                           {
-                            title: locale === "zh" ? "发送内容操作" : "Sent message actions",
+                            title: copy.shell.editor.messageActions.sentTitle,
                             items: [
-                              { key: "userCopy", label: locale === "zh" ? "复制" : "Copy", Icon: Copy },
-                              { key: "userEdit", label: locale === "zh" ? "修改" : "Edit", Icon: Pencil },
-                              { key: "userTime", label: locale === "zh" ? "时间" : "Time", Icon: Clock3 },
+                              { key: "userCopy", label: copy.shell.editor.messageActions.copy, Icon: Copy },
+                              { key: "userEdit", label: copy.shell.editor.messageActions.edit, Icon: Pencil },
+                              { key: "userTime", label: copy.shell.editor.messageActions.time, Icon: Clock3 },
                             ],
                           },
                           {
-                            title: locale === "zh" ? "生成消息操作" : "Generated message actions",
+                            title: copy.shell.editor.messageActions.generatedTitle,
                             items: [
-                              { key: "agentCopy", label: locale === "zh" ? "复制" : "Copy", Icon: Copy },
-                              { key: "agentRegenerate", label: locale === "zh" ? "重新生成" : "Regenerate", Icon: RotateCcw },
-                              { key: "agentEdit", label: locale === "zh" ? "修改" : "Edit", Icon: Pencil },
-                              { key: "agentTime", label: locale === "zh" ? "时间" : "Time", Icon: Clock3 },
+                              { key: "agentCopy", label: copy.shell.editor.messageActions.copy, Icon: Copy },
+                              { key: "agentRegenerate", label: copy.shell.editor.messageActions.regenerate, Icon: RotateCcw },
+                              { key: "agentEdit", label: copy.shell.editor.messageActions.edit, Icon: Pencil },
+                              { key: "agentTime", label: copy.shell.editor.messageActions.time, Icon: Clock3 },
                             ],
                           },
                         ] as const
@@ -3359,7 +3302,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
                       type="button"
                       className="rail-icon-btn preview-rail-float"
                       data-side="left"
-                      aria-label={locale === "zh" ? "展开侧边栏" : "Expand sidebar"}
+                      aria-label={copy.shell.editor.expandSidebar}
                       onClick={() => setLeftCollapsed(false)}
                     >
                       <span className="native-rail-icon"><SidebarRailIcon size={15} /></span>
@@ -3371,7 +3314,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
                       type="button"
                       className="rail-icon-btn preview-rail-float"
                       data-side="right"
-                      aria-label={locale === "zh" ? "展开右侧面板" : "Expand panel"}
+                      aria-label={copy.shell.editor.expandPanel}
                       onClick={() => setRightCollapsed(false)}
                     >
                       <span className="native-rail-icon"><RightSidebarRailIcon size={15} /></span>

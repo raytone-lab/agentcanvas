@@ -1,12 +1,16 @@
 /**
- * Chinese localization for the bundled demo fixtures.
+ * Localization for the bundled demo fixtures.
  *
- * The shipped fixtures are authored in English; when the UI locale is zh the preview
- * view model is rewritten through this dictionary. It lives here (rather than inline in
+ * The shipped fixtures are authored in English; for any other UI locale the preview view
+ * model is rewritten through the table for that locale. It lives here (rather than inline in
  * App.tsx) so the exported scaffold localizes identically — `i18n/**` is part of the
  * export closure, App.tsx is not.
+ *
+ * `en` has no table on purpose: the fixtures are already English, so a missing table means
+ * "leave it alone". Every function below therefore asks for a table first and returns the
+ * input untouched when there is none, instead of testing for a specific locale.
  */
-import type { AppLocale } from "./uiCopy";
+import type { AppLocale } from "./locales";
 
 const previewTextZh: Record<string, string> = {
   "Thinking": "思考中",
@@ -128,12 +132,21 @@ const AUTHORED_TEXT_KEYS = [
 
 const MESSAGE_TEXT_KEYS = ["text", "content"] as const;
 
+/** Locale → fixture rewrite table. No entry means the fixtures pass through as authored. */
+const previewText: Partial<Record<AppLocale, Record<string, string>>> = {
+  zh: previewTextZh,
+};
+
 export function localizePreviewText(value: string | undefined, locale: AppLocale): string | undefined {
-  if (!value || locale === "en") {
+  const table = previewText[locale];
+  if (!value || !table) {
     return value;
   }
-  let localized = previewTextZh[value] ?? value;
-  for (const [source, target] of Object.entries(previewTextZh)) {
+  // Whole-string hit first, then substring passes: fixture prose embeds the shorter entries
+  // (a tool name inside a sentence), so both layers are load-bearing and the substring pass
+  // is order-dependent on the table's insertion order. Left as-is deliberately.
+  let localized = table[value] ?? value;
+  for (const [source, target] of Object.entries(table)) {
     if (localized.includes(source)) {
       localized = localized.split(source).join(target);
     }
@@ -146,7 +159,7 @@ export function localizeTimelineItem(
   locale: AppLocale,
   options: LocalizePreviewOptions = {},
 ): unknown {
-  if (locale === "en" || !item || typeof item !== "object" || Array.isArray(item)) {
+  if (!previewText[locale] || !item || typeof item !== "object" || Array.isArray(item)) {
     return item;
   }
   const localizeMessageText = options.localizeMessageText ?? true;
@@ -174,7 +187,7 @@ export function localizePreviewViewModel<T extends { title?: string; timeline: r
   locale: AppLocale,
   options: LocalizePreviewOptions = {},
 ): T {
-  if (locale === "en") {
+  if (!previewText[locale]) {
     return viewModel;
   }
   return {

@@ -119,7 +119,7 @@ export function SessionSidebar({
   return (
     <aside ref={sidebarRef} className="session-sidebar" data-preview-anchor="sidebar" aria-label={c.ariaLabel}>
       <header className="session-brand">
-        <span className="session-brand-name">{locale === "zh" ? "我的Agent" : "My Agent"}</span>
+        <span className="session-brand-name">{c.brandName}</span>
         <span className="session-brand-actions">
           {search && hasSessions ? (
             <div className="session-search-menu">
@@ -150,7 +150,7 @@ export function SessionSidebar({
             <button
               type="button"
               className="rail-icon-btn"
-              aria-label={locale === "zh" ? "收起侧边栏" : "Collapse sidebar"}
+              aria-label={c.collapse}
               onClick={onCollapse}
             >
               <span className="native-rail-icon"><SidebarToggleIcon size={15} /></span>

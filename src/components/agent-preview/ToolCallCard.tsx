@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { AgentUXToolTimelineItem } from "@agent-ux/render-core";
 
 import { StateIcon, type IconSlot } from "../../agentmatrix";
-import { useCopy } from "../../i18n/LocaleContext";
+import { useCopy, useLocale } from "../../i18n/LocaleContext";
+import { chatCopy } from "../../i18n/copy/chat";
+import { APP_LOCALES, type AppLocale } from "../../i18n/locales";
 import { buildToolDisplaySpec, type DisplayBlock } from "../../runtime/toolDisplaySpec";
 import type { AgentFrontendProject } from "../../schema/agentuxConfig";
 import { deriveDisclosureOpen } from "./disclosureState";
@@ -26,6 +28,7 @@ export function ToolCallCard({
   collapseSignal?: number;
 }) {
   const copy = useCopy();
+  const { locale } = useLocale();
   const desiredOpen = tool.open || tool.status === "running" || tool.status === "awaiting_approval";
   const [open, setOpen] = useState(desiredOpen);
   const userToggledRef = useRef(false);
@@ -35,11 +38,10 @@ export function ToolCallCard({
   const hasTimelineRail = project.toolCalls.timelineRail;
   const detailMode = project.toolCalls.detail;
   const titleParts = splitToolTitle(tool.title ?? tool.name, pathFromTool(tool));
-  const useChineseLabels = hasChinese(copy.chat.reasoning.thinking);
   const toolAction = resolveToolAction(tool);
   const runningAction = toolAction;
   const fileAction = resolveToolFileAction(tool, titleParts);
-  const fileReferences = fileAction ? buildToolFileReferences(tool, fileAction, useChineseLabels, titleParts) : [];
+  const fileReferences = fileAction ? buildToolFileReferences(tool, fileAction, locale, titleParts) : [];
   const hasFileReferences = fileReferences.length > 0;
   const inputBlock = !hasFileReferences && detailMode === "full" ? spec.inputBlock : undefined;
   const outputBlock = !hasFileReferences && (detailMode === "full" || detailMode === "output-only") ? spec.outputBlock : undefined;
@@ -61,9 +63,9 @@ export function ToolCallCard({
   const headerTitle = hasExplicitRunningTitle && tool.title
     ? tool.title
     : runningAction
-      ? runningToolActionLabel(runningAction, useChineseLabels)
+      ? runningToolActionLabel(runningAction, locale)
     : fileAction
-      ? tool.title ?? fileActionHeaderLabel(fileAction, useChineseLabels)
+      ? tool.title ?? fileActionHeaderLabel(fileAction, locale)
       : tool.title ?? tool.name;
 
   useEffect(() => {
@@ -216,7 +218,7 @@ type ToolFileReference = {
   active: boolean;
 };
 
-export function outputPanelItemsFromTool(tool: AgentUXToolTimelineItem, zh = false): OutputPanelItem[] {
+export function outputPanelItemsFromTool(tool: AgentUXToolTimelineItem, locale: AppLocale = "en"): OutputPanelItem[] {
   if (tool.status === "error" || tool.status === "cancelled" || tool.status === "awaiting_approval") {
     return [];
   }
@@ -225,7 +227,7 @@ export function outputPanelItemsFromTool(tool: AgentUXToolTimelineItem, zh = fal
   if (!action) {
     return [];
   }
-  return buildToolFileReferences(tool, action, zh, titleParts).map((file) => ({
+  return buildToolFileReferences(tool, action, locale, titleParts).map((file) => ({
     id: `file:${file.filePath ?? file.fileName}`,
     kind: "file",
     title: file.fileName,
@@ -365,50 +367,63 @@ function isShellToolName(name: string): boolean {
   return name === "bash" || name === "run_command" || name === "start_server" || name === "shell.exec";
 }
 
-function runningToolActionLabel(action: RunningToolAction, zh: boolean): string {
-  if (zh) {
-    switch (action) {
-      case "read-file":
-        return "正在读取文件";
-      case "read-image":
-        return "正在读取图片";
-      case "modify-file":
-        return "正在修改文件";
-      case "edit-file":
-        return "正在编辑文件";
-      case "validate":
-        return "正在验证";
-      case "search":
-        return "正在搜索";
-      case "run-command":
-        return "正在运行命令";
-    }
-  }
-
+function runningToolActionLabel(action: RunningToolAction, locale: AppLocale): string {
+  const c = chatCopy[locale].toolCard.runningAction;
   switch (action) {
     case "read-file":
-      return "Reading file";
+      return c.readFile;
     case "read-image":
-      return "Reading image";
+      return c.readImage;
     case "modify-file":
-      return "Modifying file";
+      return c.modifyFile;
     case "edit-file":
-      return "Editing file";
+      return c.editFile;
     case "validate":
-      return "Validating";
+      return c.validate;
     case "search":
-      return "Searching";
+      return c.search;
     case "run-command":
-      return "Running command";
+      return c.runCommand;
   }
 }
 
+/**
+ * Every running-tool title we generate, in every locale we ship.
+ *
+ * Derived from the dictionaries rather than hardcoded, because the previous version tested
+ * `title.startsWith("正在")` plus an English gerund regex — a third language matched neither
+ * branch and its tool cards silently lost their running//settled classification.
+ */
+const RUNNING_TITLE_LABELS: readonly string[] = APP_LOCALES.flatMap((locale) =>
+  Object.values(chatCopy[locale].toolCard.runningAction),
+);
+
+const startsWithRunningLabel = (title: string) =>
+  RUNNING_TITLE_LABELS.some((label) => title.startsWith(label));
+
+/**
+ * The original prefix tests are kept alongside the dictionary lookup rather than replaced.
+ *
+ * They are deliberately a superset: the English regex matches a bare verb ("Validating
+ * SearchInput.test.tsx"), where a dictionary label is the whole phrase, and fixture titles
+ * reach this function from `previewLocalization` too — which rewrites prose the dictionaries
+ * here never see. Dropping them to look tidy would change which cards read as in-flight.
+ */
 function isExplicitRunningToolTitle(title: string): boolean {
-  return title.startsWith("正在") || title.startsWith("取消") || /^(Reading|Modifying|Editing|Validating|Searching|Running|Cancelled)\b/.test(title);
+  return (
+    startsWithRunningLabel(title) ||
+    title.startsWith("正在") ||
+    title.startsWith("取消") ||
+    /^(Reading|Modifying|Editing|Validating|Searching|Running|Cancelled)\b/.test(title)
+  );
 }
 
 function isActiveRunningToolTitle(title: string): boolean {
-  return title.startsWith("正在") || /^(Reading|Modifying|Editing|Validating|Searching|Running)\b/.test(title);
+  return (
+    startsWithRunningLabel(title) ||
+    title.startsWith("正在") ||
+    /^(Reading|Modifying|Editing|Validating|Searching|Running)\b/.test(title)
+  );
 }
 
 function toolActionIconSlot(action?: RunningToolAction): IconSlot {
@@ -487,30 +502,32 @@ function resolveToolFileAction(tool: AgentUXToolTimelineItem, titleParts?: ToolT
   return undefined;
 }
 
-function fileActionHeaderLabel(action: ToolFileAction, zh: boolean): string {
+function fileActionHeaderLabel(action: ToolFileAction, locale: AppLocale): string {
+  const c = chatCopy[locale].toolCard.runningAction;
   if (action === "read") {
-    return zh ? "正在读取文件" : "Reading file";
+    return c.readFile;
   }
   if (action === "edit") {
-    return zh ? "正在编辑文件" : "Editing file";
+    return c.editFile;
   }
-  return zh ? "正在修改文件" : "Modifying file";
+  return c.modifyFile;
 }
 
-function fileActionRowLabel(action: ToolFileAction, zh: boolean, active: boolean): string {
+function fileActionRowLabel(action: ToolFileAction, locale: AppLocale, active: boolean): string {
+  const c = chatCopy[locale].toolCard.fileRow;
   if (action === "read") {
-    return zh ? (active ? "正在读取" : "已读取") : (active ? "Reading" : "Read");
+    return active ? c.readActive : c.readDone;
   }
   if (action === "edit") {
-    return zh ? (active ? "正在编辑" : "已编辑") : (active ? "Editing" : "Edited");
+    return active ? c.editActive : c.editDone;
   }
-  return zh ? (active ? "正在修改" : "已修改") : (active ? "Modifying" : "Modified");
+  return active ? c.modifyActive : c.modifyDone;
 }
 
 function buildToolFileReferences(
   tool: AgentUXToolTimelineItem,
   action: ToolFileAction,
-  zh: boolean,
+  locale: AppLocale,
   titleParts?: ToolTitleParts,
 ): ToolFileReference[] {
   if (!titleParts) {
@@ -530,7 +547,7 @@ function buildToolFileReferences(
       content: "image preview",
       imageSrc: file.imageSrc,
       meta: file.meta ?? (index === 0 ? tool.preview : undefined),
-      statusText: fileActionRowLabel(action, zh, index === files.length - 1),
+      statusText: fileActionRowLabel(action, locale, index === files.length - 1),
       active: index === files.length - 1,
     }));
   }
@@ -563,7 +580,7 @@ function buildToolFileReferences(
     // `tool.preview` is the backend's own summary. No fallback: inventing a line count or a
     // diff stat is the same class of lie as inventing the file.
     meta: tool.preview,
-    statusText: fileActionRowLabel(action, zh, inProgress),
+    statusText: fileActionRowLabel(action, locale, inProgress),
     active: inProgress,
   }];
 }
@@ -609,10 +626,6 @@ function languageFromFileName(fileName: string): string {
     return "javascript";
   }
   return ext || "text";
-}
-
-function hasChinese(value: string): boolean {
-  return /[\u3400-\u9fff]/.test(value);
 }
 
 function splitToolTitle(title: string, filePath?: string): ToolTitleParts | undefined {

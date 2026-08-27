@@ -224,7 +224,7 @@ describe("export contract: the exported app's first impression", () => {
   it("lets the picker return to the welcome screen", () => {
     // Without an empty option the picker is a one-way door: once a stream is chosen there is
     // no way back to the welcome state.
-    expect(shell).toMatch(/value: "", label: locale === "zh" \? "欢迎页/);
+    expect(shell).toMatch(/value: "", label: copy\.shell\.editor\.eventStreamWelcome/);
   });
 });
 

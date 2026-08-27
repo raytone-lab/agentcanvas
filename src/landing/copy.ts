@@ -40,6 +40,7 @@ export type LandingCopy = {
     localeAria: string;
     localeZh: string;
     localeEn: string;
+    localeJa: string;
     github: string;
     skipToContent: string;
   };
@@ -153,6 +154,7 @@ const zh: LandingCopy = {
     localeAria: "切换语言",
     localeZh: "中文",
     localeEn: "EN",
+    localeJa: "日本語",
     github: "GitHub",
     skipToContent: "跳到正文",
   },
@@ -345,6 +347,7 @@ const en: LandingCopy = {
     localeAria: "Switch language",
     localeZh: "中文",
     localeEn: "EN",
+    localeJa: "日本語",
     github: "GitHub",
     skipToContent: "Skip to content",
   },
@@ -605,4 +608,272 @@ const en: LandingCopy = {
   shotMissing: "Screenshot pending",
 };
 
-export const landingCopy = { zh, en } satisfies Record<AppLocale, LandingCopy>;
+/** PENDING NATIVE REVIEW — see the note in src/i18n/copy/shell.ts for the conventions used. */
+const ja: LandingCopy = {
+  brandSuffix: "．",
+  nav: {
+    localeAria: "言語を切り替える",
+    localeZh: "中文",
+    localeEn: "EN",
+    localeJa: "日本語",
+    github: "GitHub",
+    skipToContent: "本文へスキップ",
+  },
+  hero: {
+    title: "キャンバス上で Agent の画面を組む",
+    lede:
+      "AgentCanvas はビジュアルエディターです。セッションサイドバー、チャット領域、思考ブロック、" +
+      "ツール呼び出しカード、アーティファクトのプレビューパネル、入力欄を選び、イベントストリームを流して" +
+      "その場で確認し、そのまま動く Vite + React プロジェクトとしてエクスポートします。",
+    primaryCta: "エディターを開く",
+    secondaryCta: "GitHub で Star",
+    note: "ブラウザだけで動きます。clone もインストールも不要。",
+    eyebrowTags: ["オープンソース", "エクスポートしてそのまま動く"],
+    shotAlt:
+      "AgentCanvas のエディター：左にプリセットレール、キャンバスにツール呼び出しカード、出力パネルに差分",
+    demoCaption:
+      "実際のエディターを操作して録画したものです：思考のモーションを選び、ツールのグループを開き、テーマを 3 つ切り替えています。",
+    demoPause: "デモを一時停止",
+    demoPlay: "デモを再生",
+  },
+  how: {
+    title: "3 ステップ",
+    steps: [
+      {
+        title: "組む",
+        body:
+          "実行フロー、レイアウトと出力、エンジニアリング、テーマの 4 グループからコンポーネントを選びます。" +
+          "選ぶたびに、キャンバスが実物のコンポーネントで描き直されます。",
+      },
+      {
+        title: "イベントを流す",
+        body:
+          "組み込みのシナリオをリプレイするか、自分のモデルキーを貼って実際に 1 回呼び出します。" +
+          "思考・ツール呼び出し・アーティファクトはすべてイベントストリームから描画されます。",
+      },
+      {
+        title: "エクスポート",
+        body:
+          "zip をダウンロードします。中身はキャンバス上のコンポーネントそのもののソースで、" +
+          "簡略化した別のテンプレートではありません。",
+      },
+    ],
+  },
+  parts: {
+    title: "組めるもの",
+    lede: "どの部品も独立したコンポーネントです。オン・オフを切り替えられ、配色と動きは選んだテーマに従います。",
+    items: {
+      sessions: {
+        name: "セッションサイドバー",
+        component: "SessionSidebar",
+        body: "セッション一覧と新規セッションの入口。レール全体を畳めます。",
+      },
+      chat: {
+        name: "チャット領域",
+        component: "ChatFrame",
+        body: "ユーザーと Agent のメッセージ、アバター、名前ラベル、コピー / 再生成 / 編集の操作。",
+      },
+      thinking: {
+        name: "思考ブロック",
+        component: "ReasoningBlock",
+        body: "思考のモーションと要約。折りたたみ・展開、ステータスのみ・公開用要約を選べます。",
+      },
+      tools: {
+        name: "ツール呼び出しカード",
+        component: "ToolCallCard",
+        body: "読み取り・変更・検索・コマンド実行をカードで表示し、承認と結果の詳細も含みます。",
+      },
+      output: {
+        name: "アーティファクトのプレビューパネル",
+        component: "OutputFrame",
+        body: "右パネルまたはオーバーレイで、コード・差分・Markdown・画像・音声・動画をプレビューします。",
+      },
+      composer: {
+        name: "入力欄",
+        component: "ComposerFrame",
+        body: "送信、中断、添付、そしてツール承認のインライン表示とオーバーレイ表示。",
+      },
+    },
+  },
+  events: {
+    title: "イベントストリームが画面になるまで",
+    lede:
+      "コンポーネントはベンダーの生ストリームを直接読みません。イベントはまず 1 つの標準セットに収束され、" +
+      "このマッピングが何を描画するかを決めます。だからバックエンドを差し替えてもコンポーネントには触りません。",
+    flow: [
+      { label: "ベンダーのストリーム" },
+      { label: "収束と受け入れ", file: "runtime/eventNormalizer.ts" },
+      { label: "標準イベント", file: "@agent-ux/protocol" },
+      { label: "コンポーネント", file: "slots/slotRegistry.tsx" },
+    ],
+    columnCategory: "系統",
+    columnEvent: "標準イベント",
+    columnMapping: "対応先",
+    columnTarget: "コンポーネント",
+    rows: [
+      {
+        label: "実行",
+        events: ["run.started", "run.finished", "run.error"],
+        component: "ChatFrame",
+        ui: "セッションの状態と、このターンの結果",
+      },
+      {
+        label: "テキスト",
+        events: ["text.started", "text.delta", "text.finished"],
+        component: "ChatFrame",
+        ui: "選んだ書き出しモーションで現れるメッセージの吹き出し",
+      },
+      {
+        label: "推論",
+        events: ["reasoning.status", "reasoning.summary", "reasoning.finished"],
+        component: "ReasoningBlock",
+        ui: "インジケーターと要約",
+      },
+      {
+        label: "ツール呼び出し",
+        events: ["tool.call.started", "tool.call.args.delta", "tool.call.result"],
+        component: "ToolCallCard",
+        ui: "タイトル、引数、結果",
+      },
+      {
+        label: "承認",
+        events: ["tool.call.awaiting_approval"],
+        component: "ExternalApprovalSurface",
+        ui: "インラインまたはオーバーレイの承認画面",
+      },
+      {
+        label: "アーティファクト",
+        events: ["artifact.created", "artifact.delta", "artifact.finished"],
+        component: "OutputFrame",
+        ui: "タブと内容",
+      },
+    ],
+  },
+  themes: {
+    title: "テーマとスタイル",
+    lede:
+      "配色は 12 種類。どれも同じセマンティック変数の値だけを変えており、構造は固定です。" +
+      "下のカラーチップはテーマのソースから直接読み出しています。",
+    groupNative: "ネイティブ",
+    groupMinimal: "ミニマル",
+    styleNote:
+      "スタイルごとに一式そろっています：ネイティブは暖色で IBM Plex、ミニマルは寒色で Inter を使います。",
+    compareLabel: "ライトとダークのテーマを比べる",
+    compareLight: "Soft Glass",
+    compareDark: "Warm Graphite",
+    compareLightAlt: "同じ画面をライトテーマで表示したもの",
+    compareDarkAlt: "同じ画面をダークテーマで表示したもの",
+    compareHint:
+      "同じ画面、同じコンポーネントで、変えたのはテーマの値だけです。仕切りをドラッグするか、矢印キーを使ってください。",
+    tabsLabel: "デザインスタイルごとにテーマを見る",
+  },
+  exported: {
+    title: "エクスポートの中身",
+    lede: "マニフェストでもプレビューの要約でもなく、インストールして実行して編集できるプロジェクトです。",
+    steps: ["npm install", "npm run dev"],
+    coreLabel: "主要ファイル",
+    coreFiles: [
+      { path: "main.tsx", note: "生成されたエントリー" },
+      { path: "agent-shell.tsx", note: "生成されたシェル" },
+      { path: "exported-project.ts", note: "キャンバスでの設定" },
+      { path: "demo-events.ts", note: "リプレイできるイベントストリーム" },
+      { path: "adapters/backendAdapter.ts", note: "自分のバックエンドを差し込む場所" },
+    ],
+    expandLabel: "プロジェクト全体のツリー",
+    expandNote: "{count} 件のファイル",
+    expandAction: "展開する",
+    collapseAction: "畳む",
+    tree: `your-agent/
+├─ package.json
+├─ index.html
+├─ vite.config.ts
+├─ tsconfig.json
+├─ src/
+│  ├─ main.tsx
+│  ├─ agent-shell.tsx
+│  ├─ exported-project.ts
+│  ├─ demo-events.ts
+│  ├─ adapters/backendAdapter.ts
+│  ├─ components/agent-preview/   キャンバス上のコンポーネントのソース
+│  ├─ components/ui/              基本コンポーネント
+│  ├─ runtime/  slots/  theme/  i18n/
+│  └─ styles/app.css
+└─ vendor/
+   ├─ agent-ux/{protocol,runtime,render-core,react}
+   └─ agentmatrix/agentcanvas-contract`,
+    treeNote:
+      "内部パッケージは zip に同梱されるので、レジストリの追加設定は不要です。12 種類のカラーテーマと多言語の文言もそのまま付いてきます。",
+    scriptsLabel: "package.json scripts",
+    copyLabel: "コピー",
+    copiedLabel: "コピーしました",
+    scripts: [
+      { name: "dev", run: "vite" },
+      { name: "build", run: "tsc && vite build" },
+      { name: "preview", run: "vite preview" },
+      { name: "typecheck", run: "tsc --noEmit" },
+    ],
+  },
+  providers: {
+    title: "自分のモデルにつなぐ",
+    lede: "エディターでキーを貼れば実際に 1 回呼び出せます。自分のモデルがこの画面でどう見えるか確認できます。",
+    countNote: "{count} 通りの接続方法",
+    groups: {
+      cloud: "ホスト型 API",
+      local: "ローカル実行",
+      custom: "カスタムエンドポイント",
+    },
+    names: {
+      openai: "OpenAI",
+      anthropic: "Anthropic",
+      gemini: "Gemini",
+      openrouter: "OpenRouter",
+      deepseek: "DeepSeek",
+      "z-ai": "Z.ai",
+      moonshot: "MoonShot",
+      local: "ローカルモデル",
+      custom: "カスタムエンドポイント",
+    },
+    protocolLabel: "プロトコル",
+    protocolNote:
+      "2 つです：openai-compatible と anthropic。前者は下の一覧のほとんどに加え、その API を話す自前のサービスもカバーします。",
+    keyLabel: "キーの扱い",
+    keyNote:
+      "エディターではメモリ上だけに保持し、リロードで消えます。エクスポートしたアプリは sessionStorage を使い、タブを閉じると消えます。どちらも localStorage には書きません。",
+  },
+  limits: {
+    title: "やらないこと",
+    items: [
+      {
+        title: "自由配置のキャンバスではありません",
+        body:
+          "領域はスキーマで制約されており、コンポーネントは決まった場所にしか置けません。" +
+          "この制約があるからこそ、エクスポートされたコードは人が続けて書ける状態に保たれます。",
+      },
+      {
+        title: "ホスティングされたランタイムではありません",
+        body:
+          "AgentCanvas が作るのはスキャフォールドです。あなたの Agent はエクスポートしたプロジェクトの中で動き、このサイトには依存しません。",
+      },
+      {
+        title: "未完成の連携について約束はしません",
+        body:
+          "あるのはリプレイ、モックのトランスポート、そしてベンダーアダプターのインターフェースです。" +
+          "実装とテスト経路のない連携はここには載せません。",
+      },
+    ],
+  },
+  closing: {
+    title: "ひとつ組んでみる",
+    body:
+      "エディターはこのままブラウザで開けます。clone もインストールも不要。組んでエクスポートすれば、コードはあなたのものです。",
+    primaryCta: "エディターを開く",
+    secondaryCta: "GitHub で Star",
+  },
+  footer: {
+    github: "GitHub でソースを見る",
+    openEditor: "エディターを開く",
+  },
+  shotMissing: "スクリーンショット準備中",
+};
+
+export const landingCopy = { zh, en, ja } satisfies Record<AppLocale, LandingCopy>;

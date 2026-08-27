@@ -411,7 +411,6 @@ function ArtifactLaunchCard({
 }) {
   const mediaKind = artifactMediaKind(item);
   const mediaStyle = mediaKind ? mediaGenerationStyle(project, mediaKind) : undefined;
-  const zh = hasChinese(copy.chat.reasoning.thinking);
   const launchTitle = artifactLaunchTitle(item);
   if (
     mediaKind === "image" &&
@@ -485,7 +484,7 @@ function ArtifactLaunchCard({
       )}
       <span className="artifact-inline-body">
         <strong>{launchTitle}</strong>
-        <span className="artifact-launch-kind">{artifactLaunchKind(item, zh)}</span>
+        <span className="artifact-launch-kind">{artifactLaunchKind(item, copy)}</span>
       </span>
       <span className="artifact-launch-actions">
         <button
@@ -493,7 +492,7 @@ function ArtifactLaunchCard({
           className="artifact-action-open"
           onClick={() => onOpenArtifact?.(artifactLaunchOpenRequest(item, copy, project))}
         >
-          <span>{zh ? "打开方式" : "Open with"}</span>
+          <span>{copy.chat.artifactLaunch.openWith}</span>
           <ChevronDown size={20} aria-hidden="true" />
         </button>
       </span>
@@ -593,12 +592,12 @@ function artifactLaunchTitle(item: AgentUXArtifactTimelineItem): string {
   return "Agent Component Composer";
 }
 
-function artifactLaunchKind(item: AgentUXArtifactTimelineItem, zh: boolean): string {
+function artifactLaunchKind(item: AgentUXArtifactTimelineItem, copy: UiCopy): string {
   const kind = artifactMediaKind(item);
-  if (kind === "image") return zh ? "生成图片" : "Generated image";
-  if (kind === "audio") return zh ? "音频加载" : "Audio loading";
-  if (kind === "video") return zh ? "生成视频" : "Generated video";
-  return zh ? "网站" : "Website";
+  if (kind === "image") return copy.chat.artifactLaunch.kindImage;
+  if (kind === "audio") return copy.chat.artifactLaunch.kindAudio;
+  if (kind === "video") return copy.chat.artifactLaunch.kindVideo;
+  return copy.chat.artifactLaunch.kindWebsite;
 }
 
 function artifactLaunchOpenRequest(item: AgentUXArtifactTimelineItem, copy: UiCopy, project: AgentFrontendProject): OutputPanelOpenRequest {
@@ -616,17 +615,16 @@ function artifactLaunchOpenRequest(item: AgentUXArtifactTimelineItem, copy: UiCo
       mediaStyle: mediaGenerationStyle(project, mediaKind),
     };
   }
-  const zh = hasChinese(copy.chat.reasoning.thinking);
   return {
     id: `website:${originalTitle}`,
     kind: "file",
     title: "Agent Component Composer",
-    subtitle: zh ? "网站" : "Website",
+    subtitle: copy.chat.demoSite.subtitle,
     language: "html",
     body: [
       '<main class="composer-preview">',
       "  <h1>Agent Component Composer</h1>",
-      `  <p>${zh ? "用于组合、预览并导出 Agent 前端组件。" : "Compose, preview, and export agent frontend components."}</p>`,
+      `  <p>${copy.chat.demoSite.body}</p>`,
       "</main>",
     ].join("\n"),
   };
@@ -658,10 +656,6 @@ function isMediaGenerationTool(item: AgentUXToolTimelineItem): boolean {
   return item.name.startsWith("preview.generate_");
 }
 
-function hasChinese(value: string): boolean {
-  return /[\u3400-\u9fff]/.test(value);
-}
-
 function runStatusLabel(status: string | undefined, copy: UiCopy): string {
   if (!status) {
     return "";
@@ -686,9 +680,8 @@ export function ExternalApprovalSurface({
   onConfirm?: () => void;
 }) {
   const copy = useCopy();
-  const zh = hasChinese(copy.chat.reasoning.thinking);
   const [selected, setSelected] = useState<ExternalApprovalChoice>("yes");
-  const choices = externalApprovalChoices(copy, zh);
+  const choices = externalApprovalChoices(copy);
   const prompt = tool.approval?.prompt ?? copy.chat.approval.externalPrompt;
   return (
     <aside
@@ -705,7 +698,7 @@ export function ExternalApprovalSurface({
                 <StateIcon slot={approvalIconSlot} size={15} />
               </span>
             ) : null}
-            <strong>{zh ? "需要权限" : "Permission required"}</strong>
+            <strong>{copy.chat.approval.permissionRequired}</strong>
           </span>
         </div>
         <small>{tool.title ?? tool.name}</small>
@@ -715,7 +708,7 @@ export function ExternalApprovalSurface({
 
       <div className="external-approval-command">
         <code>{formatApprovalCommand(tool)}</code>
-        <span>{zh ? "没有输出。" : "No output."}</span>
+        <span>{copy.chat.approval.noOutput}</span>
       </div>
 
       <div className="external-approval-options" aria-label={copy.chat.approval.actionsLabel}>
@@ -738,10 +731,10 @@ export function ExternalApprovalSurface({
 
       <div className="external-approval-footer">
         <span>
-          {zh ? "使用 Tab / 上下键选择，回车确认" : "Use Tab / arrow keys to choose, Enter to confirm"}
+          {copy.chat.approval.chooseHint}
         </span>
         <button type="button" className="external-approval-confirm" onClick={onConfirm}>
-          {zh ? "确认" : "Confirm"}
+          {copy.chat.approval.confirm}
         </button>
       </div>
     </aside>
@@ -750,22 +743,22 @@ export function ExternalApprovalSurface({
 
 type ExternalApprovalChoice = "yes" | "always" | "no";
 
-function externalApprovalChoices(copy: UiCopy, zh: boolean): Array<{ id: ExternalApprovalChoice; label: string; hint: string }> {
+function externalApprovalChoices(copy: UiCopy): Array<{ id: ExternalApprovalChoice; label: string; hint: string }> {
   return [
     {
       id: "yes",
       label: copy.chat.approval.yes,
-      hint: zh ? "仅允许这一次" : "Allow once",
+      hint: copy.chat.approval.hints.yes,
     },
     {
       id: "always",
       label: copy.chat.approval.always,
-      hint: zh ? "后续相同命令不再询问" : "Do not ask again for this project",
+      hint: copy.chat.approval.hints.always,
     },
     {
       id: "no",
       label: copy.chat.approval.no,
-      hint: zh ? "这次先拒绝" : "Deny this time",
+      hint: copy.chat.approval.hints.no,
     },
   ];
 }

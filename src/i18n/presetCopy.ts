@@ -1,11 +1,19 @@
-// Chinese translations for the preset rail (groups, sections, option labels/descriptions).
+// Translations for the preset rail (groups, sections, option labels/descriptions).
 // The preset schema in src/schema/presets.ts stays English — it is exported configuration.
 // These maps are keyed by stable ids/names and fall back to the schema text when missing.
+//
+// Tables are keyed by locale with no entry for `en`: the schema text already *is* English, so
+// the absence of a table is what produces the English reading. That is why the lookups at the
+// bottom have no special case for it, and why a locale we have not translated yet degrades to
+// English on its own rather than needing a branch.
 
-import type { AppLocale } from "./uiCopy";
+import type { AppLocale } from "./locales";
+
+type PresetTextTable = Record<string, string>;
+type PresetOptionTable = Record<string, { label?: string; description?: string }>;
 
 /** Preset group id → display name. */
-export const presetGroupNameZh: Record<string, string> = {
+const presetGroupNameZh: PresetTextTable = {
   conversation: "对话",
   "media-generation": "加载器",
   sidebar: "左侧栏",
@@ -20,8 +28,25 @@ export const presetGroupNameZh: Record<string, string> = {
   theme: "主题",
 };
 
+
+/** PENDING NATIVE REVIEW — see the note in ./copy/shell.ts for the conventions used. */
+const presetGroupNameJa: PresetTextTable = {
+  conversation: "チャット",
+  "media-generation": "ローダー",
+  sidebar: "左レール",
+  "ux-effects": "思考",
+  "tool-calls": "ツール",
+  blocks: "ステータス",
+  composer: "入力欄",
+  provider: "モデル",
+  output: "出力",
+  render: "レンダリング",
+  git: "Git",
+  theme: "テーマ",
+};
+
 /** Section label (English schema text) → translated label. */
-export const presetSectionZh: Record<string, string> = {
+const presetSectionZh: PresetTextTable = {
   Writing: "消息输出模式",
   "Message chrome": "消息外观",
   Recovery: "消息操作",
@@ -56,8 +81,45 @@ export const presetSectionZh: Record<string, string> = {
   "Video loading": "视频加载",
 };
 
+
+/** PENDING NATIVE REVIEW — see the note in ./copy/shell.ts for the conventions used. */
+const presetSectionJa: PresetTextTable = {
+  Writing: "メッセージの出力",
+  "Message chrome": "メッセージの外観",
+  Recovery: "メッセージの操作",
+  Motion: "モーション",
+  Disclosure: "開き方",
+  Visibility: "表示",
+  Layout: "レイアウト",
+  "Tool display": "ツールの表示",
+  Details: "詳細",
+  Lifecycle: "ライフサイクル",
+  Composer: "入力欄",
+  "Approval placement": "承認の配置",
+  Content: "内容",
+  "Failure states": "失敗時の状態",
+  Inputs: "入力",
+  "Run controls": "実行コントロール",
+  Features: "機能",
+  Permissions: "権限",
+  Shortcuts: "ショートカット",
+  "Provider UI": "プロバイダーの画面",
+  "Custom provider": "カスタムプロバイダー",
+  "Local runtime": "ローカル実行",
+  "Hosted providers": "ホスト型プロバイダー",
+  Source: "ソース",
+  "Panel behavior": "パネルの挙動",
+  "Artifact renderer": "アーティファクトのレンダラー",
+  Review: "レビュー",
+  Commit: "コミット",
+  "Scaffold theme": "スキャフォールドのテーマ",
+  "Image loading": "画像の読み込み",
+  "Audio loading": "音声の読み込み",
+  "Video loading": "動画の読み込み",
+};
+
 /** Preset option id → translated label/description. */
-export const presetOptionZh: Record<string, { label?: string; description?: string }> = {
+const presetOptionZh: PresetOptionTable = {
   // Conversation
   "writing-smooth": { label: "平滑流式", description: "以稳定的流式方式呈现助手文本，不加额外修饰。" },
   "writing-typewriter": { label: "打字机", description: "采用逐字符的节奏书写，适合专注的对话。" },
@@ -328,30 +390,36 @@ export const presetOptionZh: Record<string, { label?: string; description?: stri
   },
 };
 
+/**
+ * Locale → table. A locale absent from these reads through to the schema's English text,
+ * which is what makes adding a language a matter of adding an entry rather than a branch.
+ */
+const presetGroupNames: Partial<Record<AppLocale, PresetTextTable>> = {
+  zh: presetGroupNameZh,
+  ja: presetGroupNameJa,
+};
+
+const presetSections: Partial<Record<AppLocale, PresetTextTable>> = {
+  zh: presetSectionZh,
+  ja: presetSectionJa,
+};
+
+const presetOptions: Partial<Record<AppLocale, PresetOptionTable>> = {
+  zh: presetOptionZh,
+};
+
 export function translatePresetGroupName(id: string, fallback: string, locale: AppLocale): string {
-  if (locale !== "zh") {
-    return fallback;
-  }
-  return presetGroupNameZh[id] ?? fallback;
+  return presetGroupNames[locale]?.[id] ?? fallback;
 }
 
 export function translatePresetSection(section: string, locale: AppLocale): string {
-  if (locale !== "zh") {
-    return section;
-  }
-  return presetSectionZh[section] ?? section;
+  return presetSections[locale]?.[section] ?? section;
 }
 
 export function translatePresetOptionLabel(id: string, fallback: string, locale: AppLocale): string {
-  if (locale !== "zh") {
-    return fallback;
-  }
-  return presetOptionZh[id]?.label ?? fallback;
+  return presetOptions[locale]?.[id]?.label ?? fallback;
 }
 
 export function translatePresetOptionDescription(id: string, fallback: string, locale: AppLocale): string {
-  if (locale !== "zh") {
-    return fallback;
-  }
-  return presetOptionZh[id]?.description ?? fallback;
+  return presetOptions[locale]?.[id]?.description ?? fallback;
 }

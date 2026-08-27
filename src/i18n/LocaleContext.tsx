@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { uiCopy, type AppLocale } from "./uiCopy";
+import { HTML_LANG, isAppLocale, type AppLocale } from "./locales";
+import { uiCopy } from "./uiCopy";
 
 const STORAGE_KEY = "agentcanvas.locale";
 
@@ -20,7 +21,7 @@ function readStoredLocale(): AppLocale {
   }
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    return stored === "zh" || stored === "en" ? stored : "zh";
+    return isAppLocale(stored) ? stored : "zh";
   } catch {
     return "zh";
   }
@@ -43,6 +44,19 @@ export function LocaleProvider({
       // Session-only fallback when storage is unavailable.
     }
   }, []);
+
+  /**
+   * Keep `<html lang>` in step with the locale.
+   *
+   * Both entry HTML files ship a static `lang`, and editor.html's said `zh-CN` whatever the UI
+   * was actually showing — so a screen reader read English and Japanese with a Chinese voice,
+   * and font fallback picked Chinese glyph variants for kanji shared between the two.
+   * Done here rather than per page so a new entry point cannot forget it.
+   */
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.lang = HTML_LANG[locale];
+  }, [locale]);
 
   const value = useMemo(() => ({ locale, setLocale }), [locale, setLocale]);
 

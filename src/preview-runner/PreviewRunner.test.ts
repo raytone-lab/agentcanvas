@@ -68,6 +68,9 @@ describe("pure frontend preview runner", () => {
       attachments: [{ name: "极简风.png", isImage: true }],
       project: defaultCodingAgentProject,
       scenarioId: "coding-with-artifact",
+      // Stated outright. The runner used to infer this by testing the prompt for Han
+      // characters, which cannot separate Chinese from Japanese.
+      locale: "zh",
     }));
 
     const startedTitles = events

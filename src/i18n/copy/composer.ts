@@ -1,5 +1,8 @@
 // Composer domain copy: ComposerFrame, ProviderFloatingSettings, ProviderSettingsPanel.
-// en is the source of truth; zh must mirror its shape exactly.
+// en is the source of truth; every other locale must mirror its shape exactly — the
+// `satisfies` at the bottom is what enforces that.
+
+import type { AppLocale } from "../locales";
 
 const en = {
   frame: {
@@ -151,4 +154,83 @@ const zh: typeof en = {
   },
 };
 
-export const composerCopy = { en, zh };
+/** PENDING NATIVE REVIEW — see the note in ./shell.ts for the conventions used. */
+const ja: typeof en = {
+  frame: {
+    promptShortcutsLabel: "プロンプトのショートカット",
+    shortcuts: {
+      inspectFiles: "現在のファイルを確認",
+      fixTest: "失敗しているテストを修正",
+      explainChange: "この変更を説明",
+    },
+    placeholder: "今日は何をお手伝いしましょうか？",
+    attachFiles: "ファイルを添付",
+    thinkingBudget: "思考予算",
+    reasoningStrength: "推論の強さ",
+    thinkingBudgetValue: "標準",
+    thinkingBudgetFast: "高速",
+    thinkingBudgetFastHint: "応答速度を優先し、待ち時間を短くします",
+    thinkingBudgetMedium: "標準",
+    thinkingBudgetMediumHint: "速度と思考の深さのバランスを取ります",
+    thinkingBudgetExpert: "エキスパート",
+    thinkingBudgetExpertHint: "難しい作業により多くの推論を割り当てます",
+    tools: "承認の権限",
+    toolsValue: "権限を要求",
+    toolPermissionRequest: "権限を要求",
+    toolPermissionRequestHint: "操作の前に承認を求めます",
+    toolPermissionAllowAll: "すべて許可",
+    toolPermissionAllowAllHint: "確認せずにそのまま実行します",
+    provider: "プロバイダー",
+    model: "モデル",
+    voiceInput: "音声入力",
+    promptContextLabel: "プロンプトのコンテキスト",
+    stop: "停止",
+    send: "送信",
+  },
+  floatingSettings: {
+    settings: "プロバイダー設定",
+    heading: "プロバイダー設定",
+    close: "プロバイダー設定を閉じる",
+    default: "既定",
+    setDefault: "既定にする",
+    baseUrl: "Base URL",
+    apiKeyEnv: "API キーの環境変数",
+    noKeyRequired: "キー不要",
+    sessionKey: "セッションキー",
+    sessionKeyPlaceholderNone: "ローカルランタイム",
+    sessionKeyPlaceholder: "開発用のみ",
+    defaultModel: "既定のモデル",
+    testKey: "キーをテスト",
+    fetchModels: "モデルを取得",
+    save: "保存",
+  },
+  settingsPanel: {
+    providerUi: "表示設定",
+    settingsGear: "表示設定の歯車",
+    enabled: "有効",
+    enable: "有効にする",
+    enabledProviders: "モデルを追加",
+    default: "既定",
+    setDefault: "既定にする",
+    connections: "接続の設定",
+    defaultBadge: "既定",
+    name: "名前",
+    baseUrl: "Base URL",
+    apiKeyEnv: "API キーの環境変数",
+    noKeyRequired: "キー不要",
+    sessionKey: "セッションキー",
+    sessionKeyPlaceholderNone: "ローカルランタイム",
+    sessionKeyPlaceholder: "開発用のみ・エクスポートされません",
+    defaultModel: "既定のモデル",
+    testKey: "キーをテスト",
+    fetchModels: "モデルを取得",
+    save: "保存",
+    keepOneModelToast: "設定と実行を続けるには、少なくとも 1 つのモデルを残す必要があります。",
+    secretNote: "キーはエクスポートされる構成には書き込まれません。生成されたスキャフォールドは環境変数か、開発用のセッションキーを使います。",
+  },
+};
+
+/** Read off `en`, so every other locale is checked against it rather than trusted. */
+export type ComposerCopy = typeof en;
+
+export const composerCopy = { en, zh, ja } satisfies Record<AppLocale, ComposerCopy>;

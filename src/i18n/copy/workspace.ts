@@ -1,5 +1,8 @@
 // Workspace domain copy: OutputFrame, GitFrame, ExportFrame, DebugDock, CapabilityTray.
-// en is the source of truth; zh must mirror its shape exactly.
+// en is the source of truth; every other locale must mirror its shape exactly — the
+// `satisfies` at the bottom is what enforces that.
+
+import type { AppLocale } from "../locales";
 
 const en = {
   outputFrame: {
@@ -86,6 +89,8 @@ const en = {
   },
   sessionSidebar: {
     ariaLabel: "Conversation history",
+    brandName: "My Agent",
+    collapse: "Collapse sidebar",
     newSession: "New chat",
     searchPlaceholder: "Search chats",
     groupToday: "Today",
@@ -186,6 +191,8 @@ const zh: typeof en = {
   },
   sessionSidebar: {
     ariaLabel: "会话历史",
+    brandName: "我的Agent",
+    collapse: "收起侧边栏",
     newSession: "新建对话",
     searchPlaceholder: "搜索对话",
     groupToday: "今天",
@@ -201,4 +208,110 @@ const zh: typeof en = {
   },
 };
 
-export const workspaceCopy = { en, zh };
+/** PENDING NATIVE REVIEW — see the note in ./shell.ts for the conventions used. */
+const ja: typeof en = {
+  outputFrame: {
+    titleConsole: "出力 · コンソールログ",
+    titleArtifactPrefix: "出力 · アーティファクト ",
+    sourceArtifact: "アーティファクト",
+    sourceConsole: "コンソール",
+    rendererLabels: {
+      code: "コード",
+      markdown: "Markdown",
+      preview: "プレビュー",
+      data: "データ",
+      diff: "差分",
+    },
+    subtitleSurfaceSuffix: " 画面",
+    subtitleAutoArrow: "自動 -> ",
+    subtitleArtifactPreview: "アーティファクトのプレビュー",
+    statusLabels: {
+      success: "成功",
+      error: "エラー",
+      pending: "保留中",
+    },
+    emptyNoArtifact: "この実行ではアーティファクトは生成されませんでした。",
+    emptyNoConsole: "この実行ではコマンドは実行されませんでした。",
+    artifactMetadataEmpty: "アーティファクトのメタデータはありますが、プレビューできる内容は出力されていません。",
+    noMarkdownPreviewContent: "プレビューできる Markdown がありません。",
+    previousImplementation: "以前の実装",
+    renderedPreview: "レンダリング結果",
+    consoleLogs: "コンソールログ",
+    consoleCode: "ツールの出力",
+    diffSuffix: " の差分",
+    expandOutput: "出力を広げる",
+    collapseOutput: "出力を畳む",
+    copyCode: "コードをコピー",
+  },
+  gitFrame: {
+    title: "Git",
+    subtitle: "エクスポート可能なプロジェクトの管理",
+    comingSoonTitle: "近日公開",
+    comingSoonBody: "Git 機能は準備中です…",
+    branchStatusAria: "ブランチの状態",
+    branch: "ブランチ",
+    statusCommittedLocally: "ローカルにコミット済み",
+    statusDirty: "変更あり",
+    aheadPrefix: " · 先行 ",
+    mockSuffix: " · モック",
+    changedFilesAria: "変更ファイル",
+    committedFiles: "コミット済みファイル",
+    editedFiles: "編集したファイル",
+    filesSuffix: " 件のファイル",
+    workingTreeClean: "モックプレビューでは作業ツリーに変更がありません。",
+    changedFilesHidden: "変更ファイルはプリセットにより非表示です",
+    lastMockCommit: "前回のモックコミット",
+    commitMessage: "コミットメッセージ",
+    diffButton: "差分",
+    viewDiffAriaPrefix: "差分を見る ",
+    commitDraftAria: "コミットの下書き",
+    commitAria: "コミット",
+    committed: "コミット済み",
+    commit: "コミット",
+    push: "プッシュ",
+  },
+  exportFrame: {
+    title: "エクスポート",
+    scaffoldFilesStagedSuffix: " 件のスキャフォールドファイルを準備しました",
+    viteReactScaffold: "Vite React スキャフォールド",
+    emptyGenerate: "現在のスキーマからスキャフォールドのマニフェストを生成します。",
+    regenerateExport: "エクスポートを再生成",
+    generateExport: "エクスポートを生成",
+  },
+  debugDock: {
+    title: "デバッグドック",
+    subtitle: "標準イベント、ランタイムの状態、render-core の投影。",
+    eventsSuffix: " 件のイベント",
+    timeline: "タイムライン",
+    viewModel: "ビューモデル",
+    visibilityDefault: "既定",
+    admission: "受け入れレポート",
+  },
+  capabilityTray: {
+    title: "ケイパビリティ",
+    subtitle: "AgentUX のケイパビリティイベント",
+    empty: "ケイパビリティは付与されていません",
+  },
+  sessionSidebar: {
+    ariaLabel: "会話履歴",
+    brandName: "マイ Agent",
+    collapse: "サイドバーを畳む",
+    newSession: "新規チャット",
+    searchPlaceholder: "チャットを検索",
+    groupToday: "今日",
+    groupEarlier: "それ以前",
+    footerNote: "{version}",
+    sessions: [
+      "この Agent は何ができますか？",
+      "認証ミドルウェアをリファクタリング",
+      "SearchInput のユニットテストを追加",
+      "reducer の処理フローを説明",
+      "プレビューのスナップショット失敗を修正",
+    ],
+  },
+};
+
+/** Read off `en`, so every other locale is checked against it rather than trusted. */
+export type WorkspaceCopy = typeof en;
+
+export const workspaceCopy = { en, zh, ja } satisfies Record<AppLocale, WorkspaceCopy>;
