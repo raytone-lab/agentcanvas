@@ -1,4 +1,4 @@
-import { Brain, Bug, ChevronRight, FileText, Gauge, Hand, Image as ImageIcon, MessageSquareText, Mic, Paperclip, Plus, Rocket, Search, Send, ShieldCheck, Sparkles, Square, X } from "lucide-react";
+import { Brain, Bug, ChevronRight, FileText, Gauge, Image as ImageIcon, MessageSquareText, Mic, Paperclip, Plus, Rocket, Search, Send, ShieldCheck, ShieldHalf, ShieldOff, Sparkles, Square, X } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import {
   defaultProviderConnection,
@@ -10,6 +10,44 @@ import {
 import { StateIcon } from "../../agentmatrix";
 import { useCopy } from "../../i18n/LocaleContext";
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger, IconButton, SelectMenu, Textarea } from "../ui";
+
+/**
+ * Approval modes, least to most permissive.
+ *
+ * Three, not two. A binary "ask every time / never ask" forces a choice nobody wants to make:
+ * confirm every file read, or hand over the machine. The middle mode is the one people
+ * actually run — auto-approve the routine, stop on anything flagged risky — and it is what
+ * every shipping agent client offers.
+ *
+ * `tone: "danger"` is on the unguarded mode only. It is the one choice with consequences the
+ * user cannot take back, so it reads differently instead of sitting in the list as a peer.
+ */
+type PermissionMode = "request" | "auto" | "allow-all";
+
+const PERMISSION_MODES: ReadonlyArray<{
+  id: PermissionMode;
+  Icon: typeof ShieldCheck;
+  tone?: "danger";
+}> = [
+  { id: "request", Icon: ShieldCheck },
+  { id: "auto", Icon: ShieldHalf },
+  { id: "allow-all", Icon: ShieldOff, tone: "danger" },
+];
+
+/** Copy keys per mode, so the trigger and the menu rows can never drift apart. */
+const permissionLabelKey = (mode: PermissionMode) =>
+  mode === "request"
+    ? "toolPermissionRequest" as const
+    : mode === "auto"
+      ? "toolPermissionAuto" as const
+      : "toolPermissionAllowAll" as const;
+
+const permissionHintKey = (mode: PermissionMode) =>
+  mode === "request"
+    ? "toolPermissionRequestHint" as const
+    : mode === "auto"
+      ? "toolPermissionAutoHint" as const
+      : "toolPermissionAllowAllHint" as const;
 
 export type ComposerSubmitAttachment = {
   name: string;
@@ -84,7 +122,7 @@ export function ComposerFrame({
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const [promptValue, setPromptValue] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<{ id: string; name: string; isImage: boolean; imageSrc?: string }[]>([]);
-  const [permissionMode, setPermissionMode] = useState<"request" | "allow-all">("request");
+  const [permissionMode, setPermissionMode] = useState<PermissionMode>("request");
   const [budgetMode, setBudgetMode] = useState<"fast" | "medium" | "expert">("medium");
   const [isListening, setIsListening] = useState(false);
   const canSubmit = promptValue.trim().length > 0 || attachedFiles.length > 0;
@@ -128,7 +166,7 @@ export function ComposerFrame({
   ] as const;
   const selectedBudget = budgetOptions.find((option) => option.value === budgetMode) ?? budgetOptions[1];
   const SelectedBudgetIcon = selectedBudget.Icon;
-  const PermissionModeIcon = permissionMode === "request" ? ShieldCheck : Hand;
+  const PermissionModeIcon = PERMISSION_MODES.find((mode) => mode.id === permissionMode)?.Icon ?? ShieldCheck;
   const combinedModelBudgetLabel = [
     project.composer.modelSwitcher ? defaultProvider.defaultModel : undefined,
     project.composer.thinkingBudget ? selectedBudget.label : undefined,
@@ -350,11 +388,7 @@ export function ComposerFrame({
                   aria-label={copy.composer.frame.tools}
                 >
                   <PermissionModeIcon size={15} />
-                  <span>
-                    {permissionMode === "request"
-                      ? copy.composer.frame.toolPermissionRequest
-                      : copy.composer.frame.toolPermissionAllowAll}
-                  </span>
+                  <span>{copy.composer.frame[permissionLabelKey(permissionMode)]}</span>
                   {isMinimalStyle ? null : <ChevronRight className="composer-menu-chevron" size={14} aria-hidden="true" />}
                 </button>
               </DropdownMenuTrigger>
@@ -365,22 +399,21 @@ export function ComposerFrame({
                 align="start"
                 sideOffset={10}
               >
-                <DropdownMenuItem className="permission-mode-item" onSelect={() => setPermissionMode("request")}>
-                  <ShieldCheck size={18} />
-                  <span className="permission-mode-copy">
-                    <strong>{copy.composer.frame.toolPermissionRequest}</strong>
-                    <span>{copy.composer.frame.toolPermissionRequestHint}</span>
-                  </span>
-                  {permissionMode === "request" ? <span className="permission-mode-check" aria-hidden="true">✓</span> : null}
-                </DropdownMenuItem>
-                <DropdownMenuItem className="permission-mode-item" onSelect={() => setPermissionMode("allow-all")}>
-                  <Hand size={18} />
-                  <span className="permission-mode-copy">
-                    <strong>{copy.composer.frame.toolPermissionAllowAll}</strong>
-                    <span>{copy.composer.frame.toolPermissionAllowAllHint}</span>
-                  </span>
-                  {permissionMode === "allow-all" ? <span className="permission-mode-check" aria-hidden="true">✓</span> : null}
-                </DropdownMenuItem>
+                {PERMISSION_MODES.map(({ id, Icon, tone }) => (
+                  <DropdownMenuItem
+                    key={id}
+                    className="permission-mode-item"
+                    data-tone={tone}
+                    onSelect={() => setPermissionMode(id)}
+                  >
+                    <Icon size={18} />
+                    <span className="permission-mode-copy">
+                      <strong>{copy.composer.frame[permissionLabelKey(id)]}</strong>
+                      <span>{copy.composer.frame[permissionHintKey(id)]}</span>
+                    </span>
+                    {permissionMode === id ? <span className="permission-mode-check" aria-hidden="true">✓</span> : null}
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
           ) : null}

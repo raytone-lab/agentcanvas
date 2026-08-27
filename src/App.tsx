@@ -782,6 +782,7 @@ function InlineApprovalPrompt({
 }) {
   const c = previewCopy[locale].inlineApproval;
   const options = c.options;
+  const [answer, setAnswer] = useState("");
 
   return (
     <aside className="inline-approval-panel" data-preview-anchor="external-approval" aria-label={c.ariaLabel}>
@@ -795,15 +796,32 @@ function InlineApprovalPrompt({
       </div>
 
       <ol className="inline-approval-options">
-        {options.map((option, index) => (
-          <li key={option.title} data-placeholder={index === options.length - 1 ? "true" : undefined}>
-            <span className="inline-approval-option-index">{index + 1}.</span>
-            <div>
-              <strong>{option.title}</strong>
-              {option.body ? <span>{option.body}</span> : null}
-            </div>
-          </li>
-        ))}
+        {options.map((option, index) => {
+          // The last row is the free-text escape hatch. It used to be static text that looked
+          // like a field and swallowed every keystroke; a real input is the honest affordance,
+          // and it costs one piece of local state.
+          const isAnswerField = index === options.length - 1;
+          return (
+            <li key={option.title} data-placeholder={isAnswerField ? "true" : undefined}>
+              <span className="inline-approval-option-index">{index + 1}.</span>
+              {isAnswerField ? (
+                <input
+                  className="inline-approval-answer"
+                  type="text"
+                  value={answer}
+                  placeholder={option.title}
+                  aria-label={option.title}
+                  onChange={(event) => setAnswer(event.target.value)}
+                />
+              ) : (
+                <div>
+                  <strong>{option.title}</strong>
+                  {option.body ? <span>{option.body}</span> : null}
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ol>
 
       <footer className="inline-approval-footer">
@@ -1390,7 +1408,10 @@ export function App() {
     (slot) => slot.enabled && slot.region === "right-panel" && slot.component !== "GitFrame",
   );
   const loaderCanvasPreviewActive = surfaceMode === "builder" && selectedGroup === "media-generation";
-  const leftSidebarVisible = hasSidebar && !leftCollapsed && !autoHiddenRails.left;
+  // Mounted whenever the layout has one; `leftCollapsed` is a visual state the CSS drawer
+  // owns, so gating the mount on it would remove the element the transition animates.
+  const leftSidebarMounted = hasSidebar && !autoHiddenRails.left;
+  const leftSidebarVisible = leftSidebarMounted && !leftCollapsed;
   const rightPanelVisible =
     hasRightPanel && !rightCollapsed && !autoHiddenRails.right && !isWelcome && !loaderCanvasPreviewActive;
   useEffect(() => {
@@ -3271,10 +3292,10 @@ function selectPresetGroup(groupId: PresetGroupId) {
                   data-theme-preset={activeProject.theme.preset}
                   data-preview-refreshing={previewRefreshing}
                 >
-                  {leftSidebarVisible ? renderSlots(visibleLayoutSlots, "sidebar", slotContext) : null}
+                  {leftSidebarMounted ? renderSlots(visibleLayoutSlots, "sidebar", slotContext) : null}
                   {rightPanelVisible ? (
                     <PanelGroup className="preview-panels" orientation="horizontal">
-                      <Panel defaultSize={`${activeProject.layout.mainSize}%`} minSize="52%">
+                      <Panel className="preview-panel" defaultSize={`${activeProject.layout.mainSize}%`} minSize="52%">
                         <section className="preview-stack" data-welcome={isWelcome ? "true" : undefined}>
                           {renderSlots(visibleLayoutSlots, "main", slotContext)}
                           {renderSlots(visibleLayoutSlots, "composer", slotContext)}
@@ -3283,7 +3304,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
                         </section>
                       </Panel>
                       <PanelResizeHandle className="resize-handle" />
-                      <Panel defaultSize={`${activeProject.layout.rightPanelSize}%`} minSize="24%">
+                      <Panel className="preview-panel" defaultSize={`${activeProject.layout.rightPanelSize}%`} minSize="24%">
                         <aside className="right-panel">
                           {renderSlots(visibleLayoutSlots, "right-panel", slotContext)}
                         </aside>

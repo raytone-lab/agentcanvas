@@ -1,3 +1,4 @@
+import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { AgentUXArtifactTimelineItem, AgentUXViewModel } from "@agent-ux/render-core";
 import { Braces, Copy, FileAudio2, FileCode2, FileText, FileVideo2, ImageIcon, Maximize2, Minimize2, PanelRight, PanelsTopLeft, Play, TerminalSquare, Volume2, X } from "lucide-react";
@@ -254,6 +255,7 @@ function OutputSourceSwitch({
   copy: OutputFrameCopy;
   onChange: (source: OutputSource) => void;
 }) {
+  const reducedMotion = useReducedMotion();
   return (
     <div className="output-source-switch" role="group" aria-label={copy.titleArtifactPrefix}>
       <button
@@ -264,6 +266,7 @@ function OutputSourceSwitch({
         title={copy.subtitleArtifactPreview}
         onClick={() => onChange("artifact")}
       >
+        {source === "artifact" ? <SourcePill reduced={reducedMotion} /> : null}
         <FileCode2 size={15} />
         <span className="output-source-label">{copy.sourceArtifact}</span>
       </button>
@@ -275,10 +278,41 @@ function OutputSourceSwitch({
         title={copy.consoleLogs}
         onClick={() => onChange("console")}
       >
+        {source === "console" ? <SourcePill reduced={reducedMotion} /> : null}
         <TerminalSquare size={15} />
         <span className="output-source-label">{copy.sourceConsole}</span>
       </button>
     </div>
+  );
+}
+
+/**
+ * The moving background behind the active source tab.
+ *
+ * A shared `layoutId` is what makes this slide: motion sees the same element leave one button
+ * and arrive in the other, and interpolates the box between them. The previous version gave
+ * each button its own `background` and cross-faded — two fades read as a jump, because nothing
+ * ever travels.
+ *
+ * Spring rather than a duration: the distance changes with the label widths (and with locale —
+ * "Artifact" / "产物" / "アーティファクト" are three different widths), and a fixed duration
+ * makes the short trip feel slow and the long one feel rushed.
+ *
+ * `border-radius: inherit` in CSS, not a value here: the minimal style preset swaps the
+ * switch's radius, and a hardcoded pill would keep the pill round inside a square control.
+ */
+function SourcePill({ reduced }: { reduced: boolean | null }) {
+  return (
+    <motion.span
+      className="output-source-pill"
+      layoutId="output-source-pill"
+      aria-hidden="true"
+      transition={
+        reduced
+          ? { duration: 0 }
+          : { type: "spring", stiffness: 420, damping: 34, mass: 0.7 }
+      }
+    />
   );
 }
 

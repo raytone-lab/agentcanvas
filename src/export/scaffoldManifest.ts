@@ -815,7 +815,8 @@ export function AgentApp() {
     visibleLayoutSlots.filter((slot) => slot.enabled && slot.region === region);
   const hasSidebar = inRegion("sidebar").length > 0;
   const hasRightPanel = inRegion("right-panel").length > 0;
-  const leftSidebarVisible = hasSidebar && !leftCollapsed && !autoHiddenRails.left;
+  const leftSidebarMounted = hasSidebar && !autoHiddenRails.left;
+  const leftSidebarVisible = leftSidebarMounted && !leftCollapsed;
   const rightPanelVisible = hasRightPanel && !rightCollapsed && !autoHiddenRails.right && !isWelcome;
 
   function openArtifact(request: OutputPanelOpenRequest) {
@@ -947,7 +948,7 @@ export function AgentApp() {
           data-appearance={appearance}
           ref={frameRef}
         >
-          {leftSidebarVisible ? renderSlots(visibleLayoutSlots, "sidebar", slotContext) : null}
+          {leftSidebarMounted ? renderSlots(visibleLayoutSlots, "sidebar", slotContext) : null}
           {rightPanelVisible ? (
             <PanelGroup className="preview-panels" orientation="horizontal">
               <Panel defaultSize={mainSize} minSize="52%">
