@@ -1,7 +1,7 @@
 {
   "name": "agentcanvas",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Visual UX configurator and scaffold generator for Agent frontends: configure how reasoning, tool calls, approvals, artifacts and timelines are presented, preview it live, then export a runnable React project.",
   "license": "MIT",
   "author": "Raytone-Lab",
