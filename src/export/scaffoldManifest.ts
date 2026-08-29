@@ -58,6 +58,7 @@ export type ScaffoldPackageJson = {
   private: boolean;
   version: string;
   type: "module";
+  engines: { node: string };
   scripts: Record<string, string>;
   dependencies: Record<string, string>;
   devDependencies: Record<string, string>;
@@ -151,6 +152,7 @@ const realSourceModules = import.meta.glob(
     "../harness/HarnessAdapter.ts",
     "../harness/attachments.ts",
     "../harness/adapters/**/*.ts",
+    "../pi/**/*.ts",
     "../appVersion.ts",
     "../schema/agentuxConfig.ts",
     "../schema/presets.ts",
@@ -271,6 +273,7 @@ export function createScaffoldPackageJson(project: AgentFrontendProject): Scaffo
     // disagreed with the configurator that produced it.
     version: appVersion,
     type: "module",
+    engines: { node: ">=22.19.0" },
     scripts: {
       dev: "vite",
       build: "tsc && vite build",
@@ -283,6 +286,7 @@ export function createScaffoldPackageJson(project: AgentFrontendProject): Scaffo
       "@agent-ux/render-core": agentUxVendorDependency("render-core"),
       "@agent-ux/runtime": agentUxVendorDependency("runtime"),
       "@agentmatrix/agentcanvas-contract": agentCanvasContractVendorDependency,
+      "@earendil-works/pi-coding-agent": "^0.84.4",
       // `agentmatrix/icons.tsx` imports Phosphor for the "bold" icon weight, so the
       // exported package must declare it or `tsc` fails with TS2307 (the import is
       // currently unreferenced, so bundlers elide it — but typecheck still resolves it).
@@ -303,6 +307,7 @@ export function createScaffoldPackageJson(project: AgentFrontendProject): Scaffo
       "thinking-orbs": "^0.1.1",
     },
     devDependencies: {
+      "@types/node": "^24.0.0",
       "@types/react": "^19.2.15",
       "@types/react-dom": "^19.2.3",
       "@vitejs/plugin-react": "^6.0.2",
@@ -368,12 +373,13 @@ function scaffoldFileContent(file: string, project: AgentFrontendProject, packag
     return [
       'import { defineConfig } from "vite";',
       'import react from "@vitejs/plugin-react";',
+      'import { piRuntimePlugin } from "./src/pi/piVitePlugin.ts";',
       "",
       '// base: "./" emits relative asset paths so the built app works when served from any',
       "// subpath, not just the domain root.",
       "export default defineConfig({",
       '  base: "./",',
-      "  plugins: [react()],",
+      "  plugins: [react(), piRuntimePlugin()],",
       "  resolve: {",
       "    // The vendored @agent-ux/* packages are linked via `file:./vendor/...` and import",
       "    // bare \"react\"/\"react-dom\". Without dedupe the bundler may resolve those from the",
@@ -692,6 +698,7 @@ export type ScaffoldExportSnapshot = {
 `;
 
 const AGENT_SHELL_SOURCE = `import { useEffect, useMemo, useRef, useState } from "react";
+import { agentUXEventBuilders, type AgentUXEvent } from "@agent-ux/protocol";
 import { useAgentUXReplay } from "@agent-ux/react";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { PanelLeft, PanelRight } from "lucide-react";
@@ -703,24 +710,47 @@ import {
   type OutputPanelOpenRequest,
 } from "./components/agent-preview/OutputFrame";
 import { ProviderFloatingSettings } from "./components/agent-preview/ProviderFloatingSettings";
+import type { ComposerSubmitContext } from "./components/agent-preview/ComposerFrame";
 import { RightSidebarRailIcon, SidebarRailIcon } from "./components/common/RailIcons";
 import { SelectMenu } from "./components/ui/select-menu";
 import { gitPreviewStateFromEvents } from "./harness/gitAdapter";
 import { useCopy, useLocale } from "./i18n/LocaleContext";
 import { localizePreviewViewModel } from "./i18n/previewLocalization";
 import { createReasoningRenderPolicy } from "./preview/reasoningPreviewPolicy";
-import { modelOptionsForProject, type SlotConfig } from "./schema/agentuxConfig";
+import {
+  defaultProviderConnection,
+  modelOptionsForProject,
+  type ProviderConnection,
+  type ProviderConnectionId,
+  type SlotConfig,
+} from "./schema/agentuxConfig";
 import { renderSlots, slotsForTemplate, type SlotRenderContext } from "./slots/slotRegistry";
 import { applyTheme } from "./theme/applyTheme";
 import { themeTokens } from "./theme/themeTokens";
 import { isFixtureMode, useEventSource } from "./event-source";
 import { project } from "./exported-project";
+import {
+  abortPiRun,
+  configurePiRuntime,
+  getPiRuntimeState,
+  resolvePiApproval,
+  runPiTurn,
+  startNewPiSession,
+  type PiRuntimeState,
+} from "./pi/piClient";
 
 const noop = () => {};
 const PREVIEW_RESPONSIVE_WIDTHS = {
   hideRightPanel: 860,
   hideLeftSidebar: 660,
 } as const;
+
+/** Development fixtures are useful, but their controls are not part of the composed product. */
+function devtoolsRequested(): boolean {
+  if (!import.meta.env.DEV || typeof window === "undefined") return false;
+  const value = new URLSearchParams(window.location.search).get("devtools");
+  return value === "1" || value === "true";
+}
 
 /**
  * The exported agent surface.
@@ -731,8 +761,8 @@ const PREVIEW_RESPONSIVE_WIDTHS = {
  * by the real components + \`styles/app.css\`, not re-implemented here — that is what keeps
  * the export from drifting away from what you previewed.
  *
- * Interactive actions that need a backend (submit, stop, commit, provider test) are inert:
- * this is an offline replay of the selected event stream.
+ * Pi is mounted by the generated Vite config, so submit, stop, provider/model selection and
+ * tool approvals are live while the same fixture path remains available for visual QA.
  */
 export function AgentApp() {
   const { locale } = useLocale();
@@ -746,10 +776,17 @@ export function AgentApp() {
   const [outputModalOpen, setOutputModalOpen] = useState(false);
   const [outputSource, setOutputSource] = useState(project.output.source);
   const [sessionKeys, setSessionKeys] = useState<Record<string, string>>({});
+  const [configuredProject, setConfiguredProject] = useState(project);
+  const [piEvents, setPiEvents] = useState<AgentUXEvent[] | undefined>(undefined);
+  const [piPrompt, setPiPrompt] = useState("");
+  const [piRunning, setPiRunning] = useState(false);
+  const [piRuntimeState, setPiRuntimeState] = useState<PiRuntimeState>();
+  const piAbortRef = useRef<AbortController | undefined>(undefined);
 
   // Single entry for both modes: fixture replay (dev/preview) or the live backend
   // stream. Components never learn which one they got.
-  const { events, streams, streamId, setStreamId } = useEventSource();
+  const { events: sourceEvents, streams, streamId, setStreamId } = useEventSource();
+  const events = piEvents ?? sourceEvents;
 
   // Mirrors the configurator's policy derivation so reasoning / tool / error states
   // render exactly as previewed.
@@ -773,9 +810,13 @@ export function AgentApp() {
   const isWelcome = displayViewModel.timeline.length === 0;
 
   const activeProject = useMemo(
-    () => ({ ...project, output: { ...project.output, source: outputSource } }),
-    [outputSource],
+    () => ({ ...configuredProject, output: { ...configuredProject.output, source: outputSource } }),
+    [configuredProject, outputSource],
   );
+
+  useEffect(() => {
+    void getPiRuntimeState().then(setPiRuntimeState).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const tokens = themeTokens[project.theme.preset] ?? Object.values(themeTokens)[0];
@@ -853,6 +894,116 @@ export function AgentApp() {
     });
   }
 
+  async function refreshPiRuntime() {
+    const state = await getPiRuntimeState();
+    setPiRuntimeState(state);
+    return state;
+  }
+
+  async function submitToPi(prompt: string, context?: ComposerSubmitContext) {
+    if (piRunning) return;
+    const normalizedPrompt = prompt.trim();
+    if (!normalizedPrompt) return;
+    const provider = defaultProviderConnection(activeProject);
+    const controller = new AbortController();
+    piAbortRef.current = controller;
+    setPiRunning(true);
+    setPiPrompt(normalizedPrompt);
+    setPiEvents([]);
+    const nextEvents: AgentUXEvent[] = [];
+    const runId = "pi_export_" + Date.now().toString(36);
+    try {
+      for await (const event of runPiTurn({
+        prompt: normalizedPrompt,
+        provider: provider.id,
+        model: provider.defaultModel,
+        thinkingLevel: context?.budgetMode === "fast" ? "low" : context?.budgetMode === "expert" ? "high" : "medium",
+        permissionMode: context?.permissionMode ?? "request",
+      }, { signal: controller.signal })) {
+        if (controller.signal.aborted || piAbortRef.current !== controller) return;
+        nextEvents.push(event);
+        setPiEvents([...nextEvents]);
+      }
+      await refreshPiRuntime();
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        const message = error instanceof Error ? error.message : "Pi runtime failed.";
+        if (nextEvents.length === 0) {
+          nextEvents.push(agentUXEventBuilders.runStarted({
+            id: runId + "_started",
+            runId,
+            seq: 1,
+            ts: Date.now(),
+          }, { title: "Pi session" }));
+        }
+        nextEvents.push(agentUXEventBuilders.runError({
+          id: runId + "_error",
+          runId,
+          seq: nextEvents.length + 1,
+          ts: Date.now(),
+        }, { code: "pi_runtime_error", message, userMessage: message }));
+        setPiEvents([...nextEvents]);
+      }
+    } finally {
+      if (piAbortRef.current === controller) piAbortRef.current = undefined;
+      setPiRunning(false);
+    }
+  }
+
+  function stopPi() {
+    piAbortRef.current?.abort();
+    void abortPiRun();
+    setPiRunning(false);
+  }
+
+  async function selectProvider(id: ProviderConnectionId) {
+    const provider = activeProject.providers.connections.find((entry) => entry.id === id && entry.enabled);
+    if (!provider) return;
+    setConfiguredProject((current) => ({
+      ...current,
+      providers: { ...current.providers, defaultProviderId: id },
+    }));
+    setPiRuntimeState(await configurePiRuntime({ provider: id, model: provider.defaultModel }));
+  }
+
+  async function selectModel(model: string) {
+    const provider = defaultProviderConnection(activeProject);
+    updateProvider(provider.id, { defaultModel: model });
+    setPiRuntimeState(await configurePiRuntime({ provider: provider.id, model }));
+  }
+
+  function updateProvider(id: ProviderConnectionId, patch: Partial<ProviderConnection> & { authEnvVar?: string }) {
+    setConfiguredProject((current) => ({
+      ...current,
+      providers: {
+        ...current.providers,
+        connections: current.providers.connections.map((provider) => provider.id === id ? {
+          ...provider,
+          ...patch,
+          auth: patch.authEnvVar && provider.auth.mode === "env"
+            ? { ...provider.auth, envVar: patch.authEnvVar }
+            : provider.auth,
+        } : provider),
+      },
+    }));
+  }
+
+  async function savePiSettings() {
+    const provider = defaultProviderConnection(activeProject);
+    setPiRuntimeState(await configurePiRuntime({
+      provider: provider.id,
+      model: provider.defaultModel,
+      apiKey: sessionKeys[provider.id]?.trim() || undefined,
+    }));
+  }
+
+  async function fetchPiModels(provider: ProviderConnection, apiKey?: string) {
+    const state = await configurePiRuntime({ provider: provider.id, apiKey: apiKey?.trim() || undefined });
+    setPiRuntimeState(state);
+    const models = state.models.filter((model) => model.provider === provider.id).map((model) => model.id);
+    if (models.length > 0) updateProvider(provider.id, { models });
+  }
+
   /**
    * Back to a clean welcome screen: deselect the stream and drop everything derived from it.
    * Leaving the artifact panel populated would show products of a conversation that is no
@@ -860,6 +1011,9 @@ export function AgentApp() {
    */
   function startNewSession() {
     setStreamId("");
+    setPiEvents(undefined);
+    setPiPrompt("");
+    void startNewPiSession().then(setPiRuntimeState).catch(() => undefined);
     setOutputPanelItems([]);
     setActiveOutputPanelItemId(undefined);
     setOutputModalOpen(false);
@@ -876,20 +1030,21 @@ export function AgentApp() {
     // nobody sent to every exported app — while the configurator looked correct, because
     // App.tsx always passes a value. The default itself is load-bearing for 16 preset
     // rendering tests, so it stays; the omission here was the actual defect.
-    previewPrompt: "",
+    previewPrompt: piPrompt,
     // A shipped scaffold has no session store yet. An explicit empty list keeps the shared
     // sidebar from presenting localized preview prompts as if they were real user history.
     sessionPrompts: [],
     showDebugBadges: false,
     gitPreviewState: gitPreviewStateFromEvents(events),
     modelOptions: modelOptionsForProject(activeProject),
-    isRunning: false,
-    onSubmit: noop,
-    onStop: noop,
+    isRunning: piRunning,
+    onSubmit: submitToPi,
+    onStop: stopPi,
     onExport: noop,
     onGitCommit: noop,
-    onProviderChange: noop,
-    onModelChange: noop,
+    onProviderChange: (id) => void selectProvider(id),
+    onModelChange: (model) => void selectModel(model),
+    onApprovalDecision: (toolCallId, decision) => resolvePiApproval(toolCallId, decision),
     onCollapseLeft: () => setLeftCollapsed(true),
     onCollapseRight: () => setRightCollapsed(true),
     onOpenArtifact: openArtifact,
@@ -908,12 +1063,12 @@ export function AgentApp() {
       <ProviderFloatingSettings
         project={activeProject}
         sessionKeys={sessionKeys}
-        onFetchModels={noop}
-        onSave={noop}
-        onSetDefaultProvider={noop}
+        onFetchModels={(provider, key) => void fetchPiModels(provider, key)}
+        onSave={() => void savePiSettings()}
+        onSetDefaultProvider={(id) => void selectProvider(id)}
         onSessionKeyChange={(id, value) => setSessionKeys((current) => ({ ...current, [id]: value }))}
-        onTestProvider={noop}
-        onUpdateProvider={noop}
+        onTestProvider={(provider, key) => void fetchPiModels(provider, key)}
+        onUpdateProvider={updateProvider}
       />
     ),
   };
@@ -925,8 +1080,9 @@ export function AgentApp() {
   );
 
   const appearance = (themeTokens[project.theme.preset] ?? Object.values(themeTokens)[0]).appearance;
-  // Dev builds only: a shipped artifact must not expose demo data as product UI.
-  const showPicker = import.meta.env.DEV && isFixtureMode && streams.length > 0;
+  // Explicit opt-in even in dev: npm run dev is how recipients first inspect the package,
+  // so debug chrome must not appear unless they ask for it with ?devtools=1.
+  const showPicker = devtoolsRequested() && isFixtureMode && streams.length > 0;
   // String concat (not a template literal) so this file can be emitted from the exporter.
   const mainSize = activeProject.layout.mainSize + "%";
   const rightSize = activeProject.layout.rightPanelSize + "%";
@@ -1011,9 +1167,8 @@ export function AgentApp() {
         ) : null}
       </>
 
-      {/* Preview/development scaffolding — never product UI. Dev-only, and fixed so it
-          cannot shift the frame. A built artifact has no picker at all; use ?stream=<id>
-          to select a stream without any UI. */}
+      {/* Preview/development scaffolding — never product UI. Opt in with ?devtools=1;
+          use ?stream=<id> to select a stream without any UI. */}
       {showPicker ? (
         <div
           style={{
@@ -1066,6 +1221,7 @@ function tsconfigContent(): string {
         forceConsistentCasingInFileNames: true,
         module: "ESNext",
         moduleResolution: "Bundler",
+        allowImportingTsExtensions: true,
         resolveJsonModule: true,
         isolatedModules: true,
         noEmit: true,
@@ -1131,7 +1287,8 @@ export type EventStream = {
 /**
  * Every event stream bundled with this export, so each UI state (reasoning, tool
  * approval, retry, error, interrupt, artifacts, capabilities…) can actually be seen
- * and checked against the AgentCanvas preview. Pick one from the header dropdown.
+ * and checked against the AgentCanvas preview. Use ?stream=<id> directly, or add
+ * ?devtools=1 in development to reveal the fixture picker.
  *
  * - "Built-in demo" is the single happy-path run the exporter always ships.
  * - The AgentUX fixtures are the same JSONL the configurator previews.
@@ -1251,7 +1408,7 @@ function readmeContent(project: AgentFrontendProject, packageJson: ScaffoldPacka
     "---",
     "",
     "## Requirements / 环境要求",
-    "- Node.js 18+ and npm / Node.js 18 及以上 + npm",
+    "- Node.js 22.19+ and npm / Node.js 22.19 及以上 + npm",
     "",
     "## Quick start / 快速开始",
     "```bash",
@@ -1289,23 +1446,26 @@ function readmeContent(project: AgentFrontendProject, packageJson: ScaffoldPacka
     "> This is a Vite + React + TypeScript project with the SDK vendored under `vendor/`. Read",
     "> AGENTS.md first. Run `npm install` then `npm run dev` and give me the local URL — do NOT",
     "> open index.html via file:// (ES modules are blocked there and the page goes blank). I",
-    "> should see a full Agent UI (sidebar, conversation, tool-call cards, reasoning, output",
-    "> panel) with a demo event stream replaying automatically.",
+    "> should see the composed Agent UI. Submit a prompt to run the bundled headless Pi agent;",
+    "> use ?devtools=1 when you want the fixture-state picker.",
     "",
     "## What you should see / 预期效果",
-    "- The full composed Agent interface with a demo event stream replaying (offline, no model).",
-    "- 完整的 Agent 界面 + 自动回放的 demo 事件流(离线、无需模型)。",
+    "- The full composed Agent interface; the composer runs Pi and fixtures remain available for QA.",
+    "- 完整的 Agent 界面；输入框会运行 Pi，fixture 仍可用于逐项检查 UI 状态。",
     "",
     ...styleNote,
-    "## Two modes / 两种模式",
+    "## Event-source modes / 事件来源模式",
     "`src/exported-project.ts` → `runtime.transport` decides where events come from. Everything",
     "downstream is identical, so components cannot tell the two apart.",
     "`src/exported-project.ts` 里的 `runtime.transport` 决定事件来源,下游完全一致,组件无法区分。",
     "",
     "| transport | Events from | Fixture picker |",
     "| --- | --- | --- |",
-    "| `replay` / `mock` | bundled fixtures (preview & development data) | shown |",
+    "| `replay` / `mock` | bundled fixtures (preview & development data) | hidden by default; add `?devtools=1` |",
     "| `sse` | your backend, via the adapter | **hidden** |",
+    "",
+    "Pi turns use the bundled local runtime and temporarily replace the fixture/backend event list",
+    "with the current Pi session events; they still enter the same AgentUX rendering pipeline.",
     "",
     "Fixtures are preview / development / test data only — never product data. No UI component",
     "imports them; `src/event-source.ts` loads them with a dynamic import, so the build splits them",
@@ -1314,10 +1474,10 @@ function readmeContent(project: AgentFrontendProject, packageJson: ScaffoldPacka
     "独立 chunk,live 路径永不请求(chunk 文件仍在 dist 里,只是不加载)。",
     "",
     "## Inspecting every UI state / 逐个查看 UI 状态",
-    "In `replay` / `mock`, the header dropdown switches between the built-in demo, the 7 AgentUX",
+    "In `replay` / `mock`, add `?devtools=1` to reveal a fixture picker for the built-in demo, the 7 AgentUX",
     "fixtures, and the 9 AgentMatrix scenarios — enough to check reasoning, tool call + result,",
     "approval, error, retry, exhausted/terminal incidents, interrupts, artifacts, and capability",
-    "states against what you saw in AgentCanvas. / `replay`/`mock` 下,顶部下拉可切换内置 demo +",
+    "states against what you saw in AgentCanvas. / `replay`/`mock` 下,加 `?devtools=1` 可显示事件流选择器,切换内置 demo +",
     "7 个 AgentUX fixture + 9 个 AgentMatrix 场景,用来逐一核对思考、工具调用与结果、审批、错误、",
     "重试、耗尽/终止、打断、产物、能力等状态。",
     "",
@@ -1390,40 +1550,17 @@ function readmeContent(project: AgentFrontendProject, packageJson: ScaffoldPacka
     "> 等于公开密钥;而且 Anthropic 会用 CORS 拦截浏览器直连(需要一个额外的 opt-in 头,本包不发),",
     "> 所以直接指向 `api.anthropic.com` 无论如何都不通。",
     "",
-    "## Inert actions / 空操作说明",
-    "Until you wire a backend, submitting a prompt, stopping a run, committing in the Git panel and",
-    "provider test/fetch are intentionally no-ops; everything visual is real. / 在接入后端之前,",
-    "发送、停止、Git 提交、Provider 测试/拉取模型均为空操作,视觉部分全部真实。",
+    "## Built-in Pi runtime / 内置 Pi 运行时",
+    "The composer runs the open-source Pi agent through a same-origin local Node host. Submit, stop,",
+    "new session, provider/model selection, model discovery and tool approvals work immediately.",
+    "输入框通过同源本地 Node 服务运行开源 Pi Agent；发送、停止、新会话、模型切换、模型拉取和工具审批",
+    "均已接通。Pi works in the exported folder, so its file and command tools use this folder as cwd.",
+    "Pi 在导出目录中运行，因此读写文件和命令工具的工作目录就是当前导出目录。",
     "",
-    "### The editor could call a model. This package cannot — yet. / 编辑器能真的调模型,这个包还不能",
-    "In AgentCanvas, pasting a provider key and running a turn makes a real request. **None of that",
-    "code is in this package.** What travelled is the provider *configuration* (base URLs, protocol,",
-    "default model, model list); what did not is anything that performs a request — there is no",
-    "`fetch` in `src/` at all. So the settings panel accepts a key and then does nothing with it.",
-    "在配置器里填 Key 是真的会发请求的,但**那部分代码没有进这个包**。跟着导出的是 provider 的",
-    "*配置*(地址、协议、默认模型、模型列表);没跟来的是任何会发请求的代码——`src/` 里一个 `fetch`",
-    "都没有。所以设置面板能填 Key,填完不会有任何事发生。",
-    "",
-    "That is deliberate. The model layer is the one part that cannot be decided for you, because it",
-    "is a decision about your deployment — and two questions decide it:",
-    "这是有意的。模型这一层没法替你决定,因为它取决于你的部署方式,而决定它的是两个问题:",
-    "",
-    "1. **Who executes tools?** A model API answers messages; it does not read files, run commands or",
-    "   write diffs. The tool-call cards, approvals and diffs you composed can only be filled by",
-    "   something running a real agent loop, and a browser tab cannot be that. Give this app nothing",
-    "   but a key and you get a chat window with the agent surfaces sitting empty.",
-    "   **工具由谁执行?** 模型 API 只回消息,不会读文件、跑命令、写 diff。你配好的工具卡、审批、",
-    "   diff 只有真正在跑 Agent 循环的东西才能填满,而浏览器标签页做不到。只给一个 Key,你得到的是",
-    "   一个聊天框,Agent 那几块会一直空着。",
-    "2. **Where does the key live?** In the browser it is the end user's own key and their own risk,",
-    "   and it only works where the provider permits browser calls. Behind your own endpoint the key",
-    "   never reaches the browser and CORS stops being a question.",
-    "   **Key 放在哪?** 放浏览器就是用户自己的 Key、自己承担风险,而且只在允许浏览器直连的厂商那里",
-    "   能用。放在你自己的服务端后面,Key 永远不到浏览器,跨域也不再是问题。",
-    "",
-    "Plan this for your own situation before writing any of it. `AGENTS.md` in this folder briefs a",
-    "coding agent on the seam and the adapters that already ship. / 动手之前先按自己的情况规划。",
-    "本目录的 `AGENTS.md` 是给 AI 编程工具看的:接入点在哪、哪些 adapter 已自带。",
+    "A session key is held in memory and sent only to the local Pi host. It is never written into",
+    "the project, export zip or browser bundle. Pi can also use its normal local credentials.",
+    "会话 Key 只保存在内存并发送给本机 Pi 服务，不会写入项目、ZIP 或浏览器 bundle；也可直接使用",
+    "Pi 已有的本机凭据配置。Git commit/push remains a product-specific integration.",
     "",
     "## Customize / 自定义",
     "- `src/exported-project.ts` is the snapshot of what you composed — edit it to tweak layout,",
@@ -1472,8 +1609,8 @@ function agentsMdContent(project: AgentFrontendProject, packageJson: ScaffoldPac
     "Report the local URL. Do NOT open `index.html` over `file://` — ES modules are blocked",
     "there and the page renders blank, which reads like a broken export.",
     "",
-    "You should see a complete Agent interface replaying a demo event stream offline: no model,",
-    "no API key, no backend. That is the intended initial state, not a stub to replace.",
+    "You should see the complete composed Agent interface. Fixture streams remain available for",
+    "visual QA, and the composer is connected to the bundled headless Pi runtime.",
     "",
     "## The rule that matters",
     "",
@@ -1508,6 +1645,7 @@ function agentsMdContent(project: AgentFrontendProject, packageJson: ScaffoldPac
     "| Backend | Use | Do not |",
     "| --- | --- | --- |",
     "| Claude Code, Codex, opencode (CLI JSONL) | `importHarnessJsonl(text, \"claude\" \\| \"codex\" \\| \"opencode\")` from `src/harness/adapters/jsonlImport.ts` | hand-write a mapping — the tables ship here |",
+    "| Pi (built in) | `src/pi/piHost.ts` + `src/harness/adapters/piAdapter.ts` | replace the composed UI or expose the SDK to the browser |",
     "| Anthropic Messages API | `createAnthropicHarness({ baseUrl, model })` from `src/harness/adapters/anthropicAdapter.ts` | put an API key in the browser |",
     "| AgentMatrix protocol | `createBackendStreamSource` + `toAgentUXEvents` from `./agentmatrix` | translate by hand |",
     "| Already emits AgentUX standard events | `passthroughAdapter` | write a no-op adapter |",
@@ -1533,37 +1671,17 @@ function agentsMdContent(project: AgentFrontendProject, packageJson: ScaffoldPac
     "preset, enabled panels. Editing it is legitimate when the user asks for a layout change.",
     "Rewriting it to work around a translation bug is not.",
     "",
-    "## Inert until wired",
+    "## Built-in Pi runtime",
     "",
-    "Submitting a prompt, stopping a run, committing in the Git panel and the provider",
-    "test/fetch buttons are deliberate no-ops in a fresh export. They are not bugs to fix",
-    "before wiring a backend; wiring one is what makes them meaningful.",
-    "",
-    "## The model layer, and what not to assume about it",
-    "",
-    "The provider *configuration* travels with this package — base URLs, protocol, default model,",
-    "the model list. Nothing that performs a request does: there is no `fetch` in `src/` at all.",
-    "The settings panel therefore accepts a key and does nothing with it.",
-    "",
-    "**Do not resolve this by calling a provider directly from the browser with the user's key.**",
-    "It is the fastest path to a working demo and it is not shippable: the key is exposed to",
-    "anything running on the page, and providers that block browser calls (Anthropic, via CORS,",
-    "absent an opt-in header this package does not send) fail regardless of the key. If the user",
-    "has not told you where the key lives, ask before choosing.",
-    "",
-    "**Do not expect a model API alone to fill the agent surfaces.** A model answers messages; it",
-    "does not read files, run commands or write diffs. Tool-call cards, approval prompts and file",
-    "diffs need something running a real agent loop — a server, or a CLI whose output you consume",
-    "(see the JSONL row in the table above). A key plus a chat endpoint yields a chat window with",
-    "those panels empty, which will read as a broken build rather than an unfinished integration.",
-    "",
-    "If the user only wants chat, say so explicitly and disable or hide the surfaces that cannot",
-    "be filled, rather than leaving them empty and unexplained.",
+    "`src/pi/piHost.ts` runs Pi in Node and `src/pi/piClient.ts` is the browser-safe same-origin",
+    "client. Submit, stop, new session, provider/model configuration and approval decisions are",
+    "already wired. Session keys stay in memory and must never be copied into source or export data.",
+    "The Pi process cwd is this exported folder. Git commit/push remains product-specific.",
     "",
     "## How to verify a change",
     "",
-    `Keep \`runtime.transport\` on \`"${project.runtime.transport}"\` while developing and use the header`,
-    "dropdown to step through every built-in scenario — reasoning, tool call and result,",
+    `Keep \`runtime.transport\` on \`"${project.runtime.transport}"\` while developing and add \`?devtools=1\``,
+    "to reveal the fixture picker, then step through every built-in scenario — reasoning, tool call and result,",
     "approval, error, retry, exhausted and terminal incidents, interrupts, artifacts. That set is",
     "the contract your events have to satisfy. If a state renders under `replay` but not under",
     "`sse`, the difference is in your `toStandardEvents`, and the admission layer",

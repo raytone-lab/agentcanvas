@@ -75,6 +75,7 @@ schema/agentuxConfig.ts          schema/presets.ts
 slots/slotRegistry.tsx           preview/fixtures.ts
 preview/reasoningPreviewPolicy.ts        fixtures/agentux/**/*.jsonl
 preview-runner/PreviewRunner.ts  harness/gitAdapter.ts
+pi/**                          harness/adapters/**
 styles/app.css                   styles/agentmatrix.css
 ```
 
@@ -90,6 +91,10 @@ styles/app.css                   styles/agentmatrix.css
 | 往 `public/` 加图片 | 加进 `scaffoldManifest.ts` 的 `SCAFFOLD_PUBLIC_ASSETS`。否则导出包里是 404 碎图（`app.css` 的 `url()` 和 `OutputFrame` 的 `src="/…"` 都算） |
 | 写了个 helper 给导出端用 | 别只放 `App.tsx`。放进上面的自动进包目录 |
 | 新增目录放组件 | 加 glob 模式，并确认它不引入 configurator-only 依赖（jszip、导出管线本身） |
+
+Pi 是一个特例但已经接好：`piClient.ts` 进入浏览器包，`piHost.ts` 和 `piVitePlugin.ts`
+只在 Node/Vite 侧运行。导出包要求 Node `>=22.19.0`，API key 只通过同源本地接口进入
+Pi 的进程内运行时，不会写入 `exported-project.ts`、ZIP 或浏览器 bundle。
 
 ---
 

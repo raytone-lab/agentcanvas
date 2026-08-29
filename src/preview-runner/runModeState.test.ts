@@ -22,6 +22,11 @@ describe("preview run mode UI state", () => {
       tone: "live",
       detail: "OpenAI · gpt-4o · streaming",
     });
+    expect(previewModeStatusLine({ mode: "pi", liveState: "streaming" })).toMatchObject({
+      modeLabel: "Pi agent",
+      tone: "live",
+      detail: "streaming",
+    });
     expect(previewModeStatusLine({ mode: "harness" })).toMatchObject({
       modeLabel: "Harness",
       tone: "planned",
@@ -37,6 +42,10 @@ describe("preview run mode UI state", () => {
     expect(runButtonControlState({ surfaceMode: "saved-preview", runMode: "replay", liveRunning: true })).toEqual({
       action: "run",
       label: "Run",
+    });
+    expect(runButtonControlState({ surfaceMode: "saved-preview", runMode: "pi", liveRunning: true })).toEqual({
+      action: "stop",
+      label: "Stop",
     });
   });
 

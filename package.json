@@ -1,7 +1,7 @@
 {
   "name": "agentcanvas",
   "private": true,
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Visual UX configurator and scaffold generator for Agent frontends: configure how reasoning, tool calls, approvals, artifacts and timelines are presented, preview it live, then export a runnable React project.",
   "license": "MIT",
   "author": "Raytone-Lab",
@@ -24,7 +24,7 @@
   ],
   "type": "module",
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": ">=22.19.0"
   },
   "workspaces": [
     "packages/*"
@@ -49,6 +49,7 @@
     "@agent-ux/react": "file:vendor/agent-ux/react",
     "@agent-ux/render-core": "file:vendor/agent-ux/render-core",
     "@agent-ux/runtime": "file:vendor/agent-ux/runtime",
+    "@earendil-works/pi-coding-agent": "^0.84.4",
     "@gsap/react": "^2.1.2",
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-dialog": "^1.1.16",

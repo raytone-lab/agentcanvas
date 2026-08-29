@@ -137,21 +137,53 @@ const previewText: Partial<Record<AppLocale, Record<string, string>>> = {
   zh: previewTextZh,
 };
 
-export function localizePreviewText(value: string | undefined, locale: AppLocale): string | undefined {
+/**
+ * One compiled matcher per locale, built on first use.
+ *
+ * Replaces a loop that ran `split`/`join` once per table entry — 86 passes over every string,
+ * every time. That is invisible in replay but not in a live reply: the view model is re-derived
+ * on each token, so the whole transcript went through 86 passes per token and the reply slowed
+ * down as it grew. Measured at 5.5µs per call against 0.1µs for a locale with no table.
+ *
+ * Keys are sorted longest-first. The old loop's result depended on the table's insertion order,
+ * which is a trap for any second CJK table: a short key that is a prefix of a longer one would
+ * win or lose by declaration accident. Longest-first makes the outcome a property of the data.
+ */
+const matcherCache = new Map<AppLocale, { pattern: RegExp; table: Record<string, string> } | null>();
+
+function matcherFor(locale: AppLocale) {
+  const cached = matcherCache.get(locale);
+  if (cached !== undefined) {
+    return cached;
+  }
   const table = previewText[locale];
-  if (!value || !table) {
+  if (!table) {
+    matcherCache.set(locale, null);
+    return null;
+  }
+  const keys = Object.keys(table).sort((a, b) => b.length - a.length);
+  const built = keys.length === 0
+    ? null
+    : {
+      table,
+      pattern: new RegExp(keys.map((key) => key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g"),
+    };
+  matcherCache.set(locale, built);
+  return built;
+}
+
+export function localizePreviewText(value: string | undefined, locale: AppLocale): string | undefined {
+  const matcher = value ? matcherFor(locale) : null;
+  if (!value || !matcher) {
     return value;
   }
-  // Whole-string hit first, then substring passes: fixture prose embeds the shorter entries
-  // (a tool name inside a sentence), so both layers are load-bearing and the substring pass
-  // is order-dependent on the table's insertion order. Left as-is deliberately.
-  let localized = table[value] ?? value;
-  for (const [source, target] of Object.entries(table)) {
-    if (localized.includes(source)) {
-      localized = localized.split(source).join(target);
-    }
+  // Whole-string hit first: an exact entry may differ from what the substring pass would build.
+  const exact = matcher.table[value];
+  if (exact !== undefined) {
+    return exact;
   }
-  return localized;
+  matcher.pattern.lastIndex = 0;
+  return value.replace(matcher.pattern, (match) => matcher.table[match] ?? match);
 }
 
 export function localizeTimelineItem(

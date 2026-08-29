@@ -298,7 +298,7 @@ export function PresetOptionPreview({ optionId }: { optionId: string }) {
   }
 
   // ---- Thinking · disclosure -----------------------------------------------
-  if (optionId === "summary-first" || optionId === "reasoning-public-summary") {
+  if (optionId === "summary-first" || optionId === "reasoning-public-summary" || optionId === "reasoning-model-thinking") {
     return (
       <Tile kind="card">
         <Line w="90%" tone="accent" />

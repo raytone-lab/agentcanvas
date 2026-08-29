@@ -7,23 +7,20 @@ agent drive it.
 Read [EXPORT_CONTRACT.md](EXPORT_CONTRACT.md) instead if you are changing the configurator
 itself. This page is for the person holding the exported project.
 
-## The editor can call a model. Your export cannot — yet.
+## Pi is built in to both the editor and the export
 
-This is the single most surprising thing about the export, so it goes first.
+AgentCanvas now embeds Pi as a headless local runtime. In the editor choose **Pi agent** from
+the run-mode menu. In an exported package, `npm run dev` or `npm run preview` mounts the same
+local Pi host automatically; submitting from the existing composer runs Pi and streams
+AgentUX events into the same reasoning, tool, approval, artifact and error components.
 
-**In the editor**, pasting a provider key and running a turn makes a real HTTP call. The key
-lives in memory only: it is gone on reload, is never written to disk, and is never written
-into the export. Live preview there is limited to `openai-compatible` providers, so an
-Anthropic-protocol connection will not run live even in the editor.
+The editor's provider/model selection is exported as the initial allowed configuration. An
+export recipient can switch among those configured providers and models from the existing
+composer/settings UI. A session API key stays in memory and is posted only to the same-origin
+local Pi host; it is never written into the project, ZIP or browser bundle. Pi may also use its
+normal local credential configuration. The generated package requires Node `>=22.19.0`.
 
-**In the export, none of that code comes with you.** What travels is the provider
-*configuration* — base URLs, protocol, default model, the model list, whether auth reads an
-env var. What does not travel is anything that performs a request. There is no `fetch` in the
-exported `src/` at all. The provider settings panel renders and its fields accept input, but
-Test key and Fetch models are inert, and so is the composer's submit.
-
-That is deliberate, not an omission. The model layer is the one part of an agent product that
-cannot be decided for you, because it is a decision about *your* deployment:
+The architectural constraints still matter:
 
 - **Who executes tools?** A model API answers messages. It does not read files, run commands
   or write diffs. The tool-call cards, approval prompts and file diffs you composed can only
@@ -35,10 +32,8 @@ cannot be decided for you, because it is a decision about *your* deployment:
   unless an opt-in header is sent, which this package does not send. Behind your own endpoint,
   the key never reaches the browser and the CORS question disappears.
 
-So plan the model layer for your own situation before writing any of it. The routes below are
-the shapes that plan can take, in increasing order of what you have to build. The seam they
-all pass through is fixed and small, so this is a decision about your architecture, not about
-learning ours.
+The routes below remain available when Pi is not the desired production backend. They all
+converge on the same event seam, so replacing Pi does not require replacing UI components.
 
 ## The one seam
 
@@ -92,8 +87,8 @@ if (result.ok) {
 ```
 
 `harness` is `"claude"` for Claude Code the CLI, `"codex"`, or `"opencode"`. `"agentux"`
-means the lines are already standard events and only get validated. `"pi"` and `"custom"`
-have no table — you want route 3.
+means the lines are already standard events and only get validated. Pi uses its dedicated
+stateful SDK adapter rather than this table-driven import path; `"custom"` uses route 3.
 
 For a live stream rather than a finished file, use the two pieces underneath:
 
@@ -192,24 +187,17 @@ forever otherwise.
 If your backend speaks the AgentMatrix protocol, `createBackendStreamSource` from
 `./agentmatrix` plus `toAgentUXEvents` are bundled too.
 
-## What stays inert until you wire something
+## What still needs your product backend
 
-In a fresh export these are deliberate no-ops, not bugs: submitting a prompt, stopping a
-run, committing in the Git panel, and the provider test/fetch buttons. Everything visual is
-real. Wiring a route above makes submit and stop meaningful; the Git panel and provider
-settings are UI surfaces for a backend that reports those things.
-
-One of them deserves a decision rather than a shrug. The provider key field looks operational
-and silently does nothing, which is the worst of the three possible states — a person filling
-it in concludes the product is broken, and a coding agent pointed at the folder tends to
-"fix" it by inventing a client that puts the key in the browser. Before you ship to anyone,
-either wire it to a route above or disable it with the reason on screen. Either is fine;
-leaving it ambiguous is not.
+Submitting, stopping, starting a new Pi session, model/provider selection, model discovery,
+session-key configuration and tool approvals are operational in a fresh export. Product-level
+Git commit/push behavior remains an integration point: the panel can display Git events emitted
+by Pi, but publishing a repository or enforcing organization policy belongs to your backend.
 
 ## Checking your events against the UI
 
-Before you have a backend, `replay`/`mock` plus the header dropdown walks every state the
-components can draw — reasoning, tool call and result, approval, error, retry,
+Before you have a backend, keep `replay`/`mock` and add `?devtools=1` to reveal the fixture
+picker. It walks every state the components can draw — reasoning, tool call and result, approval, error, retry,
 exhausted/terminal incidents, interrupts, artifacts, capability states. Use it as the
 reference for what your `toStandardEvents` should produce: if a state renders under
 `replay` but not under `sse`, the difference is in your translation.

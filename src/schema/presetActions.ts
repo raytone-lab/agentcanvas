@@ -257,6 +257,18 @@ const presetPatches: Record<string, PresetPatch> = {
     ...project,
     reasoning: { ...project.reasoning, show: "summary", collapse: "summary-first", expandable: true },
   }),
+  /**
+   * The only option that sets `show: "thinking"`.
+   *
+   * The value existed in the schema and in `ReasoningBlock` from the start but nothing ever
+   * selected it, so the branch was unreachable and live runs always fell back to the generic
+   * summary. Opt-in rather than default: a provider's chain of thought is content the composer
+   * should choose to surface, not something that appears because a key was pasted.
+   */
+  "reasoning-model-thinking": (project) => ({
+    ...project,
+    reasoning: { ...project.reasoning, show: "thinking", collapse: "summary-first", expandable: true },
+  }),
   "command-cards": (project) => ({
     ...project,
     theme: { ...project.theme, motion: { ...project.theme.motion, toolCall: "card" } },
@@ -468,6 +480,7 @@ const presetDeactivators: Record<string, PresetPatch> = {
   "reasoning-expanded": revertReasoning("collapse"),
   "reasoning-status-only": revertReasoning("show"),
   "reasoning-public-summary": revertReasoning("show"),
+  "reasoning-model-thinking": revertReasoning("show"),
   "command-cards": revertMotion("toolCall"),
   "compact-chips": revertMotion("toolCall"),
   "timeline-rail": revertToolCalls("timelineRail"),
@@ -577,6 +590,8 @@ export function isPresetOptionActive(project: AgentFrontendProject, optionId: st
       return project.reasoning.show === "status";
     case "reasoning-public-summary":
       return project.reasoning.show === "summary";
+    case "reasoning-model-thinking":
+      return project.reasoning.show === "thinking";
     case "command-cards":
       return project.theme.motion.toolCall === "card";
     case "compact-chips":

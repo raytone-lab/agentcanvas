@@ -4,6 +4,7 @@ import type { AgentUXViewModel } from "@agent-ux/render-core";
 
 import { CapabilityTray } from "../components/agent-preview/CapabilityTray";
 import { ChatFrame } from "../components/agent-preview/ChatFrame";
+import type { ApprovalDecision } from "../components/agent-preview/ToolCallCard";
 import { ComposerFrame, type ComposerSubmitContext } from "../components/agent-preview/ComposerFrame";
 import { ExportFrame } from "../components/agent-preview/ExportFrame";
 import { GitFrame } from "../components/agent-preview/GitFrame";
@@ -53,6 +54,7 @@ export type SlotRenderContext = {
   onCloseOutputPanelItem?: (id: string) => void;
   onOutputSourceChange?: (source: OutputSource) => void;
   onNewSession?: () => void;
+  onApprovalDecision?: (toolCallId: string, decision: ApprovalDecision) => void | Promise<void>;
   welcomeGreeting?: string;
   isWelcome?: boolean;
   providerSettingsControl?: ReactNode;
@@ -73,7 +75,7 @@ export const slotComponentRegistry: Record<SlotComponent, SlotRenderer> = {
       onNewSession={onNewSession}
     />
   ),
-  ChatFrame: ({ project, viewModel, showDebugBadges, previewPrompt, previewPrompts, writingReplayKey, forceToolsOpen, toolCollapseSignal, onOpenArtifact, externalApprovalPlacement }) => (
+  ChatFrame: ({ project, viewModel, showDebugBadges, previewPrompt, previewPrompts, writingReplayKey, forceToolsOpen, toolCollapseSignal, onOpenArtifact, onApprovalDecision, externalApprovalPlacement }) => (
     <ChatFrame
       project={project}
       viewModel={viewModel}
@@ -84,6 +86,7 @@ export const slotComponentRegistry: Record<SlotComponent, SlotRenderer> = {
       forceToolsOpen={forceToolsOpen}
       toolCollapseSignal={toolCollapseSignal}
       onOpenArtifact={onOpenArtifact}
+      onApprovalDecision={onApprovalDecision}
       externalApprovalPlacement={externalApprovalPlacement}
     />
   ),

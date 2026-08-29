@@ -108,6 +108,7 @@ export const presetGroups: PresetGroup[] = [
       { id: "reasoning-expanded", label: "Expanded by default", description: "Open the reasoning block when the workflow benefits from inspection.", section: "Disclosure" },
       { id: "reasoning-status-only", label: "Status only", description: "Show only the current reasoning state for the lowest-noise scaffold.", section: "Visibility" },
       { id: "reasoning-public-summary", label: "Public summary", description: "Show developer-safe summary text without exposing hidden reasoning.", section: "Visibility" },
+      { id: "reasoning-model-thinking", label: "Model's own thinking", description: "Show the reasoning the model actually streamed, for providers that send it.", section: "Visibility" },
     ],
   },
   {

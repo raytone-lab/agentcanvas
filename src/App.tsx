@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AgentUXArtifactTimelineItem, AgentUXToolTimelineItem } from "@agent-ux/render-core";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import {
@@ -56,6 +56,7 @@ import { ProviderSettingsPanel } from "./components/ProviderSettingsPanel";
 import { WelcomeSettingsPanel } from "./components/WelcomeSettingsPanel";
 import { RightSidebarRailIcon, SidebarRailIcon } from "./components/common/RailIcons";
 import { ProviderFloatingSettings } from "./components/agent-preview/ProviderFloatingSettings";
+import type { ComposerSubmitContext } from "./components/agent-preview/ComposerFrame";
 import { ExternalApprovalSurface } from "./components/agent-preview/ChatFrame";
 import {
   OutputPanelModal,
@@ -133,6 +134,15 @@ import {
 import { renderSlots, slotsForTemplate, type SlotRenderContext } from "./slots/slotRegistry";
 import { applyTheme } from "./theme/applyTheme";
 import { themeTokens } from "./theme/themeTokens";
+import {
+  abortPiRun,
+  configurePiRuntime,
+  getPiRuntimeState,
+  resolvePiApproval,
+  runPiTurn,
+  startNewPiSession,
+  type PiRuntimeState,
+} from "./pi/piClient";
 
 function groupPresetOptions(options: PresetOption[], defaultSection: string) {
   const sections = new Map<string, PresetOption[]>();
@@ -233,6 +243,7 @@ const requiredPresetOptionIds = new Set([
   "reasoning-expanded",
   "reasoning-status-only",
   "reasoning-public-summary",
+  "reasoning-model-thinking",
   "command-cards",
   "compact-chips",
   "timeline-rail",
@@ -263,7 +274,8 @@ function isThinkingPreviewPreset(optionId: string) {
     optionId === "reasoning-auto-collapse" ||
     optionId === "reasoning-expanded" ||
     optionId === "reasoning-status-only" ||
-    optionId === "reasoning-public-summary"
+    optionId === "reasoning-public-summary" ||
+    optionId === "reasoning-model-thinking"
   );
 }
 
@@ -661,8 +673,46 @@ type SurfaceMode = "builder" | "saved-preview";
  * which is why the harness branch there was unreachable: the run-mode indicator had a case for
  * it, but no code could ever set the value.
  */
-type RunMode = "replay" | "live" | "harness";
+type RunMode = "replay" | "live" | "pi" | "harness";
 type WritingMode = AgentFrontendProject["theme"]["motion"]["writing"];
+
+function projectWithPiRuntime(
+  project: AgentFrontendProject,
+  state: PiRuntimeState | undefined,
+): AgentFrontendProject {
+  if (!state?.provider || !state.model || state.models.length === 0) return project;
+  const currentProvider = state.provider;
+  const currentModel = state.model;
+  const byProvider = new Map<string, string[]>();
+  for (const model of state.models) {
+    const models = byProvider.get(model.provider) ?? [];
+    if (!models.includes(model.id)) models.push(model.id);
+    byProvider.set(model.provider, models);
+  }
+  const connections: ProviderConnection[] = [...byProvider].map(([provider, models]) => {
+    const existing = project.providers.connections.find((connection) => connection.id === provider);
+    return {
+      id: provider,
+      kind: existing?.kind ?? "custom",
+      label: existing?.label ?? provider,
+      description: existing?.description ?? `Pi provider: ${provider}`,
+      protocol: existing?.protocol ?? "openai-compatible",
+      baseUrl: existing?.baseUrl ?? "",
+      auth: existing?.auth ?? { mode: "env", envVar: `${provider.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_API_KEY` },
+      defaultModel: provider === currentProvider && models.includes(currentModel) ? currentModel : models[0] ?? currentModel,
+      models,
+      enabled: true,
+    };
+  });
+  return {
+    ...project,
+    providers: {
+      ...project.providers,
+      defaultProviderId: currentProvider,
+      connections,
+    },
+  };
+}
 const defaultPreviewPrompt = {
   en: "Add validation to the search input and show a loading state while results are fetched.",
   zh: "给搜索框加校验，并在获取结果时显示加载状态。",
@@ -1288,6 +1338,15 @@ export function App() {
   // renders a real component in the center preview panel).
   const [activeStateCode, setActiveStateCode] = useState<string | null>(null);
   const [previewPrompt, setPreviewPrompt] = useState(() => defaultPreviewPromptForLocale(locale));
+  /**
+   * Prompts sent from the composer this session, newest first.
+   *
+   * The sidebar used to render only `sessionSidebar.sessions` — five authored demo rows — so a
+   * real turn left the list untouched and the highlight stranded on whichever demo row was
+   * selected. These go in front of the demo rows, which stay as filler so the preview still
+   * looks like a populated product before anything has been sent.
+   */
+  const [sentPrompts, setSentPrompts] = useState<readonly string[]>([]);
   const [runEvents, setRunEvents] = useState<AgentUXEvent[] | undefined>([]);
   const [runEventSource, setRunEventSource] = useState<RunMode | undefined>();
   const [runMode, setRunMode] = useState<RunMode>("replay");
@@ -1299,14 +1358,23 @@ export function App() {
   const [livePreviewState, setLivePreviewState] = useState<LivePreviewState>("idle");
   const [liveMessages, setLiveMessages] = useState<LiveLlmMessage[]>([]);
   const [sessionKeys, setSessionKeys] = useState<Record<string, string>>({});
+  const [piRuntimeState, setPiRuntimeState] = useState<PiRuntimeState>();
   const [gitPreviewStateOverride, setGitPreviewStateOverride] = useState<GitPreviewState | undefined>();
   const liveAbortControllerRef = useRef<AbortController | undefined>(undefined);
+  const piAbortControllerRef = useRef<AbortController | undefined>(undefined);
   const styleSwitchTimerRef = useRef<number | undefined>(undefined);
   const previousLocaleRef = useRef(locale);
   const [selectedScenarioId, setSelectedScenarioId] = useState<PreviewScenarioId>(() => resolveDefaultPreviewScenario(defaultCodingAgentProject));
   const activeProject = surfaceMode === "saved-preview" && savedProject ? savedProject : project;
+  const runtimeProject = useMemo(
+    () => runMode === "pi" ? projectWithPiRuntime(activeProject, piRuntimeState) : activeProject,
+    [activeProject, piRuntimeState, runMode],
+  );
   const standardScenario = scenarioById(standardScenarioId);
   const standardStreamRef = useRef<{ cancel: () => void } | undefined>(undefined);
+  /** Latest live event list waiting for a frame, and the pending frame handle. */
+  const pendingLiveEventsRef = useRef<readonly AgentUXEvent[] | undefined>(undefined);
+  const liveFlushHandleRef = useRef<number | undefined>(undefined);
   const previewRefreshTimerRef = useRef<number | undefined>(undefined);
   const autoOutputPanelSignatureRef = useRef("");
   const selectedComponentsRef = useRef<HTMLDivElement | null>(null);
@@ -1359,6 +1427,21 @@ export function App() {
       visibility: { show: "developer" },
     },
   });
+  const recordSentPrompt = useCallback((prompt: string) => {
+    const trimmed = prompt.trim();
+    if (!trimmed) {
+      return;
+    }
+    // Deduped and capped: re-sending the same text should move it to the top rather than add a
+    // second identical row, and the sidebar is a preview surface, not a transcript store.
+    setSentPrompts((current) => [trimmed, ...current.filter((entry) => entry !== trimmed)].slice(0, 12));
+  }, []);
+
+  const sessionPrompts = useMemo(
+    () => [...sentPrompts, ...copy.workspace.sessionSidebar.sessions.filter((demo) => !sentPrompts.includes(demo))],
+    [sentPrompts, copy.workspace.sessionSidebar.sessions],
+  );
+
   const displayViewModel = useMemo(
     () => {
       const titledViewModel = showStandard
@@ -1370,7 +1453,7 @@ export function App() {
       // ours and do get localized — previously the whole live surface was pinned to English,
       // which meant a Chinese session flipped to English the moment a real key was used.
       return localizePreviewViewModel(titledViewModel, locale, {
-        localizeMessageText: runEventSource !== "live",
+        localizeMessageText: runEventSource !== "live" && runEventSource !== "pi",
       });
     },
     [locale, runEventSource, showStandard, standardScenario, viewModel],
@@ -1499,7 +1582,8 @@ export function App() {
       <ExternalApprovalSurface
         tool={externalApprovalTool}
         approvalIconSlot={selectedApprovalIconSlot}
-        onConfirm={() => {
+        onConfirm={(decision) => {
+          if (runMode === "pi") void decidePiApproval(externalApprovalTool.id, decision);
           setDismissedExternalApprovalId(externalApprovalTool.id);
           setExternalApprovalOverlayActive(false);
         }}
@@ -2449,7 +2533,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
 
   async function runCurrentPreview(
     prompt = previewPrompt,
-    context?: { attachments?: readonly PreviewInputAttachment[] },
+    context?: ComposerSubmitContext,
   ) {
     if (!savedProject) {
       toast.info(copy.shell.toast.saveBeforeLocalPreview);
@@ -2460,6 +2544,11 @@ function selectPresetGroup(groupId: PresetGroupId) {
 
     if (runMode === "live") {
       await runLivePreview(prompt);
+      return;
+    }
+
+    if (runMode === "pi") {
+      await runPiPreview(prompt, context);
       return;
     }
 
@@ -2498,6 +2587,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
       locale,
     }));
     setPreviewPrompt(normalizedPrompt);
+    recordSentPrompt(normalizedPrompt);
     streamSavedReplayEvents(nextEvents, successMessage);
     setRunEventSource("replay");
     setLiveMessages([]);
@@ -2592,6 +2682,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
     setLiveRunning(true);
     setLivePreviewState("streaming");
     setPreviewPrompt(normalizedPrompt);
+    recordSentPrompt(normalizedPrompt);
     setLiveMessages([...history, { role: "user", content: normalizedPrompt }]);
     setGitPreviewStateOverride(undefined);
     setSurfaceMode("saved-preview");
@@ -2610,14 +2701,39 @@ function selectPresetGroup(groupId: PresetGroupId) {
           if (controller.signal.aborted || liveAbortControllerRef.current !== controller) {
             return;
           }
-          const eventsSnapshot = [...nextEvents];
-          setRunEvents(eventsSnapshot);
-          setRunEventSource("live");
+          // Coalesced to one commit per frame.
+          //
+          // The runner calls this per event, and a streaming reply is one event per token. Each
+          // commit re-derives the view model from the whole event list, re-localizes the whole
+          // timeline and re-collects the output panel, so the cost per token grew with the
+          // transcript — the reply visibly slowed down as it got longer.
+          //
+          // A frame is the useful ceiling: nothing painted between two frames was ever seen.
+          // The latest array wins, so no event is dropped, only intermediate renders are.
+          pendingLiveEventsRef.current = nextEvents;
+          if (liveFlushHandleRef.current !== undefined) {
+            return;
+          }
+          liveFlushHandleRef.current = requestAnimationFrame(() => {
+            liveFlushHandleRef.current = undefined;
+            const pending = pendingLiveEventsRef.current;
+            pendingLiveEventsRef.current = undefined;
+            if (!pending || controller.signal.aborted || liveAbortControllerRef.current !== controller) {
+              return;
+            }
+            setRunEvents([...pending]);
+            setRunEventSource("live");
+          });
         },
       });
       if (controller.signal.aborted || liveAbortControllerRef.current !== controller) {
         return;
       }
+      if (liveFlushHandleRef.current !== undefined) {
+        cancelAnimationFrame(liveFlushHandleRef.current);
+        liveFlushHandleRef.current = undefined;
+      }
+      pendingLiveEventsRef.current = undefined;
       setLiveMessages(result.messages);
       setRunEvents(result.events);
       setRunEventSource("live");
@@ -2639,8 +2755,140 @@ function selectPresetGroup(groupId: PresetGroupId) {
     }
   }
 
+  async function refreshPiRuntime(showError = false): Promise<PiRuntimeState | undefined> {
+    try {
+      const state = await getPiRuntimeState();
+      setPiRuntimeState(state);
+      if (!state.available && showError) toast.error(state.error ?? "Pi runtime is unavailable.");
+      return state;
+    } catch (error) {
+      if (showError) toast.error(error instanceof Error ? error.message : "Pi runtime is unavailable.");
+      return undefined;
+    }
+  }
+
+  async function runPiPreview(prompt = previewPrompt, context?: ComposerSubmitContext) {
+    if (!savedProject) {
+      toast.info(copy.shell.toast.saveBeforeLocalPreview);
+      return;
+    }
+    if (liveRunning) {
+      stopLivePreview();
+      return;
+    }
+
+    const state = piRuntimeState ?? await refreshPiRuntime(true);
+    if (!state?.available) return;
+    const normalizedPrompt = prompt.trim() || livePreviewFallbackPrompt[locale];
+    const controller = new AbortController();
+    piAbortControllerRef.current = controller;
+    setLiveRunning(true);
+    setLivePreviewState("streaming");
+    setPreviewPrompt(normalizedPrompt);
+    recordSentPrompt(normalizedPrompt);
+    setGitPreviewStateOverride(undefined);
+    setSurfaceMode("saved-preview");
+    setWorkspaceView("preview");
+    setRunEvents([]);
+    setRunEventSource("pi");
+
+    const nextEvents: AgentUXEvent[] = [];
+    try {
+      for await (const event of runPiTurn({
+        prompt: normalizedPrompt,
+        provider: state.provider,
+        model: state.model,
+        thinkingLevel: context?.budgetMode === "fast" ? "low" : context?.budgetMode === "expert" ? "high" : "medium",
+        permissionMode: context?.permissionMode ?? "request",
+      }, { signal: controller.signal })) {
+        if (controller.signal.aborted || piAbortControllerRef.current !== controller) return;
+        nextEvents.push(event);
+        setRunEvents([...nextEvents]);
+        if (event.type === "tool.call.awaiting_approval" && activeProject.toolCalls.approval === "hidden") {
+          setExternalApprovalOverlayActive(true);
+        }
+      }
+      setLivePreviewState("finished");
+      await refreshPiRuntime();
+      toast.success("Pi run completed.");
+    } catch (error) {
+      if (controller.signal.aborted) {
+        setLivePreviewState("stopped");
+        toast.info("Pi run stopped.");
+      } else {
+        setLivePreviewState("error");
+        toast.error(error instanceof Error ? error.message : "Pi run failed.");
+      }
+    } finally {
+      if (piAbortControllerRef.current === controller) piAbortControllerRef.current = undefined;
+      setLiveRunning(false);
+    }
+  }
+
+  async function selectPiProvider(provider: ProviderConnectionId) {
+    const model = piRuntimeState?.models.find((entry) => entry.provider === provider)?.id;
+    if (!model) return;
+    try {
+      setPiRuntimeState(await configurePiRuntime({ provider, model }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Pi provider update failed.");
+    }
+  }
+
+  async function selectPiModel(model: string) {
+    const provider = piRuntimeState?.models.find((entry) => entry.id === model)?.provider ?? piRuntimeState?.provider;
+    if (!provider) return;
+    try {
+      setPiRuntimeState(await configurePiRuntime({ provider, model }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Pi model update failed.");
+    }
+  }
+
+  async function refreshPiProviderModels(provider: ProviderConnection, apiKey?: string) {
+    try {
+      const state = await configurePiRuntime({ provider: provider.id, apiKey: apiKey?.trim() || undefined });
+      setPiRuntimeState(state);
+      const count = state.models.filter((model) => model.provider === provider.id).length;
+      toast.success(`${provider.label} · ${count} ${copy.shell.toast.modelsCountSuffix}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Pi provider update failed.");
+    }
+  }
+
+  async function savePiProviderSettings() {
+    const provider = runtimeProject.providers.connections.find(
+      (entry) => entry.id === runtimeProject.providers.defaultProviderId,
+    );
+    if (!provider) return;
+    try {
+      setPiRuntimeState(await configurePiRuntime({
+        provider: provider.id,
+        model: provider.defaultModel,
+        apiKey: sessionKeys[provider.id]?.trim() || undefined,
+      }));
+      toast.success(copy.shell.toast.providerSettingsSaved);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Pi settings could not be saved.");
+    }
+  }
+
+  async function decidePiApproval(toolCallId: string, decision: "yes" | "always" | "no") {
+    try {
+      await resolvePiApproval(toolCallId, decision);
+      setExternalApprovalOverlayActive(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Pi approval failed.");
+      throw error;
+    }
+  }
+
   function stopLivePreview() {
     liveAbortControllerRef.current?.abort();
+    if (piAbortControllerRef.current) {
+      piAbortControllerRef.current.abort();
+      void abortPiRun();
+    }
     setLivePreviewState("stopped");
     setLiveRunning(false);
   }
@@ -2654,6 +2902,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
     setRunMode(mode);
     setLivePreviewState("idle");
     setGitPreviewStateOverride(undefined);
+    if (mode === "pi") void refreshPiRuntime(true);
   }
 
   function switchPresetStyle(styleId: PresetStyleId, tabButton?: HTMLButtonElement | null) {
@@ -2761,7 +3010,10 @@ function selectPresetGroup(groupId: PresetGroupId) {
   }
 
   async function generateExport() {
-    const snapshot = createScaffoldExportSnapshot(activeProject);
+    // In Pi mode the visible provider/model set is the runtime-derived configuration the user
+    // just selected. Export that exact view so the downloaded product starts with the same Pi
+    // defaults and allowed choices shown in the editor.
+    const snapshot = createScaffoldExportSnapshot(runtimeProject);
     setExportSnapshot(snapshot);
     try {
       await downloadScaffold(snapshot);
@@ -2772,7 +3024,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
   }
 
   const slotContext: SlotRenderContext = {
-    project: activeProject,
+    project: runtimeProject,
     viewModel: displayViewModel,
     events,
     admission,
@@ -2784,7 +3036,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
     forceToolsOpen: forcePreviewToolsOpen,
     toolCollapseSignal,
     gitPreviewState,
-    modelOptions: modelOptionsForProject(activeProject),
+    modelOptions: modelOptionsForProject(runtimeProject),
     isRunning: liveRunning,
     onSubmit(prompt, context) {
       void runCurrentPreview(prompt, context);
@@ -2792,8 +3044,17 @@ function selectPresetGroup(groupId: PresetGroupId) {
     onStop: stopLivePreview,
     onExport: generateExport,
     onGitCommit: commitGitPreview,
-    onProviderChange: setDefaultProvider,
-    onModelChange: updateModel,
+    onProviderChange(id) {
+      if (runMode === "pi") void selectPiProvider(id);
+      else setDefaultProvider(id);
+    },
+    onModelChange(model) {
+      if (runMode === "pi") void selectPiModel(model);
+      else updateModel(model);
+    },
+    onApprovalDecision(toolCallId, decision) {
+      if (runMode === "pi") return decidePiApproval(toolCallId, decision);
+    },
     onCollapseLeft: () => setLeftCollapsed(true),
     onCollapseRight: () => setRightCollapsed(true),
     onOpenArtifact: openArtifactFromTool,
@@ -2803,7 +3064,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
     onCloseOutputPanelItem: closeOutputPanelItem,
     onOutputSourceChange: setOutputSource,
     activeSessionPrompt: previewPrompt,
-    sessionPrompts: copy.workspace.sessionSidebar.sessions,
+    sessionPrompts,
     onSelectSession(prompt) {
       if (isWelcome) {
         // From the welcome state, clicking a session switches back to the
@@ -2813,19 +3074,27 @@ function selectPresetGroup(groupId: PresetGroupId) {
       }
       void runCurrentPreview(prompt);
     },
-    onNewSession: enterWelcomeState,
+    onNewSession() {
+      enterWelcomeState();
+      if (runMode === "pi") void startNewPiSession().then(setPiRuntimeState).catch((error) => {
+        toast.error(error instanceof Error ? error.message : "Could not start a new Pi session.");
+      });
+    },
     welcomeGreeting: activeProject.welcome.greeting,
     isWelcome,
     providerSettingsControl: (
       <ProviderFloatingSettings
-        project={activeProject}
+        project={runtimeProject}
         sessionKeys={sessionKeys}
-        onFetchModels={fetchProviderModels}
-        onSave={saveProviderSettings}
-        onSetDefaultProvider={setDefaultProvider}
+        onFetchModels={(provider, key) => runMode === "pi" ? void refreshPiProviderModels(provider, key) : void fetchProviderModels(provider, key)}
+        onSave={() => runMode === "pi" ? void savePiProviderSettings() : saveProviderSettings()}
+        onSetDefaultProvider={(id) => runMode === "pi" ? void selectPiProvider(id) : setDefaultProvider(id)}
         onSessionKeyChange={updateSessionKey}
-        onTestProvider={testProvider}
-        onUpdateProvider={updateProviderConnection}
+        onTestProvider={(provider, key) => runMode === "pi" ? void refreshPiProviderModels(provider, key) : void testProvider(provider, key)}
+        onUpdateProvider={(id, patch) => {
+          if (runMode === "pi" && patch.defaultModel) void configurePiRuntime({ provider: id, model: patch.defaultModel }).then(setPiRuntimeState);
+          else updateProviderConnection(id, patch);
+        }}
       />
     ),
     externalApprovalPlacement: "overlay",
@@ -2899,6 +3168,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
                   options={[
                     { value: "replay", label: copy.shell.topbar.runModeReplay },
                     { value: "live", label: copy.shell.topbar.runModeLive },
+                    { value: "pi", label: copy.shell.topbar.runModePi },
                   ]}
                 />
               </label>

@@ -1,9 +1,10 @@
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
+import { piRuntimePlugin } from "./src/pi/piVitePlugin.ts";
 
 export default defineConfig({
-  plugins: [react(), agentCanvasProviderProxy()],
+  plugins: [react(), agentCanvasProviderProxy(), piRuntimePlugin()],
   test: {
     css: true,
   },

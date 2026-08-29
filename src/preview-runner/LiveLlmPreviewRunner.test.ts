@@ -479,3 +479,116 @@ describe("live LLM preview runner", () => {
     });
   });
 });
+
+describe("reasoning field shapes", () => {
+  /**
+   * There is no standard name for streamed reasoning. Reading only `reasoning_content` meant a
+   * provider that really did stream its thinking produced no reasoning events at all, so the
+   * composed thinking block never appeared — indistinguishable from "the preset did not apply".
+   *
+   * What the timeline shows is a separate, deliberate decision, asserted by the LM Studio test
+   * above: the raw chain rides in a hidden `reasoning.private` event and is kept out of the
+   * rendered timeline. These tests cover the field names only.
+   */
+  const shapes: ReadonlyArray<{ name: string; delta: Record<string, unknown> }> = [
+    { name: "reasoning_content (DeepSeek / Qwen / Moonshot)", delta: { reasoning_content: "weighing options" } },
+    { name: "reasoning (OpenRouter)", delta: { reasoning: "weighing options" } },
+    { name: "nested reasoning.content (gateways)", delta: { reasoning: { content: "weighing options" } } },
+  ];
+
+  for (const shape of shapes) {
+    it(`recognises reasoning sent as ${shape.name}`, async () => {
+      const fetcher = vi.fn(async () => sseResponse([
+        { choices: [{ index: 0, delta: shape.delta }] },
+        { choices: [{ index: 0, delta: { content: "Here is the answer." } }] },
+      ]));
+
+      const result = await runLiveLlmPreview({
+        prompt: "Think about this",
+        project: defaultCodingAgentProject,
+        sessionKeys: { openai: "sk-test" },
+        history: [],
+        fetcher: fetcher as unknown as typeof fetch,
+        now: () => 1_760_000_100_000,
+      });
+
+      const priv = result.events.filter((event) => event.type === "reasoning.private");
+      expect(priv).toHaveLength(1);
+      expect(priv[0]).toMatchObject({ visibility: "hidden", payload: { value: "weighing options" } });
+      // A reasoning block exists to render, which is what was missing before.
+      expect(result.events.some((event) => event.type === "reasoning.status")).toBe(true);
+      expect(result.events.some((event) => event.type === "reasoning.summary")).toBe(true);
+
+      const viewModel = createAgentUXViewModel(replayAgentUXEvents(result.events));
+      expect(viewModel.timeline.some((item) => item.kind === "reasoning")).toBe(true);
+      // Same invariant the LM Studio test pins: the raw chain stays out of the timeline.
+      expect(JSON.stringify(viewModel.timeline)).not.toContain("weighing options");
+    });
+  }
+
+  it("emits no reasoning when the model sends none", async () => {
+    // gpt-4o and friends stream text only. No field name can invent a stream that never came,
+    // so this stays empty on purpose rather than fabricating a thinking block.
+    const fetcher = vi.fn(async () => sseResponse([
+      { choices: [{ index: 0, delta: { content: "Plain answer." } }] },
+    ]));
+
+    const result = await runLiveLlmPreview({
+      prompt: "Say hi",
+      project: defaultCodingAgentProject,
+      sessionKeys: { openai: "sk-test" },
+      history: [],
+      fetcher: fetcher as unknown as typeof fetch,
+      now: () => 1_760_000_100_000,
+    });
+
+    expect(result.events.filter((event) => event.type.startsWith("reasoning."))).toHaveLength(0);
+  });
+});
+
+describe("show: thinking surfaces the model's own reasoning", () => {
+  const thinkingProject = {
+    ...defaultCodingAgentProject,
+    reasoning: { ...defaultCodingAgentProject.reasoning, show: "thinking" as const },
+  };
+
+  it("renders the streamed reasoning instead of the placeholder", async () => {
+    const fetcher = vi.fn(async () => sseResponse([
+      { choices: [{ index: 0, delta: { reasoning_content: "checking the reducer first" } }] },
+      { choices: [{ index: 0, delta: { content: "Found it." } }] },
+    ]));
+
+    const result = await runLiveLlmPreview({
+      prompt: "Why does it fail",
+      project: thinkingProject,
+      sessionKeys: { openai: "sk-test" },
+      history: [],
+      fetcher: fetcher as unknown as typeof fetch,
+      now: () => 1_760_000_100_000,
+    });
+
+    const summary = result.events.find((event) => event.type === "reasoning.summary");
+    expect(summary?.payload).toMatchObject({ summary: "checking the reducer first" });
+
+    const viewModel = createAgentUXViewModel(replayAgentUXEvents(result.events));
+    expect(JSON.stringify(viewModel.timeline)).toContain("checking the reducer first");
+  });
+
+  it("still falls back to the placeholder when the model streamed nothing", async () => {
+    const fetcher = vi.fn(async () => sseResponse([
+      { choices: [{ index: 0, delta: { content: "Plain answer." } }] },
+    ]));
+
+    const result = await runLiveLlmPreview({
+      prompt: "Say hi",
+      project: thinkingProject,
+      sessionKeys: { openai: "sk-test" },
+      history: [],
+      fetcher: fetcher as unknown as typeof fetch,
+      now: () => 1_760_000_100_000,
+    });
+
+    // No reasoning arrived, so there is no block at all — nothing is invented to fill it.
+    expect(result.events.filter((event) => event.type.startsWith("reasoning."))).toHaveLength(0);
+  });
+});

@@ -10,7 +10,7 @@ import { IconTooltip } from "../common/IconTooltip";
 import { ImageBlurFlowReveal, ImageDotFlickerReveal, ImageGenerationReveal, ImagePixelGridReveal, MediaLoadingReveal } from "./ImageGeneration";
 import type { OutputPanelOpenRequest } from "./OutputFrame";
 import { ReasoningBlock } from "./ReasoningBlock";
-import { ToolCallCard } from "./ToolCallCard";
+import { ToolCallCard, type ApprovalDecision } from "./ToolCallCard";
 import { WritingText } from "./WritingText";
 
 const GENERATED_IMAGE_PREVIEW_SRC = "/output-previews/product-projector.png";
@@ -26,6 +26,7 @@ export function ChatFrame({
   externalApprovalPlacement = "timeline",
   forceToolsOpen = false,
   toolCollapseSignal = 0,
+  onApprovalDecision,
 }: {
   project: AgentFrontendProject;
   viewModel: AgentUXViewModel;
@@ -37,6 +38,7 @@ export function ChatFrame({
   externalApprovalPlacement?: "timeline" | "overlay";
   forceToolsOpen?: boolean;
   toolCollapseSignal?: number;
+  onApprovalDecision?: (toolCallId: string, decision: ApprovalDecision) => void | Promise<void>;
 }) {
   const copy = useCopy();
   const promptHistory = previewPrompts?.filter((prompt) => prompt.trim().length > 0);
@@ -68,6 +70,7 @@ export function ChatFrame({
             externalApprovalPlacement,
             forceToolsOpen,
             toolCollapseSignal,
+            onApprovalDecision,
           )
         )}
       </div>
@@ -128,6 +131,7 @@ function renderConversation(
   externalApprovalPlacement: "timeline" | "overlay",
   forceToolsOpen: boolean,
   toolCollapseSignal: number,
+  onApprovalDecision: ((toolCallId: string, decision: ApprovalDecision) => void | Promise<void>) | undefined,
 ): ReactElement[] {
   const rows: ReactElement[] = [];
   let lane: AgentUXTimelineItem[] = [];
@@ -150,6 +154,7 @@ function renderConversation(
         externalApprovalPlacement={externalApprovalPlacement}
         forceToolsOpen={forceToolsOpen}
         toolCollapseSignal={toolCollapseSignal}
+        onApprovalDecision={onApprovalDecision}
       />,
     );
     turnIndex += 1;
@@ -182,6 +187,7 @@ function AssistantTurn({
   externalApprovalPlacement,
   forceToolsOpen,
   toolCollapseSignal,
+  onApprovalDecision,
 }: {
   project: AgentFrontendProject;
   items: readonly AgentUXTimelineItem[];
@@ -191,6 +197,7 @@ function AssistantTurn({
   externalApprovalPlacement: "timeline" | "overlay";
   forceToolsOpen: boolean;
   toolCollapseSignal: number;
+  onApprovalDecision?: (toolCallId: string, decision: ApprovalDecision) => void | Promise<void>;
 }) {
   const copy = useCopy();
   const orderedItems = displayOrderForAssistantTurn(items);
@@ -221,6 +228,7 @@ function AssistantTurn({
             externalApprovalPlacement={externalApprovalPlacement}
             forceToolsOpen={forceToolsOpen}
             toolCollapseSignal={toolCollapseSignal}
+            onApprovalDecision={onApprovalDecision}
           />
         ))}
       </div>
@@ -268,6 +276,7 @@ function TimelineItem({
   externalApprovalPlacement,
   forceToolsOpen,
   toolCollapseSignal,
+  onApprovalDecision,
 }: {
   item: AgentUXTimelineItem;
   project: AgentFrontendProject;
@@ -277,6 +286,7 @@ function TimelineItem({
   externalApprovalPlacement: "timeline" | "overlay";
   forceToolsOpen: boolean;
   toolCollapseSignal: number;
+  onApprovalDecision?: (toolCallId: string, decision: ApprovalDecision) => void | Promise<void>;
 }) {
   const copy = useCopy();
   const { iconSet } = useIconSet();
@@ -303,7 +313,10 @@ function TimelineItem({
       return (
         <>
           {project.toolCalls.approval === "hidden" && externalApprovalPlacement === "timeline" && isPendingApprovalTool(item) ? (
-            <ExternalApprovalSurface tool={item} />
+            <ExternalApprovalSurface
+              tool={item}
+              onConfirm={(decision) => onApprovalDecision?.(item.id, decision)}
+            />
           ) : null}
           <ToolCallCard
             project={project}
@@ -312,6 +325,7 @@ function TimelineItem({
             onOpenArtifact={onOpenArtifact}
             forceOpen={forceToolsOpen}
             collapseSignal={toolCollapseSignal}
+            onApprovalDecision={onApprovalDecision}
           />
         </>
       );
@@ -677,7 +691,7 @@ export function ExternalApprovalSurface({
 }: {
   tool: AgentUXToolTimelineItem;
   approvalIconSlot?: IconSlot;
-  onConfirm?: () => void;
+  onConfirm?: (decision: ApprovalDecision) => void | Promise<void>;
 }) {
   const copy = useCopy();
   const [selected, setSelected] = useState<ExternalApprovalChoice>("yes");
@@ -733,7 +747,11 @@ export function ExternalApprovalSurface({
         <span>
           {copy.chat.approval.chooseHint}
         </span>
-        <button type="button" className="external-approval-confirm" onClick={onConfirm}>
+        <button
+          type="button"
+          className="external-approval-confirm"
+          onClick={() => void Promise.resolve(onConfirm?.(selected)).catch(() => undefined)}
+        >
           {copy.chat.approval.confirm}
         </button>
       </div>

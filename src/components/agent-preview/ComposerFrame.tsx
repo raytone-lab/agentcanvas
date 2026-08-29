@@ -22,7 +22,8 @@ import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMe
  * `tone: "danger"` is on the unguarded mode only. It is the one choice with consequences the
  * user cannot take back, so it reads differently instead of sitting in the list as a peer.
  */
-type PermissionMode = "request" | "auto" | "allow-all";
+export type PermissionMode = "request" | "auto" | "allow-all";
+export type ThinkingBudgetMode = "fast" | "medium" | "expert";
 
 const PERMISSION_MODES: ReadonlyArray<{
   id: PermissionMode;
@@ -57,6 +58,8 @@ export type ComposerSubmitAttachment = {
 
 export type ComposerSubmitContext = {
   attachments: readonly ComposerSubmitAttachment[];
+  permissionMode: PermissionMode;
+  budgetMode: ThinkingBudgetMode;
 };
 
 type SpeechRecognitionEventLike = {
@@ -123,7 +126,7 @@ export function ComposerFrame({
   const [promptValue, setPromptValue] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<{ id: string; name: string; isImage: boolean; imageSrc?: string }[]>([]);
   const [permissionMode, setPermissionMode] = useState<PermissionMode>("request");
-  const [budgetMode, setBudgetMode] = useState<"fast" | "medium" | "expert">("medium");
+  const [budgetMode, setBudgetMode] = useState<ThinkingBudgetMode>("medium");
   const [isListening, setIsListening] = useState(false);
   const canSubmit = promptValue.trim().length > 0 || attachedFiles.length > 0;
   const isMinimalStyle = project.theme.stylePreset === "illustrated";
@@ -183,7 +186,7 @@ export function ComposerFrame({
     if (prompt) {
       setAttachedFiles([]);
       setPromptValue("");
-      onSubmit(prompt, { attachments });
+      onSubmit(prompt, { attachments, permissionMode, budgetMode });
     }
   }
 

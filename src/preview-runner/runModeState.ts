@@ -6,7 +6,7 @@ import {
 import { shellCopy } from "../i18n/copy/shell";
 import type { AppLocale } from "../i18n/locales";
 
-export type PreviewRunMode = "replay" | "live" | "harness";
+export type PreviewRunMode = "replay" | "live" | "pi" | "harness";
 export type LivePreviewState = "idle" | "streaming" | "finished" | "stopped" | "error";
 export type PreviewSessionKeys = Record<string, string | undefined>;
 
@@ -45,6 +45,14 @@ export function previewModeStatusLine(input: {
     };
   }
 
+  if (input.mode === "pi") {
+    return {
+      modeLabel: "Pi agent",
+      tone: "live",
+      detail: input.liveState ?? "idle",
+    };
+  }
+
   return {
     modeLabel: copy.replayLabel,
     tone: "mock",
@@ -54,10 +62,10 @@ export function previewModeStatusLine(input: {
 
 export function runButtonControlState(input: {
   surfaceMode: "builder" | "saved-preview";
-  runMode: "replay" | "live";
+  runMode: "replay" | "live" | "pi";
   liveRunning: boolean;
 }): { action: "run" | "stop"; label: "Run" | "Stop" } {
-  if (input.surfaceMode === "saved-preview" && input.runMode === "live" && input.liveRunning) {
+  if (input.surfaceMode === "saved-preview" && (input.runMode === "live" || input.runMode === "pi") && input.liveRunning) {
     return { action: "stop", label: "Stop" };
   }
   return { action: "run", label: "Run" };

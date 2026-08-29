@@ -19,6 +19,7 @@ export function ToolCallCard({
   onOpenArtifact,
   forceOpen = false,
   collapseSignal = 0,
+  onApprovalDecision,
 }: {
   project: AgentFrontendProject;
   tool: AgentUXToolTimelineItem;
@@ -26,6 +27,7 @@ export function ToolCallCard({
   onOpenArtifact?: (artifact: OutputPanelOpenRequest) => void;
   forceOpen?: boolean;
   collapseSignal?: number;
+  onApprovalDecision?: (toolCallId: string, decision: ApprovalDecision) => void | Promise<void>;
 }) {
   const copy = useCopy();
   const { locale } = useLocale();
@@ -174,7 +176,9 @@ export function ToolCallCard({
                   <Clock3 size={14} />
                   <span>{approval?.prompt ?? copy.chat.approval.inlinePrompt}</span>
                 </div>
-                <ApprovalDecisionActions />
+                <ApprovalDecisionActions
+                  onDecision={(decision) => onApprovalDecision?.(tool.id, decision)}
+                />
               </div>
             ) : null}
             {hasFileReferences ? (
@@ -265,11 +269,30 @@ function ToolFileReferenceList({
   );
 }
 
-type ApprovalDecision = "yes" | "always" | "no";
+export type ApprovalDecision = "yes" | "always" | "no";
 
-export function ApprovalDecisionActions() {
+export function ApprovalDecisionActions({
+  onDecision,
+}: {
+  onDecision?: (decision: ApprovalDecision) => void | Promise<void>;
+} = {}) {
   const copy = useCopy();
   const [decision, setDecision] = useState<ApprovalDecision | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function decide(next: ApprovalDecision) {
+    if (pending) return;
+    setPending(true);
+    try {
+      await onDecision?.(next);
+      setDecision(next);
+    } catch {
+      // The owner surfaces transport failures (the editor uses a toast). Keep the controls
+      // available so the user can retry instead of producing an unhandled rejected promise.
+    } finally {
+      setPending(false);
+    }
+  }
 
   if (decision) {
     return (
@@ -287,9 +310,9 @@ export function ApprovalDecisionActions() {
 
   return (
     <div className="approval-actions" aria-label={copy.chat.approval.actionsLabel}>
-      <button type="button" data-approval-action="yes" onClick={() => setDecision("yes")}>{copy.chat.approval.yes}</button>
-      <button type="button" data-approval-action="always" onClick={() => setDecision("always")}>{copy.chat.approval.always}</button>
-      <button type="button" data-approval-action="no" onClick={() => setDecision("no")}>{copy.chat.approval.no}</button>
+      <button type="button" disabled={pending} data-approval-action="yes" onClick={() => void decide("yes")}>{copy.chat.approval.yes}</button>
+      <button type="button" disabled={pending} data-approval-action="always" onClick={() => void decide("always")}>{copy.chat.approval.always}</button>
+      <button type="button" disabled={pending} data-approval-action="no" onClick={() => void decide("no")}>{copy.chat.approval.no}</button>
     </div>
   );
 }

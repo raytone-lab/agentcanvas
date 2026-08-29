@@ -16,6 +16,7 @@ const mounted: Array<{ container: HTMLDivElement; unmount: () => void }> = [];
 async function renderSidebar(props: {
   sessionPrompts?: readonly string[];
   onSelectSession?: (prompt: string) => void;
+  search?: boolean;
 }) {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -27,7 +28,12 @@ async function renderSidebar(props: {
       <LocaleProvider initialLocale="en">
         <IconSetProvider>
           <SessionSidebar
-            project={defaultCodingAgentProject}
+            project={props.search === undefined
+              ? defaultCodingAgentProject
+              : {
+                  ...defaultCodingAgentProject,
+                  sidebar: { ...defaultCodingAgentProject.sidebar, search: props.search },
+                }}
             sessionPrompts={props.sessionPrompts}
             onSelectSession={props.onSelectSession}
           />
@@ -47,13 +53,19 @@ afterEach(async () => {
 });
 
 describe("SessionSidebar session data contract", () => {
-  it("does not fabricate clickable history when no sessions are supplied", async () => {
+  it("keeps configured search visible without fabricating history", async () => {
     const container = await renderSidebar({});
 
-    expect(container.querySelector('[aria-label="Search chats"]')).toBeNull();
+    expect(container.querySelector('[aria-label="Search chats"]')).not.toBeNull();
     expect(container.querySelector(".session-list")).toBeNull();
     expect(container.textContent).not.toContain("What can this agent do?");
     expect(container.textContent).toContain("New chat");
+  });
+
+  it("hides search when the exported configuration turns it off", async () => {
+    const container = await renderSidebar({ search: false });
+
+    expect(container.querySelector('[aria-label="Search chats"]')).toBeNull();
   });
 
   it("does not render inert history when sessions have no selection handler", async () => {

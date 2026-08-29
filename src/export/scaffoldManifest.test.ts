@@ -20,6 +20,26 @@ describe("scaffold package manifest", () => {
     expect(manifest.dependencies.motion).toBeDefined();
     expect(manifest.dependencies["thinking-orbs"]).toBeDefined();
     expect(manifest.dependencies.react).toBeDefined();
+    expect(manifest.dependencies["@earendil-works/pi-coding-agent"]).toBe("^0.84.4");
+    expect(manifest.engines.node).toBe(">=22.19.0");
+  });
+
+  it("ships a working headless Pi runtime instead of inert composer controls", () => {
+    const snapshot = createScaffoldExportSnapshot(defaultCodingAgentProject);
+    for (const file of [
+      "src/pi/piClient.ts",
+      "src/pi/piHost.ts",
+      "src/pi/piVitePlugin.ts",
+      "src/harness/adapters/piAdapter.ts",
+    ]) {
+      expect(snapshot.files).toContain(file);
+    }
+    expect(snapshot.fileContents["vite.config.ts"]).toContain("piRuntimePlugin()");
+    const shell = snapshot.fileContents["src/agent-shell.tsx"] ?? "";
+    expect(shell).toContain("runPiTurn");
+    expect(shell).toContain("onSubmit: submitToPi");
+    expect(shell).toContain("resolvePiApproval");
+    expect(shell).not.toContain("onSubmit: noop");
   });
 
   it("ships the generated entry files", () => {
@@ -171,12 +191,16 @@ describe("scaffold package manifest", () => {
     expect(snapshot.files).toContain("src/event-source.ts");
   });
 
-  it("keeps the fixture picker out of any shipped artifact", () => {
+  it("keeps the fixture picker opt-in and out of the default product UI", () => {
     const snapshot = createScaffoldExportSnapshot(defaultCodingAgentProject);
     const shell = snapshot.fileContents["src/agent-shell.tsx"] ?? "";
     const eventSource = snapshot.fileContents["src/event-source.ts"] ?? "";
-    // Dev-only AND fixture-mode-only: demo data must never surface as product UI.
+    // Dev-only, explicit opt-in, AND fixture-mode-only: demo data must never surface as
+    // product UI merely because the recipient followed the normal `npm run dev` instructions.
     expect(shell).toContain("import.meta.env.DEV");
+    expect(shell).toContain("devtoolsRequested");
+    expect(shell).toContain('get("devtools")');
+    expect(shell).toContain('value === "1" || value === "true"');
     expect(shell).toContain("showPicker");
     expect(eventSource).toContain('project.runtime.transport !== "sse"');
     // Fixed position, so the picker cannot shift the frame and break parity.
@@ -187,6 +211,16 @@ describe("scaffold package manifest", () => {
     // ?stream=<id> selects a stream with no UI at all.
     expect(eventSource).toContain("stream");
     expect(eventSource).toContain("URLSearchParams");
+  });
+
+  it("ships selected sidebar search even before a session adapter has data", () => {
+    const snapshot = createScaffoldExportSnapshot(defaultCodingAgentProject);
+    const sidebar = snapshot.fileContents["src/components/agent-preview/SessionSidebar.tsx"] ?? "";
+    const exportedProject = snapshot.fileContents["src/exported-project.ts"] ?? "";
+
+    expect(exportedProject).toContain('\"search\": true');
+    expect(sidebar).toContain("{search ? (");
+    expect(sidebar).not.toContain("{search && hasSessions ? (");
   });
 
   it("lets app.css own the shell layout instead of re-implementing it inline", () => {

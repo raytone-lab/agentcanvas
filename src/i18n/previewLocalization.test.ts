@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { localizePreviewViewModel, localizeTimelineItem } from "./previewLocalization";
+import { localizePreviewText, localizePreviewViewModel, localizeTimelineItem } from "./previewLocalization";
 
 describe("preview localization", () => {
   it("localizes authored chrome and message text for replay by default", () => {
@@ -60,5 +60,20 @@ describe("preview localization", () => {
   it("is a no-op for the English locale regardless of options", () => {
     const viewModel = { title: "Normal turn", timeline: [{ kind: "message", text: "What can you do?" }] };
     expect(localizePreviewViewModel(viewModel, "en", { localizeMessageText: false })).toBe(viewModel);
+  });
+});
+
+describe("localizePreviewText matcher", () => {
+  it("keeps whole-string, substring and pass-through behaviour", () => {
+    expect(localizePreviewText("Reading file", "zh")).toBe("正在读取文件");
+    expect(localizePreviewText("Step: Reading file now", "zh")).toContain("正在读取文件");
+    expect(localizePreviewText("Reading file", "en")).toBe("Reading file");
+  });
+
+  it("prefers the longest matching key", () => {
+    // Guards the compiled matcher's longest-first ordering. The previous implementation looped
+    // the table in insertion order, so which of two overlapping keys won was an accident of
+    // declaration — a trap as soon as a second CJK table is added.
+    expect(localizePreviewText("Patch SearchInput.tsx.", "zh")).toBe("修改 SearchInput.tsx。");
   });
 });

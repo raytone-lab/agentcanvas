@@ -121,7 +121,7 @@ export function SessionSidebar({
       <header className="session-brand">
         <span className="session-brand-name">{c.brandName}</span>
         <span className="session-brand-actions">
-          {search && hasSessions ? (
+          {search ? (
             <div className="session-search-menu">
               <button
                 className="session-search-trigger"

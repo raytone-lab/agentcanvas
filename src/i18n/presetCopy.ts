@@ -179,6 +179,10 @@ const presetOptionZh: PresetOptionTable = {
     label: "公开摘要",
     description: "显示开发者安全的摘要文本，不暴露隐藏的推理。",
   },
+  "reasoning-model-thinking": {
+    label: "模型原文",
+    description: "显示模型实际输出的思考内容，仅对会返回思考的服务商生效。",
+  },
 
   // Tool Calls
   "command-cards": {

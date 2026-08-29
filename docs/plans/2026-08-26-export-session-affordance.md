@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Prevent exported scaffolds from displaying inert fabricated conversation history while preserving interactive sample sessions in the configurator preview.
+**Goal:** Prevent fabricated conversation history while preserving every sidebar affordance the user selected in the configurator.
 
-**Architecture:** Make session prompts an explicit `SessionSidebar` and `SlotRenderContext` input. The configurator supplies localized preview prompts; the generated shell supplies an empty list until a real session store is integrated. Search and grouped history render only when prompts exist.
+**Architecture:** Make session prompts an explicit `SessionSidebar` and `SlotRenderContext` input. The configurator supplies localized preview prompts; the generated shell supplies an empty list until a real session store is integrated. Grouped history depends on real prompts; search visibility depends only on the exported `sidebar.search` configuration.
 
 **Tech Stack:** React 19, TypeScript, Vitest, React DOM/jsdom, Vite.
 
@@ -19,7 +19,7 @@
 **Step 1: Write the failing tests**
 
 Add a jsdom test that renders the sidebar without `sessionPrompts` and asserts that no sample
-history or search button appears. Add a second test with one explicit prompt and a spy handler;
+history appears while the configured search control remains visible. Add a second test with one explicit prompt and a spy handler;
 click the row and assert that the handler receives the prompt.
 
 **Step 2: Run the tests to verify they fail**
@@ -30,8 +30,9 @@ Expected: FAIL because `SessionSidebar` still reads fabricated prompts from loca
 
 **Step 3: Implement the minimal component contract**
 
-Add `sessionPrompts?: readonly string[]`, default it to an empty list, and render search/history
-only when the list is non-empty. Keep `New chat`, collapse, and footer behavior unchanged.
+Add `sessionPrompts?: readonly string[]`, default it to an empty list, and render history only
+when the list is non-empty. Render search from `project.sidebar.search` so configuration does
+not drift with runtime data. Keep `New chat`, collapse, and footer behavior unchanged.
 
 **Step 4: Run the tests to verify they pass**
 
@@ -101,5 +102,4 @@ Expected: PASS.
 **Step 3:** Run `npm run build` and expect exit code 0.
 
 **Step 4:** Generate/open a fresh exported scaffold and confirm the shipped sidebar has no
-fabricated history while the AgentCanvas editor preview still shows interactive sample sessions.
-
+fabricated history, still shows selected search, and the editor preview retains interactive sample sessions.

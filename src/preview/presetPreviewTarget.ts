@@ -59,6 +59,7 @@ const reasoningOptions = new Set([
   "reasoning-expanded",
   "reasoning-status-only",
   "reasoning-public-summary",
+  "reasoning-model-thinking",
 ]);
 
 const toolCallOptions = new Set([

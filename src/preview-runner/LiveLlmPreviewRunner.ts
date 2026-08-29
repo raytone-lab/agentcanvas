@@ -68,6 +68,7 @@ type OpenAICompatibleResponse = {
     message?: {
       content?: unknown;
       reasoning_content?: unknown;
+      reasoning?: unknown;
       tool_calls?: OpenAICompatibleToolCallDelta[];
       structured_output?: unknown;
       parsed?: unknown;
@@ -84,6 +85,8 @@ type OpenAICompatibleChoice = NonNullable<OpenAICompatibleResponse["choices"]>[n
 type OpenAICompatibleDelta = {
   content?: unknown;
   reasoning_content?: unknown;
+  /** OpenRouter and some gateways use this name instead. See `reasoningText`. */
+  reasoning?: unknown;
   tool_calls?: OpenAICompatibleToolCallDelta[];
   structured_output?: unknown;
   artifact?: unknown;
@@ -378,6 +381,8 @@ function createLiveLlmEventWriter(
   let textFinished = false;
   let reasoningStarted = false;
   let reasoningFinished = false;
+  /** Reasoning the provider actually streamed, kept for the `show: "thinking"` summary. */
+  let streamedReasoning = "";
   let assistantIndex = 0;
   const toolCallStates = new Map<string, {
     toolCallId: string;
@@ -470,7 +475,7 @@ function createLiveLlmEventWriter(
       }
     },
     addDelta(delta: OpenAICompatibleDelta, choiceIndex = 0) {
-      const reasoning = stringValue(delta.reasoning_content);
+      const reasoning = reasoningText(delta);
       if (reasoning) {
         this.addReasoningPrivate(reasoning);
       }
@@ -550,6 +555,7 @@ function createLiveLlmEventWriter(
       if (!value) {
         return;
       }
+      streamedReasoning += value;
       startReasoning();
       push(agentUXEventBuilders.reasoningPrivate(meta(`reasoning_private_${seq + 1}`, { visibility: "hidden" }), {
         reasoningId,
@@ -570,10 +576,24 @@ function createLiveLlmEventWriter(
         return;
       }
       reasoningFinished = true;
+      /*
+       * `show: "thinking"` is the composed request to see what the model actually said, so it
+       * gets the streamed text. Every other setting keeps the generic line.
+       *
+       * The raw chain still travels only in the hidden `reasoning.private` events, and the
+       * timeline still excludes it for `status` and `summary` — that invariant is pinned by the
+       * LM Studio test and is not changed here. This adds the one path that was unreachable:
+       * the schema and `ReasoningBlock` both had a `thinking` branch that nothing ever selected,
+       * so a real run could only ever render the placeholder.
+       */
+      const streamed = streamedReasoning.trim();
+      const summary = context.project.reasoning.show === "thinking" && streamed
+        ? streamed
+        : "Model returned hidden reasoning while composing the response.";
       push(
         agentUXEventBuilders.reasoningSummary(meta("reasoning_summary"), {
           reasoningId,
-          summary: "Model returned hidden reasoning while composing the response.",
+          summary,
           kind: "summary",
           format: "plain",
         }),
@@ -723,7 +743,7 @@ async function readOpenAICompatibleSse(
         const choice = parsed.choices?.[0];
         const delta = choice?.delta ?? {};
         const textDelta = stringValue(delta.content);
-        const reasoningDelta = stringValue(delta.reasoning_content);
+        const reasoningDelta = reasoningText(delta);
         const hasToolCalls = Boolean(delta.tool_calls?.length);
         const hasArtifact = delta.structured_output !== undefined || delta.artifact !== undefined;
         if (textDelta || reasoningDelta || hasToolCalls || hasArtifact) {
@@ -769,7 +789,7 @@ function openAICompatibleResponseToResult(data: OpenAICompatibleResponse): OpenA
   const toolCalls = choice?.message?.tool_calls;
   const structuredArtifact = structuredArtifactFromChoice(choice);
   const content = extractOpenAICompatibleText(data, Boolean(toolCalls?.length) || Boolean(structuredArtifact));
-  const reasoningContent = stringValue(choice?.message?.reasoning_content);
+  const reasoningContent = reasoningText(choice?.message);
   return {
     content,
     reasoningContent: reasoningContent || undefined,
@@ -806,6 +826,35 @@ function extractOpenAICompatibleText(data: OpenAICompatibleResponse, allowEmpty 
     return "";
   }
   throw new Error("Live LLM response did not include assistant text.");
+}
+
+/**
+ * Reasoning text out of one delta or message, whatever the provider calls it.
+ *
+ * There is no standard field. DeepSeek, Qwen and Moonshot send `reasoning_content`; OpenRouter
+ * sends `reasoning`, and some gateways nest it as `reasoning: { content }`. Reading only the
+ * first name meant a provider that really did stream its thinking showed nothing at all — the
+ * thinking block stayed empty and looked like the preset had not applied.
+ *
+ * Anthropic is not handled here: that path has its own reader for `thinking` /
+ * `redacted_thinking` blocks in `harness/adapters/anthropicAdapter.ts`.
+ *
+ * A model that emits no reasoning at all (gpt-4o, for instance) still yields "" — no field name
+ * can conjure a stream the model never sent.
+ */
+function reasoningText(source: { reasoning_content?: unknown; reasoning?: unknown } | undefined): string {
+  if (!source) {
+    return "";
+  }
+  const direct = stringValue(source.reasoning_content) || stringValue(source.reasoning);
+  if (direct) {
+    return direct;
+  }
+  const nested = source.reasoning;
+  if (isRecord(nested)) {
+    return stringValue(nested.content) || stringValue(nested.text);
+  }
+  return "";
 }
 
 function stringValue(value: unknown): string {
