@@ -9,7 +9,14 @@ import {
   type PiEventAdapter,
   type PiWireEvent,
 } from "../harness/adapters/piAdapter.ts";
-import { PI_API_PREFIX, type PiModelInfo, type PiPromptInput, type PiRuntimeState } from "./piClient.ts";
+import {
+  PI_API_PREFIX,
+  type PiModelInfo,
+  type PiPromptInput,
+  type PiProviderDefinition,
+  type PiRuntimeConfiguration,
+  type PiRuntimeState,
+} from "./piClient.ts";
 
 export type PiPermissionMode = NonNullable<PiPromptInput["permissionMode"]>;
 
@@ -18,7 +25,7 @@ export type PiSessionBridge = {
   prompt(text: string): Promise<void>;
   abort(): Promise<void>;
   dispose(): void;
-  configure(input: { provider?: string; model?: string; thinkingLevel?: string; apiKey?: string }): Promise<void>;
+  configure(input: PiRuntimeConfiguration): Promise<void>;
   state(): Promise<Omit<PiRuntimeState, "available" | "cwd" | "running">>;
   newSession(): Promise<void>;
 };
@@ -78,12 +85,12 @@ export class PiApprovalGate {
 }
 
 export type PiRuntimeController = {
-  state(): Promise<PiRuntimeState>;
-  configure(input: { provider?: string; model?: string; thinkingLevel?: string; apiKey?: string }): Promise<PiRuntimeState>;
+  state(conversationId?: string): Promise<PiRuntimeState>;
+  configure(input: PiRuntimeConfiguration): Promise<PiRuntimeState>;
   runPrompt(input: PiPromptInput, onEvent: (event: AgentUXEvent) => void): Promise<void>;
   abort(): Promise<void>;
   resolveApproval(toolCallId: string, decision: PiApprovalDecision): boolean;
-  newSession(): Promise<PiRuntimeState>;
+  newSession(conversationId?: string): Promise<PiRuntimeState>;
   dispose(): void;
 };
 
@@ -94,18 +101,43 @@ export function createPiRuntimeController(options: {
   const { cwd } = options;
   const approvalGate = new PiApprovalGate();
   const bridgeFactory = options.bridgeFactory ?? createDefaultPiBridge;
-  let bridgePromise: Promise<PiSessionBridge> | undefined;
+  const bridgePromises = new Map<string, Promise<PiSessionBridge>>();
+  /** Conversations that have already announced their tool set — see `runPrompt`. */
+  const announcedCapabilities = new Set<string>();
+  const defaultConversationId = "default";
+  const maxConversations = 12;
+  let activeConversationId = defaultConversationId;
+  let activeBridge: PiSessionBridge | undefined;
   let activeAdapter: PiEventAdapter | undefined;
   let running = false;
 
-  const bridge = () => {
-    bridgePromise ??= bridgeFactory({ cwd, approvalGate });
-    return bridgePromise;
+  const bridge = (conversationId = activeConversationId) => {
+    const id = normalizeConversationId(conversationId);
+    activeConversationId = id;
+    const existing = bridgePromises.get(id);
+    if (existing) {
+      bridgePromises.delete(id);
+      bridgePromises.set(id, existing);
+      return existing;
+    }
+    const created = bridgeFactory({ cwd, approvalGate }).catch((error) => {
+      bridgePromises.delete(id);
+      throw error;
+    });
+    bridgePromises.set(id, created);
+    while (bridgePromises.size > maxConversations) {
+      const oldestId = bridgePromises.keys().next().value as string | undefined;
+      if (!oldestId) break;
+      const oldest = bridgePromises.get(oldestId);
+      bridgePromises.delete(oldestId);
+      void oldest?.then((current) => current.dispose());
+    }
+    return created;
   };
 
-  const state = async (): Promise<PiRuntimeState> => {
+  const state = async (conversationId = activeConversationId): Promise<PiRuntimeState> => {
     try {
-      const current = await bridge();
+      const current = await bridge(conversationId);
       return { available: true, cwd, running, ...(await current.state()) };
     } catch (error) {
       return {
@@ -122,15 +154,17 @@ export function createPiRuntimeController(options: {
   return {
     state,
     async configure(input) {
-      const current = await bridge();
+      const conversationId = normalizeConversationId(input.conversationId);
+      const current = await bridge(conversationId);
       await current.configure(input);
-      return state();
+      return state(conversationId);
     },
     async runPrompt(input, onEvent) {
       const prompt = input.prompt?.trim();
       if (!prompt) throw new Error("Pi prompt is empty.");
       if (running) throw new Error("A Pi run is already active.");
-      const current = await bridge();
+      const conversationId = normalizeConversationId(input.conversationId);
+      const current = await bridge(conversationId);
       approvalGate.setMode(input.permissionMode ?? "request");
       if (input.provider || input.model || input.thinkingLevel) {
         await current.configure({ provider: input.provider, model: input.model, thinkingLevel: input.thinkingLevel });
@@ -142,9 +176,19 @@ export function createPiRuntimeController(options: {
         onEvent,
         requiresApproval: (toolName, args) => approvalGate.requiresApproval(toolName, args),
       });
+      activeBridge = current;
       activeAdapter = adapter;
       const unsubscribe = current.subscribe((event) => adapter.apply(event));
       try {
+        // Once per conversation, before the first prompt. Canonical events accumulate across
+        // turns in the browser, so announcing on every turn would stack a duplicate row in
+        // `CapabilityTray` per turn.
+        if (!announcedCapabilities.has(conversationId)) {
+          announcedCapabilities.add(conversationId);
+          const tools = await current.state().then((value) => value.tools).catch(() => []);
+          adapter.attachCapabilities(tools);
+        }
+        adapter.startUserMessage(prompt);
         await current.prompt(prompt);
         adapter.finish("success");
       } catch (error) {
@@ -152,29 +196,35 @@ export function createPiRuntimeController(options: {
       } finally {
         unsubscribe();
         approvalGate.cancelAll();
+        activeBridge = undefined;
         activeAdapter = undefined;
         running = false;
       }
     },
     async abort() {
       approvalGate.cancelAll("Pi run was stopped.");
-      const current = await bridge();
-      await current.abort();
+      await activeBridge?.abort();
       activeAdapter?.finish("cancelled");
     },
     resolveApproval(toolCallId, decision) {
       activeAdapter?.resolveApproval(toolCallId, decision);
       return approvalGate.resolve(toolCallId, decision);
     },
-    async newSession() {
+    async newSession(conversationId) {
       if (running) throw new Error("Stop the active Pi run before starting a new session.");
-      const current = await bridge();
+      const id = normalizeConversationId(conversationId);
+      const current = await bridge(id);
       await current.newSession();
-      return state();
+      // A new session starts with an empty transcript, so its tool set has to be announced
+      // again or `CapabilityTray` would stay empty for the rest of the conversation's life.
+      announcedCapabilities.delete(id);
+      return state(id);
     },
     dispose() {
       approvalGate.cancelAll();
-      void bridgePromise?.then((current) => current.dispose());
+      for (const pending of bridgePromises.values()) void pending.then((current) => current.dispose());
+      bridgePromises.clear();
+      announcedCapabilities.clear();
     },
   };
 }
@@ -199,7 +249,7 @@ export function createPiHttpHost(options: {
 
       try {
         if (req.method === "GET" && url.pathname === `${PI_API_PREFIX}/state`) {
-          sendJson(res, 200, await controller.state());
+          sendJson(res, 200, await controller.state(url.searchParams.get("conversationId") ?? undefined));
           return true;
         }
         if (req.method === "POST" && url.pathname === `${PI_API_PREFIX}/config`) {
@@ -225,8 +275,8 @@ export function createPiHttpHost(options: {
           return true;
         }
         if (req.method === "POST" && url.pathname === `${PI_API_PREFIX}/session/new`) {
-          await readJson(req);
-          sendJson(res, 200, await controller.newSession());
+          const body = await readJson(req);
+          sendJson(res, 200, await controller.newSession(stringField(body, "conversationId")));
           return true;
         }
         if (req.method === "POST" && url.pathname === `${PI_API_PREFIX}/prompt`) {
@@ -246,6 +296,7 @@ export function createPiHttpHost(options: {
           };
           res.once("close", abortOnDisconnect);
           await controller.runPrompt({
+            conversationId: stringField(body, "conversationId"),
             prompt,
             provider: stringField(body, "provider"),
             model: stringField(body, "model"),
@@ -274,7 +325,11 @@ export function createPiHttpHost(options: {
 
 async function createDefaultPiBridge(input: { cwd: string; approvalGate: PiApprovalGate }): Promise<PiSessionBridge> {
   const pi = await import("@earendil-works/pi-coding-agent");
-  const modelRuntime = await pi.ModelRuntime.create({ allowModelNetwork: false });
+  const { InMemoryCredentialStore } = await import("@earendil-works/pi-ai");
+  const modelRuntime = await pi.ModelRuntime.create({
+    allowModelNetwork: false,
+    credentials: new InMemoryCredentialStore(),
+  });
   let session = await createSession();
 
   async function createSession() {
@@ -290,7 +345,7 @@ async function createDefaultPiBridge(input: { cwd: string; approvalGate: PiAppro
     const result = await pi.createAgentSession({
       cwd: input.cwd,
       modelRuntime,
-      sessionManager: pi.SessionManager.create(input.cwd),
+      sessionManager: pi.SessionManager.inMemory(input.cwd),
       noTools: "builtin",
       customTools: definitions,
     });
@@ -311,7 +366,23 @@ async function createDefaultPiBridge(input: { cwd: string; approvalGate: PiAppro
       session.dispose();
     },
     async configure(config) {
-      if (config.apiKey && config.provider) await modelRuntime.setRuntimeApiKey(config.provider, config.apiKey);
+      if (config.providerDefinition) {
+        registerEditorProvider(modelRuntime, config.providerDefinition, config.provider, config.model);
+      }
+      if (config.provider) {
+        if (config.apiKey) await modelRuntime.setRuntimeApiKey(config.provider, config.apiKey);
+        else if (config.clearApiKey) {
+          try {
+            await modelRuntime.removeRuntimeApiKey(config.provider);
+          } catch (error) {
+            // removeRuntimeApiKey clears the in-memory key before Pi refreshes availability.
+            // A provider that relies on an env var which is not present in this process then
+            // reports "No API key" during that refresh. Configuration is still valid and the
+            // exact model can be selected; the later prompt will surface the missing credential.
+            if (!isMissingPiCredentialError(error)) throw error;
+          }
+        }
+      }
       if (config.provider || config.model) {
         const provider = config.provider ?? session.model?.provider;
         const modelId = config.model ?? session.model?.id;
@@ -322,7 +393,16 @@ async function createDefaultPiBridge(input: { cwd: string; approvalGate: PiAppro
       if (config.thinkingLevel) session.setThinkingLevel(normalizeThinkingLevel(config.thinkingLevel));
     },
     async state() {
-      const available = new Set((await modelRuntime.getAvailable()).map((model) => `${model.provider}/${model.id}`));
+      let availableModels: readonly { provider: string; id: string }[] = [];
+      try {
+        availableModels = await modelRuntime.getAvailable();
+      } catch (error) {
+        // The selected editor model remains a valid runtime choice even before its session key
+        // is entered. Report it as unavailable instead of making the whole Pi state endpoint
+        // fail and exposing whichever default model the session previously used.
+        if (!isMissingPiCredentialError(error)) throw error;
+      }
+      const available = new Set(availableModels.map((model) => `${model.provider}/${model.id}`));
       const currentKey = session.model ? `${session.model.provider}/${session.model.id}` : undefined;
       // Pi knows about a large catalog. Sending every unavailable entry on each UI refresh made
       // the state endpoint needlessly huge and exposed choices that could never run. Keep the
@@ -348,10 +428,73 @@ async function createDefaultPiBridge(input: { cwd: string; approvalGate: PiAppro
       };
     },
     async newSession() {
+      const selected = session.model
+        ? { provider: session.model.provider, model: session.model.id, thinkingLevel: session.thinkingLevel }
+        : undefined;
       session.dispose();
       session = await createSession();
+      if (selected) {
+        const model = modelRuntime.getModel(selected.provider, selected.model);
+        if (!model) throw new Error(`Pi model not found after starting a new session: ${selected.provider}/${selected.model}`);
+        await session.setModel(model);
+        session.setThinkingLevel(normalizeThinkingLevel(selected.thinkingLevel));
+      }
     },
   };
+}
+
+type PiModelRuntime = Awaited<ReturnType<typeof import("@earendil-works/pi-coding-agent")["ModelRuntime"]["create"]>>;
+
+/** Register the editor model verbatim so Pi never substitutes a similarly named catalog model. */
+export function registerEditorProvider(
+  modelRuntime: Pick<PiModelRuntime, "registerProvider" | "unregisterProvider">,
+  definition: PiProviderDefinition,
+  selectedProvider?: string,
+  selectedModel?: string,
+): void {
+  const id = definition.id.trim();
+  const baseUrl = definition.baseUrl.trim();
+  const models = [...new Set(definition.models.map((model) => model.trim()).filter(Boolean))];
+  if (!id) throw new Error("Pi provider id is required.");
+  if (selectedProvider && selectedProvider !== id) {
+    throw new Error(`Pi provider definition mismatch: expected ${selectedProvider}, received ${id}.`);
+  }
+  if (!baseUrl) throw new Error(`Pi base URL is required for ${definition.name || id}.`);
+  const parsedUrl = new URL(baseUrl);
+  if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+    throw new Error(`Pi provider URL must use HTTP or HTTPS: ${baseUrl}`);
+  }
+  if (models.length === 0) throw new Error(`Pi provider ${definition.name || id} has no models.`);
+  if (selectedModel && !models.includes(selectedModel)) {
+    throw new Error(`Pi model ${selectedModel} is not configured for ${definition.name || id}.`);
+  }
+
+  // registerProvider merges omitted fields on re-registration. Unregister first so changing an
+  // editor provider cannot retain a stale endpoint, model list, or credential fallback.
+  modelRuntime.unregisterProvider(id);
+  modelRuntime.registerProvider(id, {
+    name: definition.name.trim() || id,
+    baseUrl,
+    api: piApiForProtocol(definition.protocol),
+    apiKey: definition.authMode === "none"
+      ? "agentcanvas-no-auth"
+      : definition.apiKeyEnvVar
+        ? `$${definition.apiKeyEnvVar}`
+        : undefined,
+    models: models.map((model) => ({
+      id: model,
+      name: model,
+      reasoning: false,
+      input: ["text", "image"],
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+      contextWindow: 128_000,
+      maxTokens: 16_384,
+    })),
+  });
+}
+
+function piApiForProtocol(protocol: PiProviderDefinition["protocol"]): "anthropic-messages" | "openai-completions" {
+  return protocol === "anthropic" ? "anthropic-messages" : "openai-completions";
 }
 
 function guardTool<T extends { name: string; execute: (...args: any[]) => Promise<any> }>(definition: T, gate: PiApprovalGate): T {
@@ -421,6 +564,19 @@ function stringField(record: Record<string, unknown>, key: string): string | und
   return typeof record[key] === "string" ? record[key] as string : undefined;
 }
 
+function normalizeConversationId(value: string | undefined): string {
+  const id = value?.trim();
+  if (!id) return "default";
+  if (id.length > 160 || !/^[a-zA-Z0-9._:-]+$/.test(id)) {
+    throw new Error("Pi conversationId is invalid.");
+  }
+  return id;
+}
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error || "Unknown Pi error");
+}
+
+function isMissingPiCredentialError(error: unknown): boolean {
+  return /(?:no api key|provider is not configured)/i.test(errorMessage(error));
 }

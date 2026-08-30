@@ -197,6 +197,43 @@ export function createProviderConnection(id: ProviderCatalogId | ProviderConnect
   };
 }
 
+const PROVIDER_CREDENTIAL_ENV_VAR = /^[A-Z][A-Z0-9_]{0,47}_(?:(?:API_)?KEY|TOKEN|SECRET|CREDENTIALS?)$/;
+
+/** Project files may store only symbolic credential names, never credential values. */
+export function isSafeProviderEnvVarName(value: string): boolean {
+  return PROVIDER_CREDENTIAL_ENV_VAR.test(value.trim());
+}
+
+export function safeProviderEnvVarName(provider: Pick<ProviderConnection, "id" | "auth">): string {
+  if (provider.auth.mode === "env" && isSafeProviderEnvVarName(provider.auth.envVar)) {
+    return provider.auth.envVar.trim();
+  }
+  const catalogAuth = providerOptionForId(provider.id).auth;
+  if (catalogAuth.mode === "env" && isSafeProviderEnvVarName(catalogAuth.envVar)) {
+    return catalogAuth.envVar;
+  }
+  const prefix = String(provider.id).toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "PROVIDER";
+  return `${prefix}_API_KEY`;
+}
+
+/** Authoritative export-boundary scrubber for legacy or malformed project state. */
+export function sanitizeProjectCredentials(project: AgentFrontendProject): AgentFrontendProject {
+  let changed = false;
+  const connections = project.providers.connections.map((provider) => {
+    if (provider.auth.mode === "env") {
+      const envVar = safeProviderEnvVarName(provider);
+      if (envVar === provider.auth.envVar) return provider;
+      changed = true;
+      return { ...provider, auth: { ...provider.auth, envVar } };
+    }
+    if (provider.auth.envVar === undefined) return provider;
+    changed = true;
+    return { ...provider, auth: { mode: provider.auth.mode } };
+  });
+  if (!changed) return project;
+  return { ...project, providers: { ...project.providers, connections } };
+}
+
 export function modelOptionsForProvider(id: ProviderCatalogId | ProviderConnectionId): readonly string[] {
   return providerOptionForId(id).modelOptions;
 }

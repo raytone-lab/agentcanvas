@@ -696,7 +696,8 @@ export function ExternalApprovalSurface({
   const copy = useCopy();
   const [selected, setSelected] = useState<ExternalApprovalChoice>("yes");
   const choices = externalApprovalChoices(copy);
-  const prompt = tool.approval?.prompt ?? copy.chat.approval.externalPrompt;
+  // Same precedence as the inline card: the backend's own question, else the dictionary's.
+  const prompt = tool.approval?.prompt ?? copy.chat.approval.promptFallback;
   return (
     <aside
       className="external-approval-panel"

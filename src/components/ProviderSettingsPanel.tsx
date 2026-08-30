@@ -4,8 +4,10 @@ import { toast } from "sonner";
 
 import {
   enabledProviderConnections,
+  isSafeProviderEnvVarName,
   providerCatalog,
   providerOptionForId,
+  safeProviderEnvVarName,
   type AgentFrontendProject,
   type ProviderCatalogId,
   type ProviderConnection,
@@ -95,6 +97,18 @@ export function ProviderSettingsPanel({
             disabled={provider.auth.mode === "none"}
             value={provider.auth.mode === "none" ? copy.noKeyRequired : envVar}
             onChange={(event) => onUpdateProvider(provider.id, { authEnvVar: event.target.value })}
+            onBlur={(event) => {
+              if (!isSafeProviderEnvVarName(event.currentTarget.value)) {
+                onUpdateProvider(provider.id, { authEnvVar: safeProviderEnvVarName(provider) });
+              }
+            }}
+            onPaste={(event) => {
+              const pasted = event.clipboardData.getData("text").trim();
+              if (pasted && !isSafeProviderEnvVarName(pasted)) {
+                event.preventDefault();
+                onSessionKeyChange(provider.id, pasted);
+              }
+            }}
           />
         </label>
 

@@ -9,7 +9,7 @@ import { ComposerFrame, type ComposerSubmitContext } from "../components/agent-p
 import { ExportFrame } from "../components/agent-preview/ExportFrame";
 import { GitFrame } from "../components/agent-preview/GitFrame";
 import { OutputFrame, type OutputPanelItem, type OutputPanelOpenRequest } from "../components/agent-preview/OutputFrame";
-import { SessionSidebar } from "../components/agent-preview/SessionSidebar";
+import { SessionSidebar, type SessionSidebarItem } from "../components/agent-preview/SessionSidebar";
 import { DebugDock } from "../components/debug-dock/DebugDock";
 import type { ScaffoldExportSnapshot } from "../export/scaffoldManifest";
 import type { GitPreviewState } from "../preview-runner/PreviewRunner";
@@ -46,7 +46,9 @@ export type SlotRenderContext = {
   onCollapseRight?: () => void;
   activeSessionPrompt?: string;
   sessionPrompts?: readonly string[];
-  onSelectSession?: (prompt: string) => void;
+  activeSessionId?: string;
+  sessionItems?: readonly SessionSidebarItem[];
+  onSelectSession?: (id: string) => void;
   onOpenArtifact?: (artifact: OutputPanelOpenRequest) => void;
   outputPanelItems?: readonly OutputPanelItem[];
   activeOutputPanelItemId?: string;
@@ -65,12 +67,14 @@ export type SlotComponent = NonNullable<SlotConfig["component"]>;
 export type SlotRenderer = (context: SlotRenderContext) => ReactNode;
 
 export const slotComponentRegistry: Record<SlotComponent, SlotRenderer> = {
-  SessionSidebar: ({ project, onCollapseLeft, activeSessionPrompt, sessionPrompts, onSelectSession, onNewSession }) => (
+  SessionSidebar: ({ project, onCollapseLeft, activeSessionPrompt, sessionPrompts, activeSessionId, sessionItems, onSelectSession, onNewSession }) => (
     <SessionSidebar
       project={project}
       onCollapse={onCollapseLeft}
       activePrompt={activeSessionPrompt}
       sessionPrompts={sessionPrompts}
+      activeSessionId={activeSessionId}
+      sessionItems={sessionItems}
       onSelectSession={onSelectSession}
       onNewSession={onNewSession}
     />

@@ -108,6 +108,7 @@ import {
 } from "./preview-runner/runModeState";
 import {
   defaultCodingAgentProject,
+  defaultProviderConnection,
   modelOptionsForProject,
   type AgentFrontendProject,
   type OutputSource,
@@ -143,6 +144,17 @@ import {
   startNewPiSession,
   type PiRuntimeState,
 } from "./pi/piClient";
+import { piErrorTurnEvents } from "./pi/piErrorTurn";
+import { createPiFrameCommit } from "./pi/piFrameCommit";
+import { piRuntimeConfigurationForProvider } from "./pi/piProviderSync";
+import {
+  appendPiConversationEvents,
+  createEphemeralPiConversation,
+  piConversationSidebarItems,
+  replacePiConversation,
+  titlePiConversation,
+  type EphemeralPiConversation,
+} from "./pi/piConversationState";
 
 function groupPresetOptions(options: PresetOption[], defaultSection: string) {
   const sections = new Map<string, PresetOption[]>();
@@ -676,43 +688,6 @@ type SurfaceMode = "builder" | "saved-preview";
 type RunMode = "replay" | "live" | "pi" | "harness";
 type WritingMode = AgentFrontendProject["theme"]["motion"]["writing"];
 
-function projectWithPiRuntime(
-  project: AgentFrontendProject,
-  state: PiRuntimeState | undefined,
-): AgentFrontendProject {
-  if (!state?.provider || !state.model || state.models.length === 0) return project;
-  const currentProvider = state.provider;
-  const currentModel = state.model;
-  const byProvider = new Map<string, string[]>();
-  for (const model of state.models) {
-    const models = byProvider.get(model.provider) ?? [];
-    if (!models.includes(model.id)) models.push(model.id);
-    byProvider.set(model.provider, models);
-  }
-  const connections: ProviderConnection[] = [...byProvider].map(([provider, models]) => {
-    const existing = project.providers.connections.find((connection) => connection.id === provider);
-    return {
-      id: provider,
-      kind: existing?.kind ?? "custom",
-      label: existing?.label ?? provider,
-      description: existing?.description ?? `Pi provider: ${provider}`,
-      protocol: existing?.protocol ?? "openai-compatible",
-      baseUrl: existing?.baseUrl ?? "",
-      auth: existing?.auth ?? { mode: "env", envVar: `${provider.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_API_KEY` },
-      defaultModel: provider === currentProvider && models.includes(currentModel) ? currentModel : models[0] ?? currentModel,
-      models,
-      enabled: true,
-    };
-  });
-  return {
-    ...project,
-    providers: {
-      ...project.providers,
-      defaultProviderId: currentProvider,
-      connections,
-    },
-  };
-}
 const defaultPreviewPrompt = {
   en: "Add validation to the search input and show a loading state while results are fetched.",
   zh: "给搜索框加校验，并在获取结果时显示加载状态。",
@@ -723,6 +698,12 @@ const livePreviewFallbackPrompt = {
   en: "Test this AgentCanvas UI/UX.",
   zh: "测试这个 AgentCanvas UI/UX。",
   ja: "この AgentCanvas の UI/UX をテストします。",
+} satisfies Record<AppLocale, string>;
+
+const piConfigurationFailureCopy = {
+  en: "Pi could not start the selected model. Reopen model settings and check the API key, Base URL, and model name.",
+  zh: "Pi 无法启动所选模型。请重新打开模型设置，检查 API Key、Base URL 和模型名称。",
+  ja: "Pi は選択したモデルを起動できませんでした。モデル設定を開き、API キー、Base URL、モデル名を確認してください。",
 } satisfies Record<AppLocale, string>;
 
 const standardScenarioCopy: Record<ScenarioId, { title: Record<AppLocale, string>; summary: Record<AppLocale, string> }> = {
@@ -1347,6 +1328,10 @@ export function App() {
    * looks like a populated product before anything has been sent.
    */
   const [sentPrompts, setSentPrompts] = useState<readonly string[]>([]);
+  const [piConversations, setPiConversations] = useState<readonly EphemeralPiConversation[]>(() => [
+    createEphemeralPiConversation(),
+  ]);
+  const [activePiConversationId, setActivePiConversationId] = useState(() => piConversations[0].id);
   const [runEvents, setRunEvents] = useState<AgentUXEvent[] | undefined>([]);
   const [runEventSource, setRunEventSource] = useState<RunMode | undefined>();
   const [runMode, setRunMode] = useState<RunMode>("replay");
@@ -1366,10 +1351,9 @@ export function App() {
   const previousLocaleRef = useRef(locale);
   const [selectedScenarioId, setSelectedScenarioId] = useState<PreviewScenarioId>(() => resolveDefaultPreviewScenario(defaultCodingAgentProject));
   const activeProject = surfaceMode === "saved-preview" && savedProject ? savedProject : project;
-  const runtimeProject = useMemo(
-    () => runMode === "pi" ? projectWithPiRuntime(activeProject, piRuntimeState) : activeProject,
-    [activeProject, piRuntimeState, runMode],
-  );
+  // The project configured in the editor is always the source of truth. Pi state confirms the
+  // active runtime model but must never replace editor choices with Pi's previous/default model.
+  const runtimeProject = activeProject;
   const standardScenario = scenarioById(standardScenarioId);
   const standardStreamRef = useRef<{ cancel: () => void } | undefined>(undefined);
   /** Latest live event list waiting for a frame, and the pending frame handle. */
@@ -1440,6 +1424,14 @@ export function App() {
   const sessionPrompts = useMemo(
     () => [...sentPrompts, ...copy.workspace.sessionSidebar.sessions.filter((demo) => !sentPrompts.includes(demo))],
     [sentPrompts, copy.workspace.sessionSidebar.sessions],
+  );
+  const activePiConversation = useMemo(
+    () => piConversations.find((conversation) => conversation.id === activePiConversationId) ?? piConversations[0],
+    [activePiConversationId, piConversations],
+  );
+  const piSessionItems = useMemo(
+    () => piConversationSidebarItems(piConversations.filter((conversation) => conversation.events.length > 0)),
+    [piConversations],
   );
 
   const displayViewModel = useMemo(
@@ -2767,6 +2759,33 @@ function selectPresetGroup(groupId: PresetGroupId) {
     }
   }
 
+  async function synchronizePiRuntime(
+    projectSnapshot: AgentFrontendProject = activeProject,
+    showError = false,
+    conversationId = activePiConversationId,
+  ): Promise<PiRuntimeState | undefined> {
+    const provider = defaultProviderConnection(projectSnapshot);
+    try {
+      const state = await configurePiRuntime(
+        {
+          ...piRuntimeConfigurationForProvider(provider, sessionKeys[provider.id]),
+          conversationId,
+        },
+      );
+      if (!state.available) throw new Error(state.error ?? "Pi runtime is unavailable.");
+      if (state.provider !== provider.id || state.model !== provider.defaultModel) {
+        throw new Error(
+          `Pi did not activate the selected model ${provider.label}/${provider.defaultModel}.`,
+        );
+      }
+      setPiRuntimeState(state);
+      return state;
+    } catch (error) {
+      if (showError) toast.error(error instanceof Error ? error.message : "Pi model synchronization failed.");
+      return undefined;
+    }
+  }
+
   async function runPiPreview(prompt = previewPrompt, context?: ComposerSubmitContext) {
     if (!savedProject) {
       toast.info(copy.shell.toast.saveBeforeLocalPreview);
@@ -2777,45 +2796,87 @@ function selectPresetGroup(groupId: PresetGroupId) {
       return;
     }
 
-    const state = piRuntimeState ?? await refreshPiRuntime(true);
-    if (!state?.available) return;
     const normalizedPrompt = prompt.trim() || livePreviewFallbackPrompt[locale];
+    const conversation = activePiConversation ?? createEphemeralPiConversation();
+    let nextConversation = titlePiConversation(conversation, normalizedPrompt);
     const controller = new AbortController();
     piAbortControllerRef.current = controller;
     setLiveRunning(true);
     setLivePreviewState("streaming");
     setPreviewPrompt(normalizedPrompt);
-    recordSentPrompt(normalizedPrompt);
+    setPiConversations((current) => replacePiConversation(current, nextConversation));
     setGitPreviewStateOverride(undefined);
     setSurfaceMode("saved-preview");
     setWorkspaceView("preview");
-    setRunEvents([]);
+    setRunEvents([...nextConversation.events]);
     setRunEventSource("pi");
 
-    const nextEvents: AgentUXEvent[] = [];
+    // Reconfigure before every turn. This prevents a new Pi session or an editor model change
+    // from leaving the runtime on its old default (commonly Anthropic/Claude). The submitted
+    // message is placed on the canvas first so a configuration failure is never a silent no-op.
+    const state = await synchronizePiRuntime(activeProject, true, nextConversation.id);
+    if (controller.signal.aborted || piAbortControllerRef.current !== controller) return;
+    if (!state?.available) {
+      nextConversation = appendPiConversationEvents(
+        nextConversation,
+        // Configuration failed before the turn emitted anything, so the prompt is passed: it
+        // has to appear above the error rather than the error standing on its own.
+        piErrorTurnEvents({
+          message: piConfigurationFailureCopy[locale],
+          prompt: normalizedPrompt,
+          code: "pi_configuration_error",
+        }),
+      );
+      setPiConversations((current) => replacePiConversation(current, nextConversation));
+      setRunEvents([...nextConversation.events]);
+      setLivePreviewState("error");
+      piAbortControllerRef.current = undefined;
+      setLiveRunning(false);
+      return;
+    }
+
+    // The conversation itself is still built one event at a time — that is what gives `seq` its
+    // order. Only the React commits are coalesced, so what finally renders is unchanged.
+    const commit = createPiFrameCommit<EphemeralPiConversation>((conversation) => {
+      setPiConversations((current) => replacePiConversation(current, conversation));
+      setRunEvents([...conversation.events]);
+    });
+
     try {
       for await (const event of runPiTurn({
+        conversationId: nextConversation.id,
         prompt: normalizedPrompt,
         provider: state.provider,
         model: state.model,
         thinkingLevel: context?.budgetMode === "fast" ? "low" : context?.budgetMode === "expert" ? "high" : "medium",
         permissionMode: context?.permissionMode ?? "request",
       }, { signal: controller.signal })) {
-        if (controller.signal.aborted || piAbortControllerRef.current !== controller) return;
-        nextEvents.push(event);
-        setRunEvents([...nextEvents]);
+        if (controller.signal.aborted || piAbortControllerRef.current !== controller) {
+          commit.cancel();
+          return;
+        }
+        nextConversation = appendPiConversationEvents(nextConversation, [event]);
+        commit.push(nextConversation);
         if (event.type === "tool.call.awaiting_approval" && activeProject.toolCalls.approval === "hidden") {
+          // An approval is waiting on the user, so it must be on screen this instant rather than
+          // whenever the next frame happens to land.
+          commit.flush();
           setExternalApprovalOverlayActive(true);
         }
       }
+      commit.flush();
       setLivePreviewState("finished");
       await refreshPiRuntime();
       toast.success("Pi run completed.");
     } catch (error) {
       if (controller.signal.aborted) {
+        commit.cancel();
         setLivePreviewState("stopped");
         toast.info("Pi run stopped.");
       } else {
+        // Keep whatever the turn produced before it failed: the transcript up to the error is
+        // the most useful thing on screen next to the error itself.
+        commit.flush();
         setLivePreviewState("error");
         toast.error(error instanceof Error ? error.message : "Pi run failed.");
       }
@@ -2826,28 +2887,40 @@ function selectPresetGroup(groupId: PresetGroupId) {
   }
 
   async function selectPiProvider(provider: ProviderConnectionId) {
-    const model = piRuntimeState?.models.find((entry) => entry.provider === provider)?.id;
-    if (!model) return;
-    try {
-      setPiRuntimeState(await configurePiRuntime({ provider, model }));
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Pi provider update failed.");
-    }
+    const selected = activeProject.providers.connections.find((entry) => entry.id === provider && entry.enabled);
+    if (!selected) return;
+    const nextProject = {
+      ...activeProject,
+      providers: { ...activeProject.providers, defaultProviderId: provider },
+    };
+    setDefaultProvider(provider);
+    await synchronizePiRuntime(nextProject, true);
   }
 
   async function selectPiModel(model: string) {
-    const provider = piRuntimeState?.models.find((entry) => entry.id === model)?.provider ?? piRuntimeState?.provider;
-    if (!provider) return;
-    try {
-      setPiRuntimeState(await configurePiRuntime({ provider, model }));
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Pi model update failed.");
-    }
+    const provider = defaultProviderConnection(activeProject);
+    const nextProvider = {
+      ...provider,
+      defaultModel: model,
+      models: provider.models.includes(model) ? provider.models : [model, ...provider.models],
+    };
+    const nextProject = {
+      ...activeProject,
+      providers: {
+        ...activeProject.providers,
+        connections: activeProject.providers.connections.map((entry) => entry.id === provider.id ? nextProvider : entry),
+      },
+    };
+    updateModel(model);
+    await synchronizePiRuntime(nextProject, true);
   }
 
   async function refreshPiProviderModels(provider: ProviderConnection, apiKey?: string) {
     try {
-      const state = await configurePiRuntime({ provider: provider.id, apiKey: apiKey?.trim() || undefined });
+      const state = await configurePiRuntime({
+        ...piRuntimeConfigurationForProvider(provider, apiKey),
+        conversationId: activePiConversationId,
+      });
       setPiRuntimeState(state);
       const count = state.models.filter((model) => model.provider === provider.id).length;
       toast.success(`${provider.label} · ${count} ${copy.shell.toast.modelsCountSuffix}`);
@@ -2862,11 +2935,8 @@ function selectPresetGroup(groupId: PresetGroupId) {
     );
     if (!provider) return;
     try {
-      setPiRuntimeState(await configurePiRuntime({
-        provider: provider.id,
-        model: provider.defaultModel,
-        apiKey: sessionKeys[provider.id]?.trim() || undefined,
-      }));
+      const state = await synchronizePiRuntime(runtimeProject);
+      if (!state) throw new Error("Pi settings could not be synchronized.");
       toast.success(copy.shell.toast.providerSettingsSaved);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Pi settings could not be saved.");
@@ -2902,7 +2972,56 @@ function selectPresetGroup(groupId: PresetGroupId) {
     setRunMode(mode);
     setLivePreviewState("idle");
     setGitPreviewStateOverride(undefined);
-    if (mode === "pi") void refreshPiRuntime(true);
+    if (mode === "pi") {
+      // Restore the active page-lifetime Pi conversation through the same canonical event path.
+      setRunEvents([...(activePiConversation?.events ?? [])]);
+      setRunEventSource("pi");
+      setLiveMessages([]);
+      void synchronizePiRuntime(activeProject, true, activePiConversationId);
+    }
+  }
+
+  function selectPiConversation(conversationId: string) {
+    const conversation = piConversations.find((entry) => entry.id === conversationId);
+    if (!conversation || liveRunning) return;
+    setActivePiConversationId(conversation.id);
+    setRunMode("pi");
+    setRunEventSource("pi");
+    setRunEvents([...conversation.events]);
+    setPreviewPrompt("");
+    setLiveMessages([]);
+    setLivePreviewState("idle");
+    setOutputPanelItems([]);
+    setActiveOutputPanelItemId(undefined);
+    setGitPreviewStateOverride(undefined);
+    autoOutputPanelSignatureRef.current = "";
+    void synchronizePiRuntime(activeProject, true, conversation.id);
+  }
+
+  function createNewPiConversation() {
+    if (liveRunning) return;
+    const conversation = createEphemeralPiConversation();
+    setPiConversations((current) => replacePiConversation(current, conversation));
+    setActivePiConversationId(conversation.id);
+    setShowStandard(false);
+    setActiveStateCode(null);
+    setRunMode("pi");
+    setRunEvents([]);
+    setRunEventSource("pi");
+    setLiveMessages([]);
+    setLivePreviewState("idle");
+    setPreviewPrompt("");
+    setWorkspaceView("preview");
+    setOutputPanelItems([]);
+    setActiveOutputPanelItemId(undefined);
+    setGitPreviewStateOverride(undefined);
+    autoOutputPanelSignatureRef.current = "";
+    void startNewPiSession(conversation.id)
+      .then(setPiRuntimeState)
+      .then(() => synchronizePiRuntime(activeProject, false, conversation.id))
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : "Could not start a new Pi session.");
+      });
   }
 
   function switchPresetStyle(styleId: PresetStyleId, tabButton?: HTMLButtonElement | null) {
@@ -3010,9 +3129,8 @@ function selectPresetGroup(groupId: PresetGroupId) {
   }
 
   async function generateExport() {
-    // In Pi mode the visible provider/model set is the runtime-derived configuration the user
-    // just selected. Export that exact view so the downloaded product starts with the same Pi
-    // defaults and allowed choices shown in the editor.
+    // The editor project is the source of truth; the exported Pi runtime registers this exact
+    // provider/model definition when the generated app starts or sends a prompt.
     const snapshot = createScaffoldExportSnapshot(runtimeProject);
     setExportSnapshot(snapshot);
     try {
@@ -3030,8 +3148,8 @@ function selectPresetGroup(groupId: PresetGroupId) {
     admission,
     exportSnapshot,
     showDebugBadges: builderUI.showDebugBadges,
-    previewPrompt: showStandard ? "" : previewPrompt,
-    previewPrompts: livePreviewPrompts,
+    previewPrompt: showStandard || runMode === "pi" ? "" : previewPrompt,
+    previewPrompts: runMode === "pi" ? undefined : livePreviewPrompts,
     writingReplayKey,
     forceToolsOpen: forcePreviewToolsOpen,
     toolCollapseSignal,
@@ -3063,22 +3181,29 @@ function selectPresetGroup(groupId: PresetGroupId) {
     onSelectOutputPanelItem: setActiveOutputPanelItemId,
     onCloseOutputPanelItem: closeOutputPanelItem,
     onOutputSourceChange: setOutputSource,
-    activeSessionPrompt: previewPrompt,
-    sessionPrompts,
-    onSelectSession(prompt) {
+    activeSessionPrompt: runMode === "pi" ? undefined : previewPrompt,
+    sessionPrompts: runMode === "pi" ? undefined : sessionPrompts,
+    activeSessionId: runMode === "pi" ? activePiConversationId : undefined,
+    sessionItems: runMode === "pi" ? piSessionItems : undefined,
+    onSelectSession(id) {
+      if (runMode === "pi") {
+        selectPiConversation(id);
+        return;
+      }
       if (isWelcome) {
         // From the welcome state, clicking a session switches back to the
         // normal conversation view instead of staying on the empty canvas.
         streamStandardScenario(standardScenarioId);
         return;
       }
-      void runCurrentPreview(prompt);
+      void runCurrentPreview(id);
     },
     onNewSession() {
+      if (runMode === "pi") {
+        createNewPiConversation();
+        return;
+      }
       enterWelcomeState();
-      if (runMode === "pi") void startNewPiSession().then(setPiRuntimeState).catch((error) => {
-        toast.error(error instanceof Error ? error.message : "Could not start a new Pi session.");
-      });
     },
     welcomeGreeting: activeProject.welcome.greeting,
     isWelcome,
@@ -3092,7 +3217,11 @@ function selectPresetGroup(groupId: PresetGroupId) {
         onSessionKeyChange={updateSessionKey}
         onTestProvider={(provider, key) => runMode === "pi" ? void refreshPiProviderModels(provider, key) : void testProvider(provider, key)}
         onUpdateProvider={(id, patch) => {
-          if (runMode === "pi" && patch.defaultModel) void configurePiRuntime({ provider: id, model: patch.defaultModel }).then(setPiRuntimeState);
+          if (runMode === "pi" && patch.defaultModel) void configurePiRuntime({
+            conversationId: activePiConversationId,
+            provider: id,
+            model: patch.defaultModel,
+          }).then(setPiRuntimeState);
           else updateProviderConnection(id, patch);
         }}
       />

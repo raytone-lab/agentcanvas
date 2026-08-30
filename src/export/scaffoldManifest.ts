@@ -1,5 +1,5 @@
 import { appVersion } from "../appVersion";
-import { assertValidProject, type AgentFrontendProject } from "../schema/agentuxConfig";
+import { assertValidProject, sanitizeProjectCredentials, type AgentFrontendProject } from "../schema/agentuxConfig";
 import { themeTokens } from "../theme/themeTokens";
 import { scaffoldTemplateContent } from "./scaffoldTemplates";
 
@@ -287,6 +287,7 @@ export function createScaffoldPackageJson(project: AgentFrontendProject): Scaffo
       "@agent-ux/runtime": agentUxVendorDependency("runtime"),
       "@agentmatrix/agentcanvas-contract": agentCanvasContractVendorDependency,
       "@earendil-works/pi-coding-agent": "^0.84.4",
+      "@earendil-works/pi-ai": "^0.84.4",
       // `agentmatrix/icons.tsx` imports Phosphor for the "bold" icon weight, so the
       // exported package must declare it or `tsc` fails with TS2307 (the import is
       // currently unreferenced, so bundlers elide it — but typecheck still resolves it).
@@ -324,8 +325,9 @@ export function createScaffoldPackageJson(project: AgentFrontendProject): Scaffo
  * Applied once here so the shell and `exported-project.ts` can never disagree.
  */
 function exportableProject(project: AgentFrontendProject): AgentFrontendProject {
-  if (project.theme.stylePreset !== "studio") return project;
-  return { ...project, theme: { ...project.theme, stylePreset: "native" } };
+  const sanitized = sanitizeProjectCredentials(project);
+  if (sanitized.theme.stylePreset !== "studio") return sanitized;
+  return { ...sanitized, theme: { ...sanitized.theme, stylePreset: "native" } };
 }
 
 export function createScaffoldExportSnapshot(input: AgentFrontendProject): ScaffoldExportSnapshot {
@@ -698,7 +700,7 @@ export type ScaffoldExportSnapshot = {
 `;
 
 const AGENT_SHELL_SOURCE = `import { useEffect, useMemo, useRef, useState } from "react";
-import { agentUXEventBuilders, type AgentUXEvent } from "@agent-ux/protocol";
+import type { AgentUXEvent } from "@agent-ux/protocol";
 import { useAgentUXReplay } from "@agent-ux/react";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { PanelLeft, PanelRight } from "lucide-react";
@@ -738,6 +740,17 @@ import {
   startNewPiSession,
   type PiRuntimeState,
 } from "./pi/piClient";
+import { piRuntimeConfigurationForProvider } from "./pi/piProviderSync";
+import {
+  appendPiConversationEvents,
+  createEphemeralPiConversation,
+  piConversationSidebarItems,
+  replacePiConversation,
+  titlePiConversation,
+  type EphemeralPiConversation,
+} from "./pi/piConversationState";
+import { piErrorTurnEvents } from "./pi/piErrorTurn";
+import { createPiFrameCommit } from "./pi/piFrameCommit";
 
 const noop = () => {};
 const PREVIEW_RESPONSIVE_WIDTHS = {
@@ -778,7 +791,10 @@ export function AgentApp() {
   const [sessionKeys, setSessionKeys] = useState<Record<string, string>>({});
   const [configuredProject, setConfiguredProject] = useState(project);
   const [piEvents, setPiEvents] = useState<AgentUXEvent[] | undefined>(undefined);
-  const [piPrompt, setPiPrompt] = useState("");
+  const [piConversations, setPiConversations] = useState<readonly EphemeralPiConversation[]>(() => [
+    createEphemeralPiConversation(),
+  ]);
+  const [activePiConversationId, setActivePiConversationId] = useState(() => piConversations[0].id);
   const [piRunning, setPiRunning] = useState(false);
   const [piRuntimeState, setPiRuntimeState] = useState<PiRuntimeState>();
   const piAbortRef = useRef<AbortController | undefined>(undefined);
@@ -787,6 +803,14 @@ export function AgentApp() {
   // stream. Components never learn which one they got.
   const { events: sourceEvents, streams, streamId, setStreamId } = useEventSource();
   const events = piEvents ?? sourceEvents;
+  const activePiConversation = useMemo(
+    () => piConversations.find((conversation) => conversation.id === activePiConversationId) ?? piConversations[0],
+    [activePiConversationId, piConversations],
+  );
+  const piSessionItems = useMemo(
+    () => piConversationSidebarItems(piConversations.filter((conversation) => conversation.events.length > 0)),
+    [piConversations],
+  );
 
   // Mirrors the configurator's policy derivation so reasoning / tool / error states
   // render exactly as previewed.
@@ -815,7 +839,13 @@ export function AgentApp() {
   );
 
   useEffect(() => {
-    void getPiRuntimeState().then(setPiRuntimeState).catch(() => undefined);
+    const provider = defaultProviderConnection(project);
+    void configurePiRuntime({
+      ...piRuntimeConfigurationForProvider(provider),
+      conversationId: activePiConversationId,
+    })
+      .then(setPiRuntimeState)
+      .catch(() => getPiRuntimeState().then(setPiRuntimeState).catch(() => undefined));
   }, []);
 
   useEffect(() => {
@@ -900,49 +930,87 @@ export function AgentApp() {
     return state;
   }
 
+  async function synchronizePiRuntime(
+    projectSnapshot = activeProject,
+    conversationId = activePiConversationId,
+  ) {
+    const provider = defaultProviderConnection(projectSnapshot);
+    const state = await configurePiRuntime(
+      {
+        ...piRuntimeConfigurationForProvider(provider, sessionKeys[provider.id]),
+        conversationId,
+      },
+    );
+    if (!state.available) throw new Error(state.error ?? "Pi runtime is unavailable.");
+    if (state.provider !== provider.id || state.model !== provider.defaultModel) {
+      throw new Error(
+        "Pi did not activate the selected model " + provider.label + "/" + provider.defaultModel + ".",
+      );
+    }
+    setPiRuntimeState(state);
+    return state;
+  }
+
   async function submitToPi(prompt: string, context?: ComposerSubmitContext) {
     if (piRunning) return;
     const normalizedPrompt = prompt.trim();
     if (!normalizedPrompt) return;
+    let nextConversation = titlePiConversation(activePiConversation, normalizedPrompt);
+    const turnStartEventCount = nextConversation.events.length;
     const provider = defaultProviderConnection(activeProject);
     const controller = new AbortController();
     piAbortRef.current = controller;
     setPiRunning(true);
-    setPiPrompt(normalizedPrompt);
-    setPiEvents([]);
-    const nextEvents: AgentUXEvent[] = [];
+    setPiConversations((current) => replacePiConversation(current, nextConversation));
+    setPiEvents([...nextConversation.events]);
     const runId = "pi_export_" + Date.now().toString(36);
+    // Same coalescing as the configurator, from the same module, so a long reply does not slow
+    // down as it grows here either. The conversation is still appended one event at a time.
+    const commit = createPiFrameCommit<EphemeralPiConversation>((conversation) => {
+      setPiConversations((current) => replacePiConversation(current, conversation));
+      setPiEvents([...conversation.events]);
+    });
     try {
+      await synchronizePiRuntime(activeProject, nextConversation.id);
       for await (const event of runPiTurn({
+        conversationId: nextConversation.id,
         prompt: normalizedPrompt,
         provider: provider.id,
         model: provider.defaultModel,
         thinkingLevel: context?.budgetMode === "fast" ? "low" : context?.budgetMode === "expert" ? "high" : "medium",
         permissionMode: context?.permissionMode ?? "request",
       }, { signal: controller.signal })) {
-        if (controller.signal.aborted || piAbortRef.current !== controller) return;
-        nextEvents.push(event);
-        setPiEvents([...nextEvents]);
+        if (controller.signal.aborted || piAbortRef.current !== controller) {
+          commit.cancel();
+          return;
+        }
+        nextConversation = appendPiConversationEvents(nextConversation, [event]);
+        commit.push(nextConversation);
+        if (event.type === "tool.call.awaiting_approval") {
+          // Waiting on the user, so it cannot wait on a frame.
+          commit.flush();
+        }
       }
+      commit.flush();
       await refreshPiRuntime();
     } catch (error) {
+      // Cancelled, not flushed: a frame still queued holds the conversation as it was *before*
+      // the error events were appended, and letting it land after the commit below would erase
+      // them from the screen.
+      commit.cancel();
       if (!controller.signal.aborted) {
         const message = error instanceof Error ? error.message : "Pi runtime failed.";
-        if (nextEvents.length === 0) {
-          nextEvents.push(agentUXEventBuilders.runStarted({
-            id: runId + "_started",
-            runId,
-            seq: 1,
-            ts: Date.now(),
-          }, { title: "Pi session" }));
-        }
-        nextEvents.push(agentUXEventBuilders.runError({
-          id: runId + "_error",
+        // The prompt is only passed when this turn never emitted anything; mid-run the
+        // transcript already shows it. Same helper the configurator uses, so a failed turn
+        // reads the same in both.
+        const errorEvents = piErrorTurnEvents({
+          message,
+          prompt: nextConversation.events.length === turnStartEventCount ? normalizedPrompt : undefined,
           runId,
-          seq: nextEvents.length + 1,
-          ts: Date.now(),
-        }, { code: "pi_runtime_error", message, userMessage: message }));
-        setPiEvents([...nextEvents]);
+        });
+        nextConversation = appendPiConversationEvents(nextConversation, errorEvents);
+        setPiConversations((current) => replacePiConversation(current, nextConversation));
+        setPiEvents([...nextConversation.events]);
       }
     } finally {
       if (piAbortRef.current === controller) piAbortRef.current = undefined;
@@ -959,17 +1027,33 @@ export function AgentApp() {
   async function selectProvider(id: ProviderConnectionId) {
     const provider = activeProject.providers.connections.find((entry) => entry.id === id && entry.enabled);
     if (!provider) return;
+    const nextProject = {
+      ...activeProject,
+      providers: { ...activeProject.providers, defaultProviderId: id },
+    };
     setConfiguredProject((current) => ({
       ...current,
       providers: { ...current.providers, defaultProviderId: id },
     }));
-    setPiRuntimeState(await configurePiRuntime({ provider: id, model: provider.defaultModel }));
+    await synchronizePiRuntime(nextProject);
   }
 
   async function selectModel(model: string) {
     const provider = defaultProviderConnection(activeProject);
+    const nextProvider = {
+      ...provider,
+      defaultModel: model,
+      models: provider.models.includes(model) ? provider.models : [model, ...provider.models],
+    };
+    const nextProject = {
+      ...activeProject,
+      providers: {
+        ...activeProject.providers,
+        connections: activeProject.providers.connections.map((entry) => entry.id === provider.id ? nextProvider : entry),
+      },
+    };
     updateProvider(provider.id, { defaultModel: model });
-    setPiRuntimeState(await configurePiRuntime({ provider: provider.id, model }));
+    await synchronizePiRuntime(nextProject);
   }
 
   function updateProvider(id: ProviderConnectionId, patch: Partial<ProviderConnection> & { authEnvVar?: string }) {
@@ -989,16 +1073,14 @@ export function AgentApp() {
   }
 
   async function savePiSettings() {
-    const provider = defaultProviderConnection(activeProject);
-    setPiRuntimeState(await configurePiRuntime({
-      provider: provider.id,
-      model: provider.defaultModel,
-      apiKey: sessionKeys[provider.id]?.trim() || undefined,
-    }));
+    await synchronizePiRuntime(activeProject);
   }
 
   async function fetchPiModels(provider: ProviderConnection, apiKey?: string) {
-    const state = await configurePiRuntime({ provider: provider.id, apiKey: apiKey?.trim() || undefined });
+    const state = await configurePiRuntime({
+      ...piRuntimeConfigurationForProvider(provider, apiKey),
+      conversationId: activePiConversationId,
+    });
     setPiRuntimeState(state);
     const models = state.models.filter((model) => model.provider === provider.id).map((model) => model.id);
     if (models.length > 0) updateProvider(provider.id, { models });
@@ -1010,15 +1092,33 @@ export function AgentApp() {
    * longer on screen.
    */
   function startNewSession() {
+    const conversation = createEphemeralPiConversation();
     setStreamId("");
-    setPiEvents(undefined);
-    setPiPrompt("");
-    void startNewPiSession().then(setPiRuntimeState).catch(() => undefined);
+    setPiConversations((current) => replacePiConversation(current, conversation));
+    setActivePiConversationId(conversation.id);
+    setPiEvents([]);
+    void startNewPiSession(conversation.id)
+      .then(setPiRuntimeState)
+      .then(() => synchronizePiRuntime(activeProject, conversation.id))
+      .catch(() => undefined);
     setOutputPanelItems([]);
     setActiveOutputPanelItemId(undefined);
     setOutputModalOpen(false);
     setLeftCollapsed(false);
     setRightCollapsed(false);
+  }
+
+  function selectPiConversation(conversationId: string) {
+    if (piRunning) return;
+    const conversation = piConversations.find((entry) => entry.id === conversationId);
+    if (!conversation) return;
+    setStreamId("");
+    setActivePiConversationId(conversation.id);
+    setPiEvents([...conversation.events]);
+    setOutputPanelItems([]);
+    setActiveOutputPanelItemId(undefined);
+    setOutputModalOpen(false);
+    void synchronizePiRuntime(activeProject, conversation.id).catch(() => undefined);
   }
 
   const slotContext: SlotRenderContext = {
@@ -1030,10 +1130,12 @@ export function AgentApp() {
     // nobody sent to every exported app — while the configurator looked correct, because
     // App.tsx always passes a value. The default itself is load-bearing for 16 preset
     // rendering tests, so it stays; the omission here was the actual defect.
-    previewPrompt: piPrompt,
-    // A shipped scaffold has no session store yet. An explicit empty list keeps the shared
-    // sidebar from presenting localized preview prompts as if they were real user history.
-    sessionPrompts: [],
+    // Pi user turns are canonical AgentUX events. A second prompt-history path would duplicate
+    // bubbles and drift from the editor's event ordering.
+    previewPrompt: "",
+    activeSessionId: activePiConversationId,
+    sessionItems: piSessionItems,
+    onSelectSession: selectPiConversation,
     showDebugBadges: false,
     gitPreviewState: gitPreviewStateFromEvents(events),
     modelOptions: modelOptionsForProject(activeProject),

@@ -12,6 +12,25 @@ import type { AgentFrontendProject } from "../../schema/agentuxConfig";
 import { deriveDisclosureOpen } from "./disclosureState";
 import type { OutputPanelItem, OutputPanelOpenRequest } from "./OutputFrame";
 
+/**
+ * The approval question, in the reader's language.
+ *
+ * A prompt the backend actually authored wins — the bundled fixtures phrase specific questions
+ * ("Remove .agent/tmp-cache recursively?") that a generic line would throw away. Otherwise the
+ * dictionary asks it, which is what keeps a real run from showing an English sentence inside a
+ * Chinese screen.
+ *
+ * Deliberately without the tool's name. The header above already says what is about to run, and
+ * by this point the name has been canonicalized to an internal concept (`bash` → `run_command`),
+ * so interpolating it both repeats the header and leaks a machine name into a sentence.
+ */
+function approvalPromptFor(
+  vendorPrompt: string | undefined,
+  copy: ReturnType<typeof useCopy>,
+): string {
+  return vendorPrompt ?? copy.chat.approval.promptFallback;
+}
+
 export function ToolCallCard({
   project,
   tool,
@@ -174,7 +193,7 @@ export function ToolCallCard({
               <div className="approval-box" data-approval-surface="inline">
                 <div className="approval-copy">
                   <Clock3 size={14} />
-                  <span>{approval?.prompt ?? copy.chat.approval.inlinePrompt}</span>
+                  <span>{approvalPromptFor(approval?.prompt, copy)}</span>
                 </div>
                 <ApprovalDecisionActions
                   onDecision={(decision) => onApprovalDecision?.(tool.id, decision)}

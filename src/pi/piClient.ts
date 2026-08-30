@@ -26,7 +26,32 @@ export type PiRuntimeState = {
   error?: string;
 };
 
+export type PiProviderProtocol = "openai-compatible" | "anthropic" | "gemini" | "ollama-native";
+
+/** Exact provider definition selected in AgentCanvas and registered into Pi at runtime. */
+export type PiProviderDefinition = {
+  id: string;
+  name: string;
+  protocol: PiProviderProtocol;
+  baseUrl: string;
+  models: string[];
+  authMode: "required" | "none";
+  apiKeyEnvVar?: string;
+};
+
+export type PiRuntimeConfiguration = {
+  conversationId?: string;
+  provider?: string;
+  model?: string;
+  thinkingLevel?: string;
+  apiKey?: string;
+  /** Explicitly clear an in-memory key. Omission means "leave the Pi process key unchanged". */
+  clearApiKey?: boolean;
+  providerDefinition?: PiProviderDefinition;
+};
+
 export type PiPromptInput = {
+  conversationId?: string;
   prompt: string;
   provider?: string;
   model?: string;
@@ -39,7 +64,7 @@ export async function getPiRuntimeState(fetcher: typeof fetch = fetch): Promise<
 }
 
 export async function configurePiRuntime(
-  input: { provider?: string; model?: string; thinkingLevel?: string; apiKey?: string },
+  input: PiRuntimeConfiguration,
   fetcher: typeof fetch = fetch,
 ): Promise<PiRuntimeState> {
   return requestJson<PiRuntimeState>(fetcher, `${PI_API_PREFIX}/config`, input);
@@ -49,8 +74,11 @@ export async function abortPiRun(fetcher: typeof fetch = fetch): Promise<void> {
   await requestJson(fetcher, `${PI_API_PREFIX}/abort`, {});
 }
 
-export async function startNewPiSession(fetcher: typeof fetch = fetch): Promise<PiRuntimeState> {
-  return requestJson<PiRuntimeState>(fetcher, `${PI_API_PREFIX}/session/new`, {});
+export async function startNewPiSession(
+  conversationId?: string,
+  fetcher: typeof fetch = fetch,
+): Promise<PiRuntimeState> {
+  return requestJson<PiRuntimeState>(fetcher, `${PI_API_PREFIX}/session/new`, { conversationId });
 }
 
 export async function resolvePiApproval(

@@ -8,9 +8,14 @@ import { IconSetProvider } from "../../agentmatrix";
 import { ChatFrame } from "../../components/agent-preview/ChatFrame";
 import { OutputFrame } from "../../components/agent-preview/OutputFrame";
 import { LocaleProvider } from "../../i18n/LocaleContext";
+import {
+  appendPiConversationEvents,
+  createEphemeralPiConversation,
+} from "../../pi/piConversationState";
 import { admitEvents } from "../../runtime/admissionReport";
 import { defaultCodingAgentProject } from "../../schema/agentuxConfig";
 import { anthropicEventsFromFrames } from "./anthropicAdapter";
+import { createPiEventAdapter, type PiWireEvent } from "./piAdapter";
 import { claudeCodeMapping } from "./mappings/claudeCode";
 import { codexMapping } from "./mappings/codex";
 import { opencodeMapping } from "./mappings/opencode";
@@ -66,6 +71,33 @@ function viewModelFor(rawEvents: readonly unknown[], extraAliases?: Record<strin
  * integration produced. Counting those is the mechanical version of "does it look like what I
  * composed".
  */
+/**
+ * The rendered surfaces in the order they appear on screen.
+ *
+ * `surfaceOf` deliberately sorts, because it measures *composition*. Nothing measured order,
+ * and order is what went wrong in front of an audience: a tool card above the reasoning that
+ * asked for it, an answer before the work it describes. `compareEvents`
+ * (`vendor/agent-ux/runtime/dist/index.js:53`) sorts on `seq` and falls back to comparing event
+ * *ids as strings* when `seq` ties — so a vendor that reuses sequence numbers does not render
+ * out of order loudly, it renders out of order arbitrarily. That needs an assertion, not a
+ * count.
+ *
+ * Reduced to the surface kind on purpose. Which tool card a vendor earns is allowed to differ
+ * (see the test below) and the wording is the vendor's own; the *sequence of surfaces* is the
+ * designed thing and must not.
+ */
+function sequenceOf(markup: string): string[] {
+  const sequence: string[] = [];
+  for (const [tag] of markup.matchAll(/<(?:section|article)\b[^>]*>/g)) {
+    if (tag.includes('class="reasoning-block')) sequence.push("reasoning");
+    else if (tag.includes('class="tool-card')) sequence.push("tool");
+    else if (/class="[^"]*message-bubble/.test(tag)) {
+      sequence.push(`message:${/data-role="([^"]*)"/.exec(tag)?.[1] ?? "?"}`);
+    }
+  }
+  return sequence;
+}
+
 function surfaceOf(markup: string) {
   const toolCardTags = markup.match(/<section class="tool-card"[^>]*>/g) ?? [];
   return {
@@ -161,6 +193,73 @@ const anthropicFrames = [
   { type: "message_stop" },
 ];
 
+/**
+ * Pi, the runtime the product ships with — and until now the only backend absent from this
+ * suite, which is why an empty reasoning block reached a demo. Same conversation, Pi's wire
+ * shapes. No `requiresApproval`, so the write runs straight through as it does for the others.
+ */
+const piWireEvents: PiWireEvent[] = [
+  { type: "agent_start" },
+  { type: "message_start", message: { role: "assistant", content: [], timestamp: 1 } },
+  { type: "message_update", assistantMessageEvent: { type: "thinking_start", contentIndex: 0 } },
+  {
+    type: "message_update",
+    assistantMessageEvent: { type: "thinking_delta", contentIndex: 0, delta: "写一个页面。" },
+  },
+  { type: "message_update", assistantMessageEvent: { type: "thinking_end", contentIndex: 0 } },
+  {
+    type: "message_update",
+    assistantMessageEvent: { type: "toolcall_start", contentIndex: 1, id: "c1", toolName: "write" },
+  },
+  {
+    type: "message_update",
+    assistantMessageEvent: {
+      type: "toolcall_delta",
+      contentIndex: 1,
+      delta: '{"path":"index.html","content":"<!DOCTYPE html><h1>hi</h1>"}',
+    },
+  },
+  {
+    type: "message_update",
+    assistantMessageEvent: {
+      type: "toolcall_end",
+      contentIndex: 1,
+      toolCall: {
+        id: "c1",
+        name: "write",
+        arguments: { path: "index.html", content: "<!DOCTYPE html><h1>hi</h1>" },
+      },
+    },
+  },
+  {
+    type: "tool_execution_start",
+    toolCallId: "c1",
+    toolName: "write",
+    args: { path: "index.html", content: "<!DOCTYPE html><h1>hi</h1>" },
+  },
+  {
+    type: "tool_execution_end",
+    toolCallId: "c1",
+    toolName: "write",
+    result: { content: [{ type: "text", text: "written" }] },
+    isError: false,
+  },
+  { type: "message_update", assistantMessageEvent: { type: "text_start", contentIndex: 2 } },
+  {
+    type: "message_update",
+    assistantMessageEvent: { type: "text_delta", contentIndex: 2, delta: "已生成 index.html。" },
+  },
+  { type: "message_update", assistantMessageEvent: { type: "text_end", contentIndex: 2 } },
+  { type: "message_end", message: { role: "assistant", content: [], timestamp: 1 } },
+  { type: "agent_settled" },
+];
+
+function piEvents(): readonly unknown[] {
+  const adapter = createPiEventAdapter({ runId: "pi-parity", now: 1_000 });
+  for (const event of piWireEvents) adapter.apply(event);
+  return adapter.events;
+}
+
 type Vendor = { id: string; events: readonly unknown[]; aliases?: Record<string, readonly string[]> };
 
 /** Harnesses: a process ran the tool, so a file really was written. */
@@ -185,7 +284,14 @@ const harnesses: Vendor[] = [
 /** A model API: it asked for the tool; nothing executed it. */
 const modelApi: Vendor = { id: "anthropic", events: anthropicEventsFromFrames(anthropicFrames) };
 
-const vendors: Vendor[] = [...harnesses, modelApi];
+/**
+ * Pi executes its own tools and emits artifact events itself, rather than having them derived
+ * from a completed write, so it is a vendor for every render-time assertion but is not part of
+ * `harnesses` — that group exists to test the *derivation*.
+ */
+const piRuntime: Vendor = { id: "pi", events: piEvents() };
+
+const vendors: Vendor[] = [...harnesses, modelApi, piRuntime];
 
 /** The treatments `ToolCallCard` has a designed card for. */
 const DESIGNED_ACTIONS = [
@@ -219,6 +325,28 @@ describe("vendor parity on rendered output", () => {
     expect(first.reasoningBlocks, "思考应渲染成思考块").toBeGreaterThan(0);
   });
 
+  it("renders the surfaces in the same order for every vendor", () => {
+    // The demo failure this exists for: surfaces appearing in the wrong order. One conversation
+    // — think, write the file, answer — must read that way whoever produced it. Asserted on the
+    // rendered sequence rather than on `seq` numbers, because `seq` being monotonic is a means
+    // and this is the end.
+    const sequences = vendors.map((vendor) => ({
+      id: vendor.id,
+      sequence: sequenceOf(render(chatFrame(viewModelFor(vendor.events, vendor.aliases).viewModel))),
+    }));
+
+    const [first, ...rest] = sequences;
+    for (const other of rest) {
+      expect(other.sequence, `${other.id} 的渲染顺序与 ${first.id} 不一致`).toEqual(first.sequence);
+    }
+    // Pinned, so "they all agree" cannot be satisfied by them all being equally wrong.
+    expect(first.sequence, "顺序应为：思考 → 工具 → 回答").toEqual([
+      "reasoning",
+      "tool",
+      "message:assistant",
+    ]);
+  });
+
   it("gives every tool a designed card, whatever the vendor called it", () => {
     // This is the guarantee that matters. `resolveToolAction` returns undefined for a name it
     // does not recognise, which drops `data-action` and renders the un-designed row a real
@@ -242,6 +370,7 @@ describe("vendor parity on rendered output", () => {
     expect(byId["claude-code"]).toEqual(["modify-file"]);
     expect(byId["opencode"]).toEqual(["modify-file"]);
     expect(byId["anthropic"]).toEqual(["modify-file"]);
+    expect(byId["pi"]).toEqual(["modify-file"]);
   });
 
   it("fills the artifact panel for every harness that actually wrote the file", () => {
@@ -274,6 +403,76 @@ describe("vendor parity on rendered output", () => {
     expect(
       admission.events.filter((event) => event.type === "tool.call.finished").map((event) => event.payload.status),
     ).toEqual(["cancelled"]);
+  });
+
+  it("renders a streamed turn exactly like a replayed one", () => {
+    // The demo runs live: events arrive one at a time and each is appended through
+    // `appendPiConversationEvents`, which renumbers `seq` by position. Every other test in this
+    // file hands the renderer a finished array, so nothing covered the arrival pattern the
+    // audience actually sees — and `seq` renumbering is precisely where a live stream could
+    // order itself differently from the preview.
+    //
+    // Byte-identical markup is the assertion (the same instrument `fixtureParity` uses): if
+    // streaming and replaying can only ever produce the same screen, then "it looked different
+    // when it was live" stops being possible. This is also the safety net for coalescing state
+    // updates on the live path — batching is only allowed to change *when* React renders, never
+    // what it renders.
+    const events = piRuntime.events;
+
+    let streamed = createEphemeralPiConversation("stream", 0);
+    for (const event of events) {
+      streamed = appendPiConversationEvents(streamed, [event as never]);
+    }
+
+    const markupOf = (source: readonly unknown[]) => {
+      const { viewModel } = viewModelFor(source);
+      return render(chatFrame(viewModel)) + render(
+        <OutputFrame project={defaultCodingAgentProject} viewModel={viewModel} />,
+      );
+    };
+
+    expect(streamed.events).toHaveLength(events.length);
+    expect(streamed.events.map((event) => event.seq)).toEqual(
+      events.map((_, index) => index + 1),
+    );
+    expect(markupOf(streamed.events), "逐事件流式渲染的结果应与一次性重放完全一致").toBe(
+      markupOf(events),
+    );
+  });
+
+  it("asks the approval question in the reader's language for a real backend run", () => {
+    // The screen this fixes had "Allow Pi to run bash?" sitting between 正在运行命令 and
+    // 允许/始终允许/拒绝, because the adapter authored the sentence and an adapter has no locale.
+    const adapter = createPiEventAdapter({ runId: "pi-appr", now: 1_000, requiresApproval: () => true });
+    for (const event of [
+      { type: "agent_start" },
+      { type: "message_start", message: { role: "assistant", content: [], timestamp: 1 } },
+      {
+        type: "message_update",
+        assistantMessageEvent: { type: "toolcall_start", contentIndex: 0, id: "c1", toolName: "bash" },
+      },
+      {
+        type: "tool_execution_start",
+        toolCallId: "c1",
+        toolName: "bash",
+        args: { command: "env | sort" },
+      },
+    ] as PiWireEvent[]) adapter.apply(event);
+
+    const viewModel = viewModelFor(adapter.events).viewModel;
+    const chinese = renderToStaticMarkup(
+      <LocaleProvider initialLocale="zh">
+        <IconSetProvider>{chatFrame(viewModel)}</IconSetProvider>
+      </LocaleProvider>,
+    );
+
+    expect(chinese, "审批提问应使用当前语言").toContain("批准此工具调用？");
+    expect(chinese, "适配器不应把英文文案带到界面上").not.toContain("Allow Pi to run");
+    // No tool name in the question: by this point `bash` has been canonicalized to the internal
+    // concept `run_command`, and the header above already says what is about to run.
+    expect(chinese, "不应把内部概念名甩到句子里").not.toContain("run_command");
+    // English still reads correctly — the point is that it follows the locale, not that zh wins.
+    expect(render(chatFrame(viewModel))).toContain("Approve this tool call?");
   });
 
   it("keeps vendor bookkeeping out of the transcript", () => {

@@ -77,8 +77,12 @@ const en = {
   },
   approval: {
     externalLabel: "External tool approval",
-    externalPrompt: "Approve this tool call?",
-    inlinePrompt: "Awaiting tool approval",
+    /**
+     * Asked when the backend supplies no prompt of its own — which is the normal case for a real
+     * run. A backend must not have to author UI prose: `piAdapter` doing exactly that put an
+     * English sentence in the middle of a Chinese screen, because an adapter has no locale.
+     */
+    promptFallback: "Approve this tool call?",
     actionsLabel: "Tool approval actions",
     yes: "Yes",
     always: "Always",
@@ -208,8 +212,7 @@ const zh: typeof en = {
   },
   approval: {
     externalLabel: "外部工具审批",
-    externalPrompt: "批准此工具调用？",
-    inlinePrompt: "等待工具审批",
+    promptFallback: "批准此工具调用？",
     actionsLabel: "工具审批操作",
     yes: "允许",
     always: "始终允许",
@@ -338,8 +341,7 @@ const ja: typeof en = {
   },
   approval: {
     externalLabel: "外部ツールの承認",
-    externalPrompt: "このツール呼び出しを承認しますか？",
-    inlinePrompt: "ツールの承認待ち",
+    promptFallback: "このツール呼び出しを承認しますか？",
     actionsLabel: "ツール承認の操作",
     yes: "許可",
     always: "常に許可",

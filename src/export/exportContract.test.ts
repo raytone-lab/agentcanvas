@@ -212,19 +212,39 @@ describe("export contract: the exported app's first impression", () => {
     expect(shell).toContain("onNewSession: startNewSession");
     expect(shell).not.toContain("onNewSession: noop");
     expect(shell, "新建对话必须清空事件流与产物面板").toMatch(
-      /function startNewSession\(\)[\s\S]{0,240}setStreamId\(""\)/,
+      /function startNewSession\(\)[\s\S]{0,300}setStreamId\(""\)/,
     );
+    expect(shell).toContain("startNewPiSession(conversation.id)");
   });
 
-  it("does not fabricate conversation history without a session adapter", () => {
-    expect(shell).toContain("sessionPrompts: []");
-    expect(shell).not.toContain("onSelectSession:");
+  it("uses identity-based, page-lifetime Pi conversation history", () => {
+    expect(shell).toContain("sessionItems: piSessionItems");
+    expect(shell).toContain("onSelectSession: selectPiConversation");
+    expect(shell).toContain("conversationId: nextConversation.id");
+    expect(shell).toContain("appendPiConversationEvents(nextConversation, [event])");
+    expect(shell).not.toContain("setPiEvents([]);\n    const nextEvents");
   });
 
   it("lets the picker return to the welcome screen", () => {
     // Without an empty option the picker is a one-way door: once a stream is chosen there is
     // no way back to the welcome state.
     expect(shell).toMatch(/value: "", label: copy\.shell\.editor\.eventStreamWelcome/);
+  });
+});
+
+describe("export contract: credentials never cross the archive boundary", () => {
+  it("scrubs a key mistakenly stored as an environment-variable name from every output", () => {
+    const sentinel = "sk-test-secret-value-that-must-not-export";
+    const contaminated = structuredClone(defaultCodingAgentProject);
+    contaminated.providers.connections[0].auth = { mode: "env", envVar: sentinel };
+
+    const safeSnapshot = createScaffoldExportSnapshot(contaminated);
+    expect(JSON.stringify(safeSnapshot)).not.toContain(sentinel);
+    expect(safeSnapshot.agentuxConfig.providers.connections[0].auth).toEqual({
+      mode: "env",
+      envVar: "OPENAI_API_KEY",
+    });
+    expect(safeSnapshot.fileContents["src/exported-project.ts"]).toContain('"envVar": "OPENAI_API_KEY"');
   });
 });
 

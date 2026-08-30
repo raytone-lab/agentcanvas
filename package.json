@@ -49,6 +49,7 @@
     "@agent-ux/react": "file:vendor/agent-ux/react",
     "@agent-ux/render-core": "file:vendor/agent-ux/render-core",
     "@agent-ux/runtime": "file:vendor/agent-ux/runtime",
+    "@earendil-works/pi-ai": "^0.84.4",
     "@earendil-works/pi-coding-agent": "^0.84.4",
     "@gsap/react": "^2.1.2",
     "@phosphor-icons/react": "^2.1.10",

@@ -36,6 +36,71 @@ describe("Pi event adapter", () => {
     ]);
     expect(adapter.events.filter((event) => event.type === "text.started").map((event) => event.payload.textId))
       .toEqual(["pi-run_m1_text_1", "pi-run_m2_text_0"]);
+    // Carried, not withheld. Every other adapter puts the vendor's reasoning text on the
+    // canonical stream (`vendorParity.test.tsx` asserts it reaches the screen for codex,
+    // claude-code, opencode and anthropic); Pi dropping it made `ReasoningBlock` render an
+    // empty box on the one backend that ships with the product. Hiding it is
+    // `reasoning.show: "status"`, a render-policy decision that travels with the export —
+    // not something this layer decides by discarding the data.
+    expect(adapter.events.find((event) => event.type === "reasoning.delta")).toMatchObject({
+      payload: { delta: "Checking" },
+    });
+  });
+
+  it("makes one card when the arguments stream before the tool is identified", () => {
+    // The shape a real Pi run actually sends, captured from a live GLM turn: the argument deltas
+    // arrive with neither an id nor a tool name, and only `toolcall_end` says `call_…`/`read`.
+    // Minting a placeholder to attach them to produced a second card named "tool" — no
+    // `data-action`, never resolved, left showing as `cancelled` next to the real one.
+    const adapter = createPiEventAdapter({ runId: "pi-late-id", now: 100 });
+
+    adapter.apply({ type: "agent_start" });
+    adapter.apply({ type: "message_start", message: { role: "assistant", content: [], timestamp: 1 } });
+    adapter.apply({ type: "message_update", assistantMessageEvent: { type: "toolcall_start", contentIndex: 0 } });
+    for (const delta of ['{"', "path", '":"', 'package.json"', "}"]) {
+      adapter.apply({ type: "message_update", assistantMessageEvent: { type: "toolcall_delta", contentIndex: 0, delta } });
+    }
+    adapter.apply({
+      type: "message_update",
+      assistantMessageEvent: {
+        type: "toolcall_end",
+        contentIndex: 0,
+        toolCall: { id: "call_abc", name: "read", arguments: { path: "package.json" } },
+      },
+    });
+    adapter.apply({ type: "tool_execution_start", toolCallId: "call_abc", toolName: "read", args: { path: "package.json" } });
+    adapter.apply({
+      type: "tool_execution_end",
+      toolCallId: "call_abc",
+      toolName: "read",
+      result: { content: [{ type: "text", text: "{}" }] },
+      isError: false,
+    });
+
+    const started = adapter.events.filter((event) => event.type === "tool.call.started");
+    expect(started, "一次工具调用只应开一张卡").toHaveLength(1);
+    expect(started[0]).toMatchObject({ payload: { toolCallId: "call_abc", name: "read" } });
+    // No placeholder id anywhere, and nothing settles as cancelled.
+    expect(JSON.stringify(adapter.events)).not.toContain("pi_tool_");
+    expect(adapter.events.filter((event) => event.type === "tool.call.finished")).toEqual([
+      expect.objectContaining({ payload: expect.objectContaining({ status: "success" }) }),
+    ]);
+    // The buffered arguments still reach the card, as one delta rather than five.
+    expect(
+      adapter.events.filter((event) => event.type === "tool.call.args.delta").map((event) => event.payload.delta),
+    ).toEqual(['{"path":"package.json"}']);
+  });
+
+  it("emits the user turn into the canonical stream before assistant events", () => {
+    const adapter = createPiEventAdapter({ runId: "pi-user", now: 100 });
+    adapter.startUserMessage("Hello Pi");
+    adapter.apply({ type: "message_update", assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: "Hello" } });
+
+    expect(adapter.events.slice(0, 4).map((event) => event.type)).toEqual([
+      "run.started", "text.started", "text.delta", "text.finished",
+    ]);
+    expect(adapter.events[1]).toMatchObject({ type: "text.started", payload: { role: "user" } });
+    expect(adapter.events[2]).toMatchObject({ type: "text.delta", payload: { delta: "Hello Pi" } });
   });
 
   it("maps tool arguments, approval, execution progress, result, and a write artifact", () => {
@@ -68,10 +133,13 @@ describe("Pi event adapter", () => {
       args: { path: "src/a.ts", content: "export const a = 1" },
     });
 
+    // The adapter reports the fact and nothing else: no `prompt`, because prose written here
+    // would be prose in one language, and the components ask the question from their dictionary.
     expect(adapter.events.at(-1)).toMatchObject({
       type: "tool.call.awaiting_approval",
-      payload: { toolCallId: "call-1", prompt: expect.stringContaining("write") },
+      payload: { toolCallId: "call-1" },
     });
+    expect(adapter.events.at(-1)?.payload).not.toHaveProperty("prompt");
 
     adapter.resolveApproval("call-1", "yes");
     adapter.apply({

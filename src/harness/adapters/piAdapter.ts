@@ -17,6 +17,15 @@ export type PiEventAdapterOptions = {
 
 export type PiEventAdapter = {
   readonly events: readonly AgentUXEvent[];
+  /**
+   * Announce the tools this session can actually use, once per conversation.
+   *
+   * `CapabilityTray` renders `viewModel.capabilities`, and Pi emitted nothing for it, so the
+   * panel sat on its "no capabilities attached" empty state for every real run. The tool names
+   * come from Pi itself (`session.getActiveToolNames()`), so this reports rather than invents.
+   */
+  attachCapabilities(toolNames: readonly string[]): AgentUXEvent[];
+  startUserMessage(text: string): AgentUXEvent[];
   apply(raw: unknown): AgentUXEvent[];
   resolveApproval(toolCallId: string, decision: PiApprovalDecision): AgentUXEvent[];
   finish(status?: "success" | "cancelled" | "error"): AgentUXEvent[];
@@ -75,7 +84,70 @@ export function createPiEventAdapter(options: PiEventAdapterOptions = {}): PiEve
     }), next);
   };
 
-  const blockKey = (kind: "text" | "reasoning", contentIndex: unknown) => {
+  /**
+   * Content-block index → tool call id, recorded by `toolcall_start` (the only update carrying
+   * both).
+   *
+   * Pi's later `toolcall_delta`/`toolcall_end` updates identify the call by `contentIndex`
+   * alone. Resolving that by *position among tools* is wrong, because a content block index
+   * counts thinking and text blocks too: a tool at block 1 is the 0th tool, so the lookup
+   * missed and each delta minted a phantom `pi_tool_N` named "tool" — an un-designed card that
+   * never receives a result and settles as `cancelled`. Recording the real mapping is what
+   * `blockKey` already does for text and reasoning.
+   */
+  const toolCallByBlock = new Map<string, string>();
+
+  /**
+   * Streamed tool arguments held until the call's real identity arrives.
+   *
+   * A real Pi run streams the arguments *before* it says which tool they belong to: the
+   * `toolcall_start`/`toolcall_delta` updates carry neither an id nor a tool name, and only
+   * `toolcall_end`/`tool_execution_start` reveal `call_…` and `read`. Minting a placeholder id
+   * to have something to attach to produced a second card — named "tool", so
+   * `resolveToolAction` could not match it, which rendered the un-designed grey row that then
+   * settled as `cancelled` because no result ever referenced it.
+   *
+   * So nothing is emitted until the identity is known, and the buffered text is flushed as one
+   * `tool.call.args.delta` at that point. The cost is that argument streaming for such a call
+   * appears in one step rather than character by character; the alternative was a card that
+   * named the wrong tool and never finished. When Pi *does* send an id up front, the original
+   * per-delta streaming is kept.
+   */
+  const pendingToolArgs = new Map<string, string>();
+
+  const flushPendingToolArgs = (key: string, tool: ToolState, next: AgentUXEvent[]) => {
+    const buffered = pendingToolArgs.get(key);
+    pendingToolArgs.delete(key);
+    if (!buffered || tool.finished) return;
+    tool.argsText += buffered;
+    tool.args = parseJson(tool.argsText) ?? tool.args;
+    push(agentUXEventBuilders.toolCallArgsDelta(meta(`tool_args_${tool.id}`), {
+      toolCallId: tool.id,
+      delta: buffered,
+      format: "json-fragment",
+    }), next);
+  };
+
+  /**
+   * Same flush, from `tool_execution_start` — which is a top-level event and so has no
+   * `contentIndex` to key on.
+   *
+   * Attributed only when exactly one buffer is outstanding, because that is the only case where
+   * the owner is unambiguous. With several in flight the buffers are dropped rather than guessed
+   * at: `tool_execution_start` carries the real `args`, so the card still shows them; all that
+   * is lost is the streaming step, and mis-attributing arguments to the wrong tool would be a
+   * worse thing to render than not animating them.
+   */
+  const adoptPendingToolArgs = (tool: ToolState, next: AgentUXEvent[]) => {
+    if (pendingToolArgs.size === 0) return;
+    if (pendingToolArgs.size > 1) {
+      pendingToolArgs.clear();
+      return;
+    }
+    flushPendingToolArgs([...pendingToolArgs.keys()][0], tool, next);
+  };
+
+  const blockKey = (kind: "text" | "reasoning" | "tool", contentIndex: unknown) => {
     const index = typeof contentIndex === "number" || typeof contentIndex === "string" ? String(contentIndex) : "0";
     return `${activeAssistantMessage}_${kind}_${index}`;
   };
@@ -285,31 +357,59 @@ export function createPiEventAdapter(options: PiEventAdapterOptions = {}): PiEve
         } else if (updateType === "text_end") finishText(contentIndex, next);
         else if (updateType === "thinking_start") openReasoning(contentIndex, next);
         else if (updateType === "thinking_delta") {
+          // Carried through, exactly as every other adapter does: `claudeCode` maps `thinking`
+          // to reasoning, `opencode` maps `reasoning`, and `anthropicAdapter` forwards
+          // `thinking_delta`. Dropping it here made `ReasoningBlock` render an empty box on the
+          // one backend the product ships with, so the same component made a different promise
+          // depending on who was behind it.
+          //
+          // Whether the text reaches the screen is not this layer's call: `reasoning.show`
+          // decides, via `createReasoningRenderPolicy` → `shouldShowReasoningText`. Setting it
+          // to "status" hides the body, and that choice travels with the export. Withholding
+          // the data instead took the decision away from the configurator.
           const state = openReasoning(contentIndex, next);
-          if (delta) push(agentUXEventBuilders.reasoningDelta(meta(`reasoning_delta_${state.id}`, activeAssistantMessage), {
-            reasoningId: state.id,
-            delta,
-          }), next);
+          if (delta) {
+            push(agentUXEventBuilders.reasoningDelta(meta(`reasoning_delta_${state.id}`, activeAssistantMessage), {
+              reasoningId: state.id,
+              delta,
+            }), next);
+          }
         } else if (updateType === "thinking_end") finishReasoning(contentIndex, next);
         else if (updateType === "toolcall_start") {
-          const id = stringField(update, "id") ?? `pi_tool_${tools.size + 1}`;
-          ensureTool(id, stringField(update, "toolName") ?? "tool", next);
+          const id = stringField(update, "id");
+          if (id) {
+            toolCallByBlock.set(blockKey("tool", contentIndex), id);
+            ensureTool(id, stringField(update, "toolName") ?? "tool", next);
+          } else {
+            // Identity unknown yet — buffer instead of minting one. See `pendingToolArgs`.
+            pendingToolArgs.set(blockKey("tool", contentIndex), "");
+          }
         } else if (updateType === "toolcall_delta") {
-          const id = toolCallIdFromUpdate(update, contentIndex, tools);
-          const tool = ensureTool(id, stringField(update, "toolName") ?? tools.get(id)?.name ?? "tool", next);
-          if (delta && !tool.finished) {
-            tool.argsText += delta;
-            tool.args = parseJson(tool.argsText) ?? tool.args;
-            push(agentUXEventBuilders.toolCallArgsDelta(meta(`tool_args_${id}`), {
-              toolCallId: id,
-              delta,
-              format: "json-fragment",
-            }), next);
+          const known = stringField(update, "id")
+            ?? stringField(update, "toolCallId")
+            ?? toolCallByBlock.get(blockKey("tool", contentIndex));
+          if (known) {
+            const tool = ensureTool(known, stringField(update, "toolName") ?? tools.get(known)?.name ?? "tool", next);
+            if (delta && !tool.finished) {
+              tool.argsText += delta;
+              tool.args = parseJson(tool.argsText) ?? tool.args;
+              push(agentUXEventBuilders.toolCallArgsDelta(meta(`tool_args_${known}`), {
+                toolCallId: known,
+                delta,
+                format: "json-fragment",
+              }), next);
+            }
+          } else if (delta) {
+            const key = blockKey("tool", contentIndex);
+            pendingToolArgs.set(key, (pendingToolArgs.get(key) ?? "") + delta);
           }
         } else if (updateType === "toolcall_end") {
           const call = asRecord(update.toolCall);
-          const id = stringField(call, "id") ?? toolCallIdFromUpdate(update, contentIndex, tools);
+          const id = stringField(call, "id")
+            ?? toolCallIdFromUpdate(update, contentIndex, toolCallByBlock.get(blockKey("tool", contentIndex)), tools);
+          toolCallByBlock.set(blockKey("tool", contentIndex), id);
           const tool = ensureTool(id, stringField(call, "name") ?? stringField(call, "toolName") ?? "tool", next);
+          flushPendingToolArgs(blockKey("tool", contentIndex), tool, next);
           tool.args = call.arguments ?? call.args ?? parseJson(tool.argsText) ?? tool.args;
         }
         break;
@@ -328,12 +428,16 @@ export function createPiEventAdapter(options: PiEventAdapterOptions = {}): PiEve
       case "tool_execution_start": {
         const id = stringField(event, "toolCallId") ?? `pi_tool_${tools.size + 1}`;
         const tool = ensureTool(id, stringField(event, "toolName") ?? "tool", next);
+        adoptPendingToolArgs(tool, next);
         tool.args = event.args ?? parseJson(tool.argsText) ?? tool.args;
         if (options.requiresApproval?.(tool.name, tool.args)) {
           tool.awaitingApproval = true;
+          // No `prompt`. This used to author "Allow Pi to run bash?" in English, which then sat
+          // untranslated inside a Chinese UI — an adapter has no locale, so any prose it writes
+          // is prose in one language. The tool name is the fact; the components ask the question
+          // from their own dictionary (`chat.approval.promptForTool`).
           push(agentUXEventBuilders.toolCallAwaitingApproval(meta(`tool_awaiting_${id}`), {
             toolCallId: id,
-            prompt: `Allow Pi to run ${tool.name}?`,
             argsPreview: tool.args,
           }), next);
         } else {
@@ -439,6 +543,43 @@ export function createPiEventAdapter(options: PiEventAdapterOptions = {}): PiEve
 
   return {
     events,
+    attachCapabilities(toolNames) {
+      const next: AgentUXEvent[] = [];
+      if (toolNames.length === 0) return next;
+      ensureRun(next);
+      for (const name of toolNames) {
+        push(agentUXEventBuilders.capabilityAttached(meta(`capability_${name}`) as never, {
+          capabilityId: `pi_tool_capability_${name}`,
+          kind: "tool",
+          title: name,
+          status: "attached",
+          itemCount: 1,
+          source: { kind: "pi", name },
+        }), next);
+      }
+      return next;
+    },
+    startUserMessage(text) {
+      const next: AgentUXEvent[] = [];
+      const content = text.trim();
+      if (!content) return next;
+      ensureRun(next);
+      const messageId = `${runId}_user`;
+      const textId = `${messageId}_text`;
+      push(agentUXEventBuilders.textStarted(meta("user_text_started", messageId), {
+        textId,
+        role: "user",
+        format: "plain",
+      }), next);
+      push(agentUXEventBuilders.textDelta(meta("user_text_delta", messageId), {
+        textId,
+        delta: content,
+      }), next);
+      push(agentUXEventBuilders.textFinished(meta("user_text_finished", messageId), {
+        textId,
+      }), next);
+      return next;
+    },
     apply,
     resolveApproval,
     finish(status = "success") {
@@ -508,10 +649,22 @@ function parseJson(value: string): unknown {
   }
 }
 
-function toolCallIdFromUpdate(update: Record<string, unknown>, contentIndex: unknown, tools: Map<string, ToolState>): string {
+/**
+ * `knownForBlock` is the id `toolcall_start` recorded for this content block. It is consulted
+ * before any positional guess, because position among tools is not what `contentIndex` means.
+ * The last-tool fallback stays for streams that send deltas without ever having opened the
+ * call, which is still better than inventing a tool that no vendor asked for.
+ */
+function toolCallIdFromUpdate(
+  update: Record<string, unknown>,
+  contentIndex: unknown,
+  knownForBlock: string | undefined,
+  tools: Map<string, ToolState>,
+): string {
   const direct = stringField(update, "id") ?? stringField(update, "toolCallId");
   if (direct) return direct;
-  const byIndex = [...tools.values()][typeof contentIndex === "number" ? contentIndex : tools.size - 1];
+  if (knownForBlock) return knownForBlock;
+  const byIndex = [...tools.values()].at(-1);
   return byIndex?.id ?? `pi_tool_${tools.size + 1}`;
 }
 

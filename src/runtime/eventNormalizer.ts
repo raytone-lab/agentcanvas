@@ -361,6 +361,23 @@ export function normalizeAgentUXEvents(
   const rejectedCalls = new Set<string>();
   let derivedSeq = 0;
 
+  /**
+   * Artifact URIs the stream already carries.
+   *
+   * Deriving an artifact from a completed write assumes the backend does not report artifacts
+   * itself. Pi does — it emits `artifact.created/delta/finished` for the same write — so the
+   * output panel listed the file twice, once from Pi and once from this derivation. Correlated
+   * on the `file://` uri rather than on any id shape, because that is the field both sides
+   * already agree on; nothing here should know a vendor's id prefix.
+   */
+  const streamArtifactUris = new Set<string>();
+  for (const candidate of input) {
+    const record = candidate as { type?: unknown; payload?: unknown };
+    if (record?.type !== "artifact.finished") continue;
+    const uri = str((record.payload as Record<string, unknown> | undefined)?.uri);
+    if (uri) streamArtifactUris.add(uri);
+  }
+
   const idOf = (payload: Record<string, unknown>) => str(payload.toolCallId) ?? "";
 
   for (const event of input) {
@@ -452,7 +469,7 @@ export function normalizeAgentUXEvents(
     ) {
       const path = paths.get(id);
       const content = contents.get(id);
-      if (path && content) {
+      if (path && content && !streamArtifactUris.has(`file://${path}`)) {
         derivedSeq += 1;
         const artifactId = `derived_artifact_${derivedSeq}`;
         const base = event as { runId?: string; ts?: number };

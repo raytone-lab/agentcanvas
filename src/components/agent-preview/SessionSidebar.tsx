@@ -6,6 +6,8 @@ import { appVersionLabel } from "../../appVersion";
 import { useCopy, useLocale } from "../../i18n/LocaleContext";
 import type { AgentFrontendProject } from "../../schema/agentuxConfig";
 
+export type SessionSidebarItem = { id: string; title: string };
+
 /**
  * Conversation-history rail for the scaffolded agent product: new chat, search,
  * and a grouped list of recent sessions. Which parts show is driven by the
@@ -16,6 +18,8 @@ export function SessionSidebar({
   onCollapse,
   activePrompt,
   sessionPrompts = [],
+  activeSessionId,
+  sessionItems,
   onSelectSession,
   onNewSession,
 }: {
@@ -25,8 +29,11 @@ export function SessionSidebar({
   activePrompt?: string;
   /** Real session prompts supplied by the host. Omitted means there is no history yet. */
   sessionPrompts?: readonly string[];
-  /** Click a session to load it as the "我" bubble in the canvas. */
-  onSelectSession?: (prompt: string) => void;
+  /** Identity-based real sessions. When present, these replace the legacy prompt rows. */
+  activeSessionId?: string;
+  sessionItems?: readonly SessionSidebarItem[];
+  /** Click a session to activate its ID (or its prompt for legacy rows). */
+  onSelectSession?: (id: string) => void;
   onNewSession?: () => void;
 }) {
   const c = useCopy().workspace.sessionSidebar;
@@ -36,24 +43,28 @@ export function SessionSidebar({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchOverlayRoot, setSearchOverlayRoot] = useState<HTMLElement | null>(null);
   const [query, setQuery] = useState("");
-  const sessions = onSelectSession ? sessionPrompts : [];
+  const sessions = onSelectSession
+    ? sessionItems ?? sessionPrompts.map((prompt) => ({ id: prompt, title: prompt }))
+    : [];
   const hasSessions = sessions.length > 0;
   const footerLabel = c.footerNote.replace("{version}", appVersionLabel);
   // Display-only: when the active prompt does not match, highlight the first supplied
   // session so one conversation always reads as the currently-open one.
-  const effectiveActive =
-    activePrompt && sessions.includes(activePrompt) ? activePrompt : sessions[0];
+  const requestedActiveId = activeSessionId ?? activePrompt;
+  const effectiveActive = sessions.some((session) => session.id === requestedActiveId)
+    ? requestedActiveId
+    : sessions[0]?.id;
   const filteredSessions = useMemo(() => {
     const value = query.trim().toLowerCase();
     if (!value) {
       return sessions;
     }
-    return sessions.filter((session) => session.toLowerCase().includes(value));
+    return sessions.filter((session) => session.title.toLowerCase().includes(value));
   }, [query, sessions]);
   const today = sessions.slice(0, 3);
   const earlier = sessions.slice(3);
-  const searchToday = filteredSessions.filter((session) => today.includes(session));
-  const searchEarlier = filteredSessions.filter((session) => earlier.includes(session));
+  const searchToday = filteredSessions.filter((session) => today.some((entry) => entry.id === session.id));
+  const searchEarlier = filteredSessions.filter((session) => earlier.some((entry) => entry.id === session.id));
   const resolveSearchOverlayRoot = () => {
     const frame = sidebarRef.current?.closest<HTMLElement>(".preview-frame") ?? null;
     return frame?.querySelector<HTMLElement>(".preview-stack") ?? frame;
@@ -88,9 +99,9 @@ export function SessionSidebar({
           <SessionGroup
             label={c.groupToday}
             items={searchToday}
-            activePrompt={activePrompt}
-            onSelect={(prompt) => {
-              onSelectSession?.(prompt);
+            activeId={effectiveActive}
+            onSelect={(id) => {
+              onSelectSession?.(id);
               closeSearch();
             }}
           />
@@ -98,9 +109,9 @@ export function SessionSidebar({
             <SessionGroup
               label={c.groupEarlier}
               items={searchEarlier}
-              activePrompt={activePrompt}
-              onSelect={(prompt) => {
-                onSelectSession?.(prompt);
+              activeId={effectiveActive}
+              onSelect={(id) => {
+                onSelectSession?.(id);
                 closeSearch();
               }}
             />
@@ -173,13 +184,13 @@ export function SessionSidebar({
         <nav className="session-list">
           {grouping ? (
             <>
-              <SessionGroup label={c.groupToday} items={today} activePrompt={effectiveActive} onSelect={onSelectSession} />
+              <SessionGroup label={c.groupToday} items={today} activeId={effectiveActive} onSelect={onSelectSession} />
               {earlier.length > 0 ? (
-                <SessionGroup label={c.groupEarlier} items={earlier} activePrompt={effectiveActive} onSelect={onSelectSession} />
+                <SessionGroup label={c.groupEarlier} items={earlier} activeId={effectiveActive} onSelect={onSelectSession} />
               ) : null}
             </>
           ) : (
-            <SessionGroup items={sessions} activePrompt={effectiveActive} onSelect={onSelectSession} />
+            <SessionGroup items={sessions} activeId={effectiveActive} onSelect={onSelectSession} />
           )}
         </nav>
       ) : null}
@@ -247,28 +258,28 @@ function NewChatIcon({ size }: { size: number }) {
 function SessionGroup({
   label,
   items,
-  activePrompt,
+  activeId,
   onSelect,
 }: {
   label?: string;
-  items: readonly string[];
-  activePrompt?: string;
-  onSelect?: (prompt: string) => void;
+  items: readonly SessionSidebarItem[];
+  activeId?: string;
+  onSelect?: (id: string) => void;
 }) {
   return (
     <section className="session-group">
       {label ? <h4>{label}</h4> : null}
-      {items.map((title) => {
-        const active = title === activePrompt;
+      {items.map(({ id, title }) => {
+        const active = id === activeId;
         return (
-          <div key={title} className="session-item-shell" data-active={active}>
+          <div key={id} className="session-item-shell" data-active={active}>
             <span className="session-item-bg" aria-hidden="true" />
             <button
               className="session-item"
               type="button"
               data-active={active}
               aria-current={active ? "true" : undefined}
-              onClick={() => onSelect?.(title)}
+              onClick={() => onSelect?.(id)}
             >
               <span className="session-item-label">{title}</span>
             </button>

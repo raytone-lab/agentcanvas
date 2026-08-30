@@ -4,6 +4,8 @@ import { useState } from "react";
 import {
   defaultProviderConnection,
   enabledProviderConnections,
+  isSafeProviderEnvVarName,
+  safeProviderEnvVarName,
   type AgentFrontendProject,
   type ProviderConnection,
   type ProviderConnectionId,
@@ -106,6 +108,18 @@ export function ProviderFloatingSettings({
                       disabled={provider.auth.mode === "none"}
                       value={provider.auth.mode === "none" ? copy.noKeyRequired : envVar}
                       onChange={(event) => onUpdateProvider(provider.id, { authEnvVar: event.target.value })}
+                      onBlur={(event) => {
+                        if (!isSafeProviderEnvVarName(event.currentTarget.value)) {
+                          onUpdateProvider(provider.id, { authEnvVar: safeProviderEnvVarName(provider) });
+                        }
+                      }}
+                      onPaste={(event) => {
+                        const pasted = event.clipboardData.getData("text").trim();
+                        if (pasted && !isSafeProviderEnvVarName(pasted)) {
+                          event.preventDefault();
+                          onSessionKeyChange(provider.id, pasted);
+                        }
+                      }}
                     />
                   </label>
                   <label>

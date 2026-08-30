@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { IconSetProvider } from "../../agentmatrix";
 import { LocaleProvider } from "../../i18n/LocaleContext";
 import { defaultCodingAgentProject } from "../../schema/agentuxConfig";
-import { SessionSidebar } from "./SessionSidebar";
+import { SessionSidebar, type SessionSidebarItem } from "./SessionSidebar";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -15,6 +15,8 @@ const mounted: Array<{ container: HTMLDivElement; unmount: () => void }> = [];
 
 async function renderSidebar(props: {
   sessionPrompts?: readonly string[];
+  sessionItems?: readonly SessionSidebarItem[];
+  activeSessionId?: string;
   onSelectSession?: (prompt: string) => void;
   search?: boolean;
 }) {
@@ -35,6 +37,8 @@ async function renderSidebar(props: {
                   sidebar: { ...defaultCodingAgentProject.sidebar, search: props.search },
                 }}
             sessionPrompts={props.sessionPrompts}
+            sessionItems={props.sessionItems}
+            activeSessionId={props.activeSessionId}
             onSelectSession={props.onSelectSession}
           />
         </IconSetProvider>
@@ -89,5 +93,20 @@ describe("SessionSidebar session data contract", () => {
     await act(async () => row?.click());
     expect(onSelectSession).toHaveBeenCalledOnce();
     expect(onSelectSession).toHaveBeenCalledWith("Inspect the export contract");
+  });
+
+  it("uses stable session IDs even when two conversations have the same title", async () => {
+    const onSelectSession = vi.fn();
+    const container = await renderSidebar({
+      sessionItems: [{ id: "first", title: "Same title" }, { id: "second", title: "Same title" }],
+      activeSessionId: "second",
+      onSelectSession,
+    });
+    const rows = Array.from(container.querySelectorAll<HTMLButtonElement>(".session-item"));
+
+    expect(rows).toHaveLength(2);
+    expect(rows[1]?.getAttribute("aria-current")).toBe("true");
+    await act(async () => rows[0]?.click());
+    expect(onSelectSession).toHaveBeenCalledWith("first");
   });
 });
