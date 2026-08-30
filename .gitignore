@@ -9,6 +9,10 @@ out
 .tmp/
 .playwright-cli/
 
+# Per-machine tool state. Was only ever excluded by a contributor's global ignore, which
+# does not travel with a clone.
+.claude/settings.local.json
+
 # Vendored @agent-ux prebuilt packages. Their paths contain dist/, which the
 # rule above would otherwise swallow.
 #

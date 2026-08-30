@@ -32,6 +32,11 @@ The architectural constraints still matter:
   unless an opt-in header is sent, which this package does not send. Behind your own endpoint,
   the key never reaches the browser and the CORS question disappears.
 
+One boundary is worth knowing before you plan a deployment: the Pi host mounts into Vite's
+`dev` and `preview` servers, so a `npm run build` output served as static files has no Node side
+and no Pi. [PI_RUNTIME.md](PI_RUNTIME.md) covers that, the tools Pi provides, the events it
+emits, and how the path is tested.
+
 The routes below remain available when Pi is not the desired production backend. They all
 converge on the same event seam, so replacing Pi does not require replacing UI components.
 
