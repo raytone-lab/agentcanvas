@@ -167,7 +167,14 @@ export function createEventWriter(options: {
           label: "Thinking",
         }));
       }
-      push(agentUXEventBuilders.reasoningDelta(meta("reasoning_delta"), { reasoningId, delta: text }));
+      // Harness reasoning is the provider's own thinking, not a public summary. Marking the
+      // distinction at the canonical boundary lets the default `show: "summary"` policy keep
+      // it out of ordinary UI while the explicit "model thinking" preset can still opt in.
+      push(agentUXEventBuilders.reasoningDelta(meta("reasoning_delta"), {
+        reasoningId,
+        kind: "thinking",
+        delta: text,
+      }));
     },
     finishReasoning() {
       if (!reasoningOpen || reasoningClosed) return;

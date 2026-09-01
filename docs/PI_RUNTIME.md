@@ -73,7 +73,8 @@ mapping tables cannot. It emits 23 of the 26 canonical AgentUX event types:
 
 - run lifecycle: `run.started`, `run.finished`, `run.error`
 - text: `text.started/delta/finished`, for the user's turn as well as the model's
-- reasoning: `reasoning.status`, `reasoning.delta`, `reasoning.finished`
+- reasoning: `reasoning.status`, `reasoning.delta`, `reasoning.finished`; Pi deltas are marked
+  `kind: "thinking"`, so the normal public-summary policy never mistakes them for safe copy
 - tools: `started`, `args.delta`, `running`, `progress`, `awaiting_approval`, `result`,
   `error`, `finished`
 - artifacts: `artifact.created/delta/finished`
@@ -82,11 +83,11 @@ mapping tables cannot. It emits 23 of the 26 canonical AgentUX event types:
 
 Deliberately absent, with reasons:
 
-- `reasoning.summary` — `reasoning.delta` already displays under every non-`status` disclosure
-  policy, so a summary event would be a second copy of the same text.
+- `reasoning.summary` — Pi does not supply a separate provider-authored public summary. Its raw
+  thinking stays hidden under the normal summary policy instead of being relabeled as one.
 - `reasoning.private` — the raw/hidden split exists for backends that distinguish them. Pi does
-  not; its thinking text is carried as `reasoning.delta` and whether it reaches the screen is
-  decided by `reasoning.show`, exactly as for every other adapter.
+  not; its thinking text is carried as a `kind: "thinking"` delta and is visible only when the
+  project explicitly selects the model-thinking visibility preset.
 - `run.awaiting_input` — `tool.call.awaiting_approval` already moves the run status to
   `awaiting_input` in the render core, so emitting both would be redundant.
 

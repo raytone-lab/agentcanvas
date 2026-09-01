@@ -36,14 +36,10 @@ describe("Pi event adapter", () => {
     ]);
     expect(adapter.events.filter((event) => event.type === "text.started").map((event) => event.payload.textId))
       .toEqual(["pi-run_m1_text_1", "pi-run_m2_text_0"]);
-    // Carried, not withheld. Every other adapter puts the vendor's reasoning text on the
-    // canonical stream (`vendorParity.test.tsx` asserts it reaches the screen for codex,
-    // claude-code, opencode and anthropic); Pi dropping it made `ReasoningBlock` render an
-    // empty box on the one backend that ships with the product. Hiding it is
-    // `reasoning.show: "status"`, a render-policy decision that travels with the export —
-    // not something this layer decides by discarding the data.
+    // Pi thinking stays available to the explicit model-thinking preset, but it must be
+    // classified as thinking so the ordinary summary policy never displays it as public copy.
     expect(adapter.events.find((event) => event.type === "reasoning.delta")).toMatchObject({
-      payload: { delta: "Checking" },
+      payload: { kind: "thinking", delta: "Checking" },
     });
   });
 

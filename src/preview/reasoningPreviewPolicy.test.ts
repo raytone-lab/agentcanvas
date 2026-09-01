@@ -6,10 +6,8 @@ import { createReasoningRenderPolicy } from "./reasoningPreviewPolicy";
 
 describe("reasoning preview policy", () => {
   it("closes a finished block for every disclosure preset except expanded", () => {
-    // `summary-first` used to stay open. That read as "show the summary" while no backend sent
-    // reasoning text, but once Pi began carrying `reasoning.delta` an open finished block
-    // displayed the model's full raw reasoning inline — the opposite of what the preset
-    // describes, and unreadable to scroll past.
+    // `summary-first` is a compact disclosure mode: any safe summary remains available through
+    // the toggle, while the completed transcript does not stay expanded by default.
     for (const preset of ["summary-first", "reasoning-auto-collapse", "reasoning-status-only"]) {
       expect(
         createReasoningRenderPolicy(applyPresetOption(defaultCodingAgentProject, preset)),

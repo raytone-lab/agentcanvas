@@ -14,6 +14,7 @@ import {
 } from "../../pi/piConversationState";
 import { admitEvents } from "../../runtime/admissionReport";
 import { defaultCodingAgentProject } from "../../schema/agentuxConfig";
+import { createReasoningRenderPolicy } from "../../preview/reasoningPreviewPolicy";
 import { anthropicEventsFromFrames } from "./anthropicAdapter";
 import { createPiEventAdapter, type PiWireEvent } from "./piAdapter";
 import { claudeCodeMapping } from "./mappings/claudeCode";
@@ -57,7 +58,12 @@ function chatFrame(viewModel: never) {
 function viewModelFor(rawEvents: readonly unknown[], extraAliases?: Record<string, readonly string[]>) {
   const admission = admitEvents(rawEvents, { extraAliases: extraAliases as never });
   const state = replayAgentUXEvents(admission.events as never);
-  return { admission, viewModel: createAgentUXViewModel(state as never) as never };
+  return {
+    admission,
+    viewModel: createAgentUXViewModel(state as never, {
+      policy: { reasoning: createReasoningRenderPolicy(defaultCodingAgentProject) },
+    }) as never,
+  };
 }
 
 /**
@@ -487,11 +493,12 @@ describe("vendor parity on rendered output", () => {
     expect(admission.normalize.rejected).toEqual([]);
   });
 
-  it("shows the reasoning each vendor sent, in its own words", () => {
+  it("keeps provider thinking out of the default public-summary UI", () => {
     for (const vendor of vendors) {
       const { viewModel } = viewModelFor(vendor.events, vendor.aliases);
       const markup = render(chatFrame(viewModel));
-      expect(markup, `${vendor.id}: 思考内容应出现在界面上`).toContain("写一个页面。");
+      expect(markup, `${vendor.id}: 原始思考不应被当成公开摘要`).not.toContain("写一个页面。");
+      expect(surfaceOf(markup).reasoningBlocks, `${vendor.id}: 思考生命周期组件仍应存在`).toBeGreaterThan(0);
       expect(markup, `${vendor.id}: 回答应出现在界面上`).toContain("已生成 index.html。");
     }
   });

@@ -98,6 +98,15 @@ describe("event writer pairing", () => {
     expect(finished.payload.status).toBe("cancelled");
   });
 
+  it("classifies provider reasoning as thinking rather than a public summary", () => {
+    const writer = createEventWriter({ runId: "r" });
+    writer.reasoningDelta("private planning text");
+
+    expect(writer.events.find((event) => event.type === "reasoning.delta")).toMatchObject({
+      payload: { kind: "thinking", delta: "private planning text" },
+    });
+  });
+
   it("produces a stream the contract validator accepts", () => {
     // The point of the writer: an adapter that only decides *meaning* still emits a
     // well-formed stream. Anything the contract flags here is a writer bug, not an adapter bug.

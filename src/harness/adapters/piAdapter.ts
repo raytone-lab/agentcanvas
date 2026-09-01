@@ -357,20 +357,16 @@ export function createPiEventAdapter(options: PiEventAdapterOptions = {}): PiEve
         } else if (updateType === "text_end") finishText(contentIndex, next);
         else if (updateType === "thinking_start") openReasoning(contentIndex, next);
         else if (updateType === "thinking_delta") {
-          // Carried through, exactly as every other adapter does: `claudeCode` maps `thinking`
-          // to reasoning, `opencode` maps `reasoning`, and `anthropicAdapter` forwards
-          // `thinking_delta`. Dropping it here made `ReasoningBlock` render an empty box on the
-          // one backend the product ships with, so the same component made a different promise
-          // depending on who was behind it.
-          //
-          // Whether the text reaches the screen is not this layer's call: `reasoning.show`
-          // decides, via `createReasoningRenderPolicy` → `shouldShowReasoningText`. Setting it
-          // to "status" hides the body, and that choice travels with the export. Withholding
-          // the data instead took the decision away from the configurator.
+          // Pi calls this `thinking`, and it is not a provider-authored public summary. Keep
+          // that classification on the canonical event so the normal `show: "summary"`
+          // policy cannot mistake raw thinking for safe UI copy. The reasoning lifecycle still
+          // renders for every project; only the explicit "model thinking" preset may reveal
+          // this text.
           const state = openReasoning(contentIndex, next);
           if (delta) {
             push(agentUXEventBuilders.reasoningDelta(meta(`reasoning_delta_${state.id}`, activeAssistantMessage), {
               reasoningId: state.id,
+              kind: "thinking",
               delta,
             }), next);
           }
