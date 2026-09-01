@@ -601,13 +601,22 @@ function buildToolFileReferences(
   // rendered three rows and opened three artifact tabs, two of which named files that do not
   // exist — with no content, because there was nothing to show. Absent data renders as absent.
   const spec = buildToolDisplaySpec(tool);
-  const body = spec.outputBlock?.kind === "plain"
+  const resultBody = spec.outputBlock?.kind === "plain"
     ? spec.outputBlock.text
     : spec.outputBlock?.kind === "code"
       ? spec.outputBlock.code
-      : spec.inputBlock?.kind === "code"
-        ? spec.inputBlock.code
-        : undefined;
+      : undefined;
+  const writtenBody = spec.inputBlock?.kind === "code" ? spec.inputBlock.code : undefined;
+  /**
+   * The row names a file, so clicking it means "show me that file" — and which block holds the
+   * file depends on what the tool did.
+   *
+   * A read returns the file in its *result*. A write carries it in its *arguments*; the result
+   * is a confirmation line ("Successfully wrote 7274 bytes to …"). Preferring the result
+   * unconditionally meant clicking a freshly written HTML deck opened the confirmation — for Pi,
+   * the raw result JSON, so the preview showed `{` and a placeholder card instead of the page.
+   */
+  const body = action === "read" ? resultBody ?? writtenBody : writtenBody ?? resultBody;
 
   // In progress vs finished, from the tool's own status — the same test the header uses. The
   // row label and the `active` flag must agree, or a completed read is captioned "reading".
@@ -617,7 +626,12 @@ function buildToolFileReferences(
   return [{
     fileName: titleParts.fileName,
     filePath: titleParts.filePath ?? titleParts.fileName,
-    language: action === "read" ? languageFromFileName(titleParts.fileName) : "diff",
+    // "diff" only when a diff is what we are actually showing. `edit_file` produces one; a
+    // `write_file` produces a whole file, and labelling that a diff mislabels the tab and
+    // discards the file's own type — which is what the preview needs to know it can render it.
+    language: spec.outputBlock?.kind === "diff" && body === resultBody
+      ? "diff"
+      : languageFromFileName(titleParts.fileName),
     content: body,
     // `tool.preview` is the backend's own summary. No fallback: inventing a line count or a
     // diff stat is the same class of lie as inventing the file.

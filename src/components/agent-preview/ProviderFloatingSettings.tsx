@@ -40,6 +40,14 @@ export function ProviderFloatingSettings({
   }) {
   const copy = useCopy().composer.floatingSettings;
   const [open, setOpen] = useState(defaultOpen);
+  /**
+   * Providers whose env-var field just had a pasted key redirected to the session key.
+   *
+   * Shown inline rather than as a toast: this component ships in the exported package, and the
+   * toast host lives in the configurator's `App.tsx`, which does not. A toast here would be
+   * silently dropped in an export — the same silence this is meant to remove.
+   */
+  const [redirectedKeyFor, setRedirectedKeyFor] = useState<readonly string[]>([]);
   const enabledProviders = enabledProviderConnections(project);
   const defaultProvider = defaultProviderConnection(project);
 
@@ -107,7 +115,10 @@ export function ProviderFloatingSettings({
                     <Input
                       disabled={provider.auth.mode === "none"}
                       value={provider.auth.mode === "none" ? copy.noKeyRequired : envVar}
-                      onChange={(event) => onUpdateProvider(provider.id, { authEnvVar: event.target.value })}
+                      onChange={(event) => {
+                        setRedirectedKeyFor((current) => current.filter((id) => id !== provider.id));
+                        onUpdateProvider(provider.id, { authEnvVar: event.target.value });
+                      }}
                       onBlur={(event) => {
                         if (!isSafeProviderEnvVarName(event.currentTarget.value)) {
                           onUpdateProvider(provider.id, { authEnvVar: safeProviderEnvVarName(provider) });
@@ -118,9 +129,16 @@ export function ProviderFloatingSettings({
                         if (pasted && !isSafeProviderEnvVarName(pasted)) {
                           event.preventDefault();
                           onSessionKeyChange(provider.id, pasted);
+                          setRedirectedKeyFor((current) =>
+                            current.includes(provider.id) ? current : [...current, provider.id]);
                         }
                       }}
                     />
+                    {redirectedKeyFor.includes(provider.id) ? (
+                      <small className="provider-field-note" role="status">
+                        {copy.keyPastedIntoEnvVarToast}
+                      </small>
+                    ) : null}
                   </label>
                   <label>
                     <span>{copy.sessionKey}</span>

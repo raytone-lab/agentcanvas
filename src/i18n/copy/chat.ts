@@ -109,10 +109,8 @@ const en = {
     kindAudio: "Audio loading",
     kindVideo: "Generated video",
     kindWebsite: "Website",
-  },
-  demoSite: {
-    subtitle: "Website",
-    body: "Compose, preview, and export agent frontend components.",
+    /** Anything that is not a page or a media file: a script, a document, a config. */
+    kindFile: "File",
   },
   toolCard: {
     fallbackTitle: "Tool call",
@@ -239,10 +237,7 @@ const zh: typeof en = {
     kindAudio: "音频加载",
     kindVideo: "生成视频",
     kindWebsite: "网站",
-  },
-  demoSite: {
-    subtitle: "网站",
-    body: "用于组合、预览并导出 Agent 前端组件。",
+    kindFile: "文件",
   },
   toolCard: {
     fallbackTitle: "工具调用",
@@ -368,10 +363,7 @@ const ja: typeof en = {
     kindAudio: "音声の読み込み",
     kindVideo: "生成された動画",
     kindWebsite: "ウェブサイト",
-  },
-  demoSite: {
-    subtitle: "ウェブサイト",
-    body: "Agent フロントエンドのコンポーネントを組み立て、プレビューし、エクスポートします。",
+    kindFile: "ファイル",
   },
   toolCard: {
     fallbackTitle: "ツール呼び出し",

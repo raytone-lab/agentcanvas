@@ -627,7 +627,13 @@ function outputItemModalRenderer(item: OutputPanelItem): ConcreteArtifactRendere
 }
 
 function renderOpenedOutputBody(item: OutputPanelItem, kind: OpenedOutputRenderKind, language: string, copy: OutputFrameCopy): ReactNode {
-  const body = item.body ?? fallbackOpenedItemBody(item);
+  // An artifact with nothing in it says so. Synthesizing a body here produced a page that
+  // looked like a real preview — a heading, a line of filler and a "Preview action" button —
+  // sitting next to the genuine article in a second tab.
+  if (item.body === undefined || item.body.trim() === "") {
+    return <div className="empty-state">{copy.emptyNoArtifact}</div>;
+  }
+  const body = item.body;
   if (kind === "image") {
     return <ImageOutputPreview item={item} />;
   }
@@ -637,7 +643,10 @@ function renderOpenedOutputBody(item: OutputPanelItem, kind: OpenedOutputRenderK
   if (kind === "video") {
     return <VideoOutputPreview item={item} />;
   }
-  if (kind === "html") {
+  // The extension says "html"; the body decides whether there is a page to render. A `.html`
+  // tab holding something else (a tool's JSON receipt, for instance) shows its source rather
+  // than being dressed up as a page.
+  if (kind === "html" && looksLikeHtmlDocument(body)) {
     return <iframe className="html-output-preview" title={item.title} srcDoc={htmlOutputDocument(body, item.title)} />;
   }
   if (kind === "markdown") {
@@ -772,11 +781,32 @@ function hashString(value: string): number {
   return hash;
 }
 
+/**
+ * Whether there is a page here to render.
+ *
+ * A full document renders as itself; a bare fragment (`<main>…</main>`) still renders once
+ * wrapped. Anything without markup at all is not a page, and dressing it up as one is how a
+ * tool's JSON receipt came to be displayed as a styled card with a "Preview action" button.
+ */
+function looksLikeHtmlDocument(body: string): boolean {
+  return /<!doctype|<html|<body|<[a-z][a-z0-9-]*[\s>/]/i.test(body.trim());
+}
+
 function htmlOutputDocument(body: string, title: string): string {
   if (/<html|<body|<!doctype/i.test(body)) {
     return body;
   }
-  return `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:14px system-ui;background:#f8fafc;color:#172033}.page{padding:24px}.card{border:1px solid #d8dde8;border-radius:14px;background:white;padding:18px;box-shadow:0 8px 26px rgba(20,30,45,.08)}button{border:0;border-radius:10px;background:#111e36;color:white;padding:10px 14px}</style></head><body><main class="page"><section class="card"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(firstMeaningfulLine(body))}</p><button>Preview action</button></section></main></body></html>`;
+  // A fragment, wrapped so it can render — and nothing else. This used to build a card with the
+  // file's name as a heading, one line of its text, and a dead "Preview action" button, which
+  // read as a working preview of something that had not been previewed at all.
+  return [
+    '<!doctype html><html><head><meta charset="utf-8">',
+    `<title>${escapeHtml(title)}</title>`,
+    "<style>body{margin:0;font:14px system-ui;color:#172033}</style>",
+    "</head><body>",
+    body,
+    "</body></html>",
+  ].join("");
 }
 
 function normalizeJsonPreview(body: string): string {

@@ -1296,7 +1296,14 @@ export function App() {
   const pendingStyleButtonRef = useRef<HTMLButtonElement | null>(null);
   // Canvas rails (left session sidebar / right output panel) can be collapsed.
   const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
+  /**
+   * Closed until asked for.
+   *
+   * It used to open as soon as a conversation started, so a run with nothing to show still gave
+   * half the canvas to "no artifacts produced". The panel now opens on the two actions that mean
+   * "show me the output": the drawer toggle, and clicking an artifact in the conversation.
+   */
+  const [rightCollapsed, setRightCollapsed] = useState(true);
   const [autoHiddenRails, setAutoHiddenRails] = useState({ left: false, right: false });
   const [outputPanelItems, setOutputPanelItems] = useState<OutputPanelItem[]>([]);
   const [activeOutputPanelItemId, setActiveOutputPanelItemId] = useState<string | undefined>();
@@ -1487,8 +1494,18 @@ export function App() {
   // owns, so gating the mount on it would remove the element the transition animates.
   const leftSidebarMounted = hasSidebar && !autoHiddenRails.left;
   const leftSidebarVisible = leftSidebarMounted && !leftCollapsed;
-  const rightPanelVisible =
-    hasRightPanel && !rightCollapsed && !autoHiddenRails.right && !isWelcome && !loaderCanvasPreviewActive;
+  /**
+   * The panel *could* be shown — the slot exists, the window is wide enough, there is a
+   * conversation. Separate from `rightPanelVisible`, which additionally asks whether the reader
+   * has opened it.
+   *
+   * The distinction is load-bearing for clicking an artifact: a panel the reader collapsed
+   * should reopen, while a panel that does not fit needs the modal instead. Conflating the two
+   * meant a collapsed panel sent every artifact to a modal.
+   */
+  const rightPanelAvailable =
+    hasRightPanel && !autoHiddenRails.right && !isWelcome && !loaderCanvasPreviewActive;
+  const rightPanelVisible = rightPanelAvailable && !rightCollapsed;
   useEffect(() => {
     if (defaultOutputPanelItems.length === 0) {
       autoOutputPanelSignatureRef.current = "";
@@ -1498,15 +1515,16 @@ export function App() {
       return;
     }
     autoOutputPanelSignatureRef.current = defaultOutputPanelSignature;
+    // Populated, not opened. A run producing an artifact is not the reader asking to look at it,
+    // and forcing the panel open here is what handed half the canvas to a panel nobody opened.
+    // Clicking the artifact, or the drawer toggle, is the request.
     setOutputPanelItems((current) => mergeOutputPanelItems(current, defaultOutputPanelItems));
     setActiveOutputPanelItemId(defaultOutputPanelItems[defaultOutputPanelItems.length - 1]?.id);
-    setOutputModalOpen(false);
-    if (!loaderCanvasPreviewActive) {
-      setRightCollapsed(false);
-    }
     setProject((current) => ({
       ...current,
-      output: { ...current.output, source: "artifact" },
+      // `output.source` is left alone. This effect re-runs as events arrive, so forcing
+      // "artifact" here silently undid a click on the console tab a moment after it happened —
+      // which is why the console looked unclickable rather than broken.
       layout: {
         ...current.layout,
         slots: current.layout.slots.map((slot) =>
@@ -3099,7 +3117,10 @@ function selectPresetGroup(groupId: PresetGroupId) {
       ...current,
       output: { ...current.output, source: "artifact" },
     }));
-    if (rightPanelVisible) {
+    // Keyed on *available*, not visible. Clicking an artifact is the request to see it, so a
+    // panel the reader had collapsed should open rather than being bypassed for a modal. The
+    // modal is for when there is genuinely no room — a narrow window, or no output slot.
+    if (rightPanelAvailable) {
       setOutputModalOpen(false);
       setRightCollapsed(false);
       window.setTimeout(() => scrollPreviewToAnchor("output"), 80);

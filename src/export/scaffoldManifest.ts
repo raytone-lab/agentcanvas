@@ -782,7 +782,10 @@ export function AgentApp() {
   const copy = useCopy();
   const frameRef = useRef<HTMLDivElement>(null);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
+  // Closed until asked for, matching the configurator: a run with nothing to show should not
+  // hand half the canvas to an empty output panel. Opens on the drawer toggle or on clicking an
+  // artifact in the conversation.
+  const [rightCollapsed, setRightCollapsed] = useState(true);
   const [autoHiddenRails, setAutoHiddenRails] = useState({ left: false, right: false });
   const [outputPanelItems, setOutputPanelItems] = useState<OutputPanelItem[]>([]);
   const [activeOutputPanelItemId, setActiveOutputPanelItemId] = useState<string | undefined>(undefined);
@@ -888,7 +891,10 @@ export function AgentApp() {
   const hasRightPanel = inRegion("right-panel").length > 0;
   const leftSidebarMounted = hasSidebar && !autoHiddenRails.left;
   const leftSidebarVisible = leftSidebarMounted && !leftCollapsed;
-  const rightPanelVisible = hasRightPanel && !rightCollapsed && !autoHiddenRails.right && !isWelcome;
+  // Available = it could be shown. Visible = the reader has opened it. Clicking an artifact
+  // keys on the former, so a collapsed panel reopens instead of being bypassed for a modal.
+  const rightPanelAvailable = hasRightPanel && !autoHiddenRails.right && !isWelcome;
+  const rightPanelVisible = rightPanelAvailable && !rightCollapsed;
 
   function openArtifact(request: OutputPanelOpenRequest) {
     const item = normalizeOutputPanelRequest(request);
@@ -903,7 +909,7 @@ export function AgentApp() {
     });
     setActiveOutputPanelItemId(item.id);
     setOutputSource("artifact");
-    if (rightPanelVisible) {
+    if (rightPanelAvailable) {
       setOutputModalOpen(false);
       setRightCollapsed(false);
       return;
@@ -1105,7 +1111,8 @@ export function AgentApp() {
     setActiveOutputPanelItemId(undefined);
     setOutputModalOpen(false);
     setLeftCollapsed(false);
-    setRightCollapsed(false);
+    // Collapsed, not opened: a fresh conversation has no output yet.
+    setRightCollapsed(true);
   }
 
   function selectPiConversation(conversationId: string) {

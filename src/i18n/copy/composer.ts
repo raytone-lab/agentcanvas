@@ -50,6 +50,12 @@ const en = {
     sessionKey: "Session key",
     sessionKeyPlaceholderNone: "Local runtime",
     sessionKeyPlaceholder: "Dev-only",
+    /**
+     * Shown when a pasted value is redirected. The redirect protects the export — a key in
+     * `auth.envVar` is serialized into the project — but doing it silently made the field look
+     * broken: the text vanished and reappeared somewhere else with no explanation.
+     */
+    keyPastedIntoEnvVarToast: "That is a key, not a variable name. Moved it to Session key, which is never exported.",
     defaultModel: "Default model",
     testKey: "Test key",
     fetchModels: "Fetch models",
@@ -72,6 +78,7 @@ const en = {
     sessionKey: "Session key",
     sessionKeyPlaceholderNone: "Local runtime",
     sessionKeyPlaceholder: "Dev-only, not exported",
+    keyPastedIntoEnvVarToast: "That is a key, not a variable name. Moved it to Session key, which is never exported.",
     defaultModel: "Default model",
     testKey: "Test key",
     fetchModels: "Fetch models",
@@ -127,6 +134,7 @@ const zh: typeof en = {
     sessionKey: "会话密钥",
     sessionKeyPlaceholderNone: "本地运行时",
     sessionKeyPlaceholder: "仅限开发",
+    keyPastedIntoEnvVarToast: "这是密钥，不是变量名。已移到下方「会话密钥」——会话密钥不会写入导出的配置。",
     defaultModel: "默认模型",
     testKey: "测试密钥",
     fetchModels: "获取模型",
@@ -149,6 +157,7 @@ const zh: typeof en = {
     sessionKey: "会话密钥",
     sessionKeyPlaceholderNone: "本地运行时",
     sessionKeyPlaceholder: "仅限开发，不导出",
+    keyPastedIntoEnvVarToast: "这是密钥，不是变量名。已移到下方「会话密钥」——会话密钥不会写入导出的配置。",
     defaultModel: "默认模型",
     testKey: "测试密钥",
     fetchModels: "获取模型",
@@ -205,6 +214,7 @@ const ja: typeof en = {
     sessionKey: "セッションキー",
     sessionKeyPlaceholderNone: "ローカルランタイム",
     sessionKeyPlaceholder: "開発用のみ",
+    keyPastedIntoEnvVarToast: "これは変数名ではなくキーです。下の「セッションキー」に移しました。セッションキーはエクスポートされません。",
     defaultModel: "既定のモデル",
     testKey: "キーをテスト",
     fetchModels: "モデルを取得",
@@ -227,6 +237,7 @@ const ja: typeof en = {
     sessionKey: "セッションキー",
     sessionKeyPlaceholderNone: "ローカルランタイム",
     sessionKeyPlaceholder: "開発用のみ・エクスポートされません",
+    keyPastedIntoEnvVarToast: "これは変数名ではなくキーです。下の「セッションキー」に移しました。セッションキーはエクスポートされません。",
     defaultModel: "既定のモデル",
     testKey: "キーをテスト",
     fetchModels: "モデルを取得",

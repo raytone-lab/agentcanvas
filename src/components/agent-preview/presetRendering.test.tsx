@@ -478,6 +478,34 @@ describe("preset-driven preview rendering", () => {
     expect(logMarkup).not.toContain("line 1");
   });
 
+  it("opens a written file's own content, not the confirmation the tool returned", () => {
+    // A real Pi run: the write tool carries the page in its arguments and returns a receipt.
+    // Preferring the result meant clicking a freshly written HTML deck opened the raw result
+    // JSON, so the preview rendered `{` and a placeholder card instead of the slides.
+    const page = '<!doctype html><html><body><section class="slide"><h1>AI 进程</h1></section></body></html>';
+    const tool = {
+      kind: "tool",
+      id: "tool_write_deck",
+      name: "write_file",
+      title: "Write ai-progress-slides.html",
+      status: "success",
+      args: { path: "ai-progress-slides.html", content: page },
+      result: { content: [{ type: "text", text: "Successfully wrote 7274 bytes to ai-progress-slides.html" }] },
+      preview: "Successfully wrote 7274 bytes",
+      open: true,
+    } as never;
+
+    const [item, ...rest] = outputPanelItemsFromTool(tool, "zh");
+
+    expect(rest, "一个文件一个面板条目").toHaveLength(0);
+    expect(item.title).toBe("ai-progress-slides.html");
+    expect(item.body, "应是文件内容").toBe(page);
+    expect(item.body, "不应是工具返回的确认").not.toContain("Successfully wrote");
+    // The file's own type, so the preview knows it can render it. Hardcoding "diff" for every
+    // non-read both mislabelled a newly created file and hid that it was renderable.
+    expect(item.language).toBe("html");
+  });
+
   it("renders file tool actions with clickable references in the expanded body", () => {
     // Asserts the zh copy, so pin the locale rather than relying on the stored default.
     const tool = {
@@ -554,8 +582,13 @@ describe("preset-driven preview rendering", () => {
     );
 
     expect(markup.indexOf("Validation and loading state added.")).toBeLessThan(markup.indexOf("artifact-launch-card"));
-    expect(markup).toContain("Agent Component Composer");
-    expect(markup).toContain("网站");
+    // The artifact's own name and kind. This used to assert "Agent Component Composer" and 网站
+    // for a `.tsx` file, because the launch card hardcoded a demo title and called everything
+    // that was not media a website — which is also why a real HTML deck showed a fixture page.
+    expect(markup).toContain("SearchInput.tsx");
+    expect(markup).not.toContain("Agent Component Composer");
+    expect(markup).toContain("文件");
+    expect(markup).not.toContain("网站");
     expect(markup).toContain("打开方式");
     expect(markup).not.toContain("撤销");
     expect(markup).not.toContain("审核");

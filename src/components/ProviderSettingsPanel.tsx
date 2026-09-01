@@ -1,5 +1,5 @@
 import { CheckCircle2, RefreshCw } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -43,6 +43,13 @@ export function ProviderSettingsPanel({
   onSave: () => void;
 }) {
   const copy = useCopy().composer.settingsPanel;
+  /**
+   * Providers whose env-var field just had a pasted key redirected to the session key.
+   *
+   * Inline rather than a toast, matching `ProviderFloatingSettings`: the explanation belongs next
+   * to the field that confused the reader, and it should stay put rather than time out.
+   */
+  const [redirectedKeyFor, setRedirectedKeyFor] = useState<readonly string[]>([]);
   const enabledProviders = enabledProviderConnections(project);
   const providersById = useMemo(
     () => new Map(project.providers.connections.map((provider) => [provider.id, provider])),
@@ -96,7 +103,10 @@ export function ProviderSettingsPanel({
           <input
             disabled={provider.auth.mode === "none"}
             value={provider.auth.mode === "none" ? copy.noKeyRequired : envVar}
-            onChange={(event) => onUpdateProvider(provider.id, { authEnvVar: event.target.value })}
+            onChange={(event) => {
+              setRedirectedKeyFor((current) => current.filter((id) => id !== provider.id));
+              onUpdateProvider(provider.id, { authEnvVar: event.target.value });
+            }}
             onBlur={(event) => {
               if (!isSafeProviderEnvVarName(event.currentTarget.value)) {
                 onUpdateProvider(provider.id, { authEnvVar: safeProviderEnvVarName(provider) });
@@ -107,9 +117,16 @@ export function ProviderSettingsPanel({
               if (pasted && !isSafeProviderEnvVarName(pasted)) {
                 event.preventDefault();
                 onSessionKeyChange(provider.id, pasted);
+                setRedirectedKeyFor((current) =>
+                  current.includes(provider.id) ? current : [...current, provider.id]);
               }
             }}
           />
+          {redirectedKeyFor.includes(provider.id) ? (
+            <small className="provider-field-note" role="status">
+              {copy.keyPastedIntoEnvVarToast}
+            </small>
+          ) : null}
         </label>
 
         <label className="provider-field">

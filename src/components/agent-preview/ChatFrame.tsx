@@ -599,11 +599,24 @@ function MiniWaveform({ bars }: { bars: number }) {
   );
 }
 
+/**
+ * What the artifact actually is, rather than what the demo used to show.
+ *
+ * Both this and `artifactLaunchOpenRequest` used to hardcode "Agent Component Composer" and a
+ * canned HTML snippet for anything that was not an image, audio or video — so a real run that
+ * wrote a 10KB HTML deck displayed a fixture page instead of the file, and a `SearchInput.tsx`
+ * was labelled a website. The real title and the real content are what the file is.
+ */
 function artifactLaunchTitle(item: AgentUXArtifactTimelineItem): string {
-  if (artifactMediaKind(item)) {
-    return item.title ?? item.id;
-  }
-  return "Agent Component Composer";
+  const title = item.title ?? item.id;
+  // Basenamed, as the media branch already does: a path is not a name.
+  return title.split("/").filter(Boolean).pop() ?? title;
+}
+
+function artifactIsWebsite(item: AgentUXArtifactTimelineItem): boolean {
+  const title = (item.title ?? item.id).toLowerCase();
+  const mimeType = String((item as AgentUXArtifactTimelineItem & { mimeType?: string }).mimeType ?? "").toLowerCase();
+  return /\.(html?|xhtml)$/.test(title) || mimeType.includes("html");
 }
 
 function artifactLaunchKind(item: AgentUXArtifactTimelineItem, copy: UiCopy): string {
@@ -611,7 +624,9 @@ function artifactLaunchKind(item: AgentUXArtifactTimelineItem, copy: UiCopy): st
   if (kind === "image") return copy.chat.artifactLaunch.kindImage;
   if (kind === "audio") return copy.chat.artifactLaunch.kindAudio;
   if (kind === "video") return copy.chat.artifactLaunch.kindVideo;
-  return copy.chat.artifactLaunch.kindWebsite;
+  // Only an actual page is a website. Calling every other artifact one is how a `.tsx` file
+  // ended up labelled 网站.
+  return artifactIsWebsite(item) ? copy.chat.artifactLaunch.kindWebsite : copy.chat.artifactLaunch.kindFile;
 }
 
 function artifactLaunchOpenRequest(item: AgentUXArtifactTimelineItem, copy: UiCopy, project: AgentFrontendProject): OutputPanelOpenRequest {
@@ -629,18 +644,18 @@ function artifactLaunchOpenRequest(item: AgentUXArtifactTimelineItem, copy: UiCo
       mediaStyle: mediaGenerationStyle(project, mediaKind),
     };
   }
+  const website = artifactIsWebsite(item);
   return {
-    id: `website:${originalTitle}`,
+    id: `${website ? "website" : "file"}:${originalTitle}`,
     kind: "file",
-    title: "Agent Component Composer",
-    subtitle: copy.chat.demoSite.subtitle,
-    language: "html",
-    body: [
-      '<main class="composer-preview">',
-      "  <h1>Agent Component Composer</h1>",
-      `  <p>${copy.chat.demoSite.body}</p>`,
-      "</main>",
-    ].join("\n"),
+    title: artifactLaunchTitle(item),
+    subtitle: originalTitle,
+    // Let the output panel decide by extension when the artifact does not say; forcing "html"
+    // made every artifact render through the HTML preview path.
+    language: website ? "html" : undefined,
+    // The real content. Falling back to the demo page here is what hid a real deck behind a
+    // fixture; with no content the panel shows its own empty state, which is the truth.
+    body: item.content ?? undefined,
   };
 }
 
