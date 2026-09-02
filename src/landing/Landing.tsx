@@ -332,7 +332,8 @@ export function Landing() {
       <header className="lp-header" data-scrolled={scrolled}>
         <div className="lp-shell lp-header-inner">
           <a className="lp-brand" href="/">
-            AgentCanvas<span>{copy.brandSuffix}</span>
+            <img className="lp-brand-mark" src="/agent-canvas-mark.svg" alt="" aria-hidden="true" />
+            <span className="lp-brand-name">Agent Canvas</span>
           </a>
           {/* No enclosing capsule and no solid pill for GitHub: a language switch and one
               link do not need two layers of container to be findable. */}

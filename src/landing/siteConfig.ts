@@ -3,11 +3,8 @@
  * trivial to swap without reading the page component.
  */
 
-/**
- * TODO(owner): replace with the real repository URL before publishing.
- * Used by the hero's secondary CTA and the footer link.
- */
-export const GITHUB_REPO_URL = "https://github.com/OWNER/REPO";
+/** Used by the navigation, CTAs, and footer source link. */
+export const GITHUB_REPO_URL = "https://github.com/raytone-lab/agentcanvas";
 
 /**
  * The editor entry. A real file emitted by Vite's second HTML input (see

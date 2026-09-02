@@ -1,10 +1,10 @@
 /*
  * Landing page styles.
  *
- * Every colour, radius, shadow, duration and easing is a semantic token from
- * `src/styles/app.css :root` (DESIGN.md §2/§4/§5/§7). No raw hex, no raw motion duration,
- * and nothing here modifies an existing rule — all selectors are `.lp-*`-prefixed and this
- * file is imported only by `src/landing/main.tsx`.
+ * Every colour, radius, shadow, duration and easing is a semantic token. The landing page
+ * overrides the shared product palette on `.lp-page` so its warmer presentation never leaks
+ * into the editor. Nothing here modifies an existing product rule: all selectors are
+ * `.lp-*`-prefixed and this file is imported only by `src/landing/main.tsx`.
  *
  * Three decisions worth not re-litigating:
  *
@@ -26,6 +26,29 @@
  */
 
 .lp-page {
+  /* A restrained cream palette: warm enough to avoid the product's blue-gray cast, while
+     keeping panels close to white and body copy neutral rather than brown. */
+  --surface-canvas: #f7f3eb;
+  --surface-panel: #fffdf9;
+  --surface-raised: #fbf8f2;
+  --surface-inset: #f1ece3;
+  --surface-hover: #e9e2d8;
+  --text-primary: #201e1b;
+  --text-secondary: #59554f;
+  --text-muted: #817b72;
+  --text-inverse: #fffdf9;
+  --border-subtle: #e8e1d7;
+  --border-strong: #d7cec1;
+  --accent: #292722;
+  --accent-hover: #171613;
+  --accent-soft: #eee8de;
+  --shadow: 0 12px 32px rgba(73, 58, 36, 0.07);
+  --shadow-sm: 0 1px 2px rgba(73, 58, 36, 0.06);
+  --shadow-md: 0 6px 20px rgba(73, 58, 36, 0.08);
+  --shadow-lg: 0 24px 60px rgba(73, 58, 36, 0.12);
+  --focus-ring: 0 0 0 2px var(--surface-panel),
+    0 0 0 4px color-mix(in srgb, var(--accent) 72%, white);
+
   /*
    * Five steps, each a clear jump from the one below it. The previous ladder ran
    * 44 / 27 / 17 / 15: the section heading was only 1.6x its own lede, and the lede only
@@ -116,16 +139,28 @@
   min-height: var(--control-lg);
 }
 
-/* Just the wordmark. A pill around a logo is chrome around chrome. */
+/* The source logo pairs this mark with Raytone; the landing uses the mark with its own name. */
 .lp-brand {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
+  gap: var(--space-2);
   font-family: var(--font-display);
   font-size: var(--text-lg);
   font-weight: var(--weight-title);
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   color: var(--text-primary);
   text-decoration: none;
+}
+
+.lp-brand-mark {
+  display: block;
+  width: auto;
+  height: 24px;
+  flex: 0 0 auto;
+}
+
+.lp-brand-name {
+  white-space: nowrap;
 }
 
 .lp-nav {
@@ -173,11 +208,10 @@
   .lp-brand {
     font-size: var(--text-md);
   }
-}
 
-/* Decorative glyph — the wordmark carries the name. */
-.lp-brand span {
-  color: var(--text-muted);
+  .lp-brand-mark {
+    height: 22px;
+  }
 }
 
 /*
