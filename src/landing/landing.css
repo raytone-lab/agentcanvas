@@ -69,6 +69,17 @@
   --lp-section-gap: clamp(var(--space-8), 5vw, 72px);
   --lp-lede-gap: var(--space-7);
 
+  /* The hero mark's dot grid and its sheen. Declared here rather than inline because the
+     product's motion tokens are interaction-scale (120–240ms) and this is an ambient loop:
+     one pass, then a long rest, so it reads as a slow breath and not a spinner. */
+  /* The hero mark's two colours. Read by `HeroMark.tsx` rather than applied here — the dots
+     are canvas geometry — but kept in CSS so the palette stays the single source of truth.
+     The gold is the mark asset's own (#dfae39), so the glint is the brand's colour and not
+     an invented one. Grid pitch and timing live in the component, next to the maths that
+     uses them. */
+  --lp-mark-fill: color-mix(in srgb, var(--accent) 12%, transparent);
+  --lp-mark-glint: color-mix(in srgb, #dfae39 60%, transparent);
+
   min-height: 100vh;
   background: var(--surface-canvas);
   color: var(--text-primary);
@@ -360,7 +371,39 @@
 /* The bottom padding is what stops the video's caption from sitting on the strip's top
    rule — the two were about 20px apart and read as one block. */
 .lp-hero {
+  position: relative;
+  /* Contains the mark's negative z-index, so it stays behind the hero text without
+     dropping behind the page canvas. */
+  isolation: isolate;
   padding-block: clamp(var(--space-8), 6vw, 80px) clamp(var(--space-7), 4vw, 56px);
+}
+
+/*
+ * The hero's product mark. Only its box lives here — the dots, the glint and the scatter are
+ * drawn by `HeroMark.tsx` onto a canvas, because repulsion needs each dot to hold a position
+ * and a tiled `radial-gradient` mask has no addressable dots in it.
+ *
+ * The two colour tokens below are still the source of truth: the component reads them with
+ * `getComputedStyle`, which resolves the `color-mix()` to concrete rgba for the canvas.
+ */
+.lp-hero-mark {
+  position: absolute;
+  z-index: -1;
+  top: clamp(var(--space-6), 5vw, 64px);
+  right: var(--space-5);
+  width: clamp(220px, 26vw, 340px);
+  /* Matches the mark's own viewBox (58 × 53.61), so the grid is never stretched. */
+  aspect-ratio: 58 / 53.61;
+  /* Deliberately not `none`: the scatter is a hover effect and needs the pointer. Nothing in
+     the hero overlaps this box, so taking events here costs the text nothing. */
+  pointer-events: auto;
+}
+
+/* Below this the hero text fills the column and the mark would sit under the headline. */
+@media (max-width: 960px) {
+  .lp-hero-mark {
+    display: none;
+  }
 }
 
 .lp-hero-title {
@@ -1913,4 +1956,8 @@
   .lp-theme-chip {
     transition: none;
   }
+
+  /* The hero mark's own reduced-motion handling lives in `HeroMark.tsx`: it keeps the dot
+     grid, drops the glint and the scatter, and never starts the frame loop at all. A CSS
+     rule cannot reach inside a canvas to do that. */
 }
