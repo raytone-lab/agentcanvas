@@ -57,7 +57,7 @@ import { WelcomeSettingsPanel } from "./components/WelcomeSettingsPanel";
 import { RightSidebarRailIcon, SidebarRailIcon } from "./components/common/RailIcons";
 import { ProviderFloatingSettings } from "./components/agent-preview/ProviderFloatingSettings";
 import type { ComposerSubmitContext } from "./components/agent-preview/ComposerFrame";
-import { ExternalApprovalSurface } from "./components/agent-preview/ChatFrame";
+import { ExternalApprovalSurface, InlineApprovalPrompt, InlineApprovalSurface } from "./components/agent-preview/ChatFrame";
 import {
   OutputPanelModal,
   languageFromFileName,
@@ -790,7 +790,7 @@ function findPendingApprovalTool(timeline: readonly unknown[]): AgentUXToolTimel
   });
 }
 
-function demoExternalApprovalTool(locale: AppLocale): AgentUXToolTimelineItem {
+function demoApprovalTool(locale: AppLocale): AgentUXToolTimelineItem {
   return {
     kind: "tool",
     id: "composer-external-approval-demo",
@@ -804,72 +804,25 @@ function demoExternalApprovalTool(locale: AppLocale): AgentUXToolTimelineItem {
   } as AgentUXToolTimelineItem;
 }
 
-function InlineApprovalPrompt({
-  locale,
-  onDismiss,
-}: {
-  locale: AppLocale;
-  onDismiss: () => void;
-}) {
+function InlineApprovalDemo({ locale, onDismiss }: { locale: AppLocale; onDismiss: () => void }) {
   const c = previewCopy[locale].inlineApproval;
-  const options = c.options;
-  const [answer, setAnswer] = useState("");
-
   return (
-    <aside className="inline-approval-panel" data-preview-anchor="external-approval" aria-label={c.ariaLabel}>
-      <div className="inline-approval-head">
-        <div>
-          <span>{c.kicker}</span>
-          <strong>
-            {c.question}
-          </strong>
-        </div>
-      </div>
-
-      <ol className="inline-approval-options">
-        {options.map((option, index) => {
-          // The last row is the free-text escape hatch. It used to be static text that looked
-          // like a field and swallowed every keystroke; a real input is the honest affordance,
-          // and it costs one piece of local state.
-          const isAnswerField = index === options.length - 1;
-          return (
-            <li key={option.title} data-placeholder={isAnswerField ? "true" : undefined}>
-              <span className="inline-approval-option-index">{index + 1}.</span>
-              {isAnswerField ? (
-                <input
-                  className="inline-approval-answer"
-                  type="text"
-                  value={answer}
-                  placeholder={option.title}
-                  aria-label={option.title}
-                  onChange={(event) => setAnswer(event.target.value)}
-                />
-              ) : (
-                <div>
-                  <strong>{option.title}</strong>
-                  {option.body ? <span>{option.body}</span> : null}
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-
-      <footer className="inline-approval-footer">
-        <span>
-          <span className="inline-approval-info" aria-hidden="true">i</span>
-          {c.hint}
-        </span>
-        <div>
-          <button type="button" className="inline-approval-secondary" onClick={onDismiss}>
-            {c.ignore}
-          </button>
-          <button type="button" className="inline-approval-primary" onClick={onDismiss}>
-            {c.continueLabel}
-          </button>
-        </div>
-      </footer>
-    </aside>
+    <InlineApprovalPrompt
+      ariaLabel={c.ariaLabel}
+      kicker={c.kicker}
+      question={c.question}
+      options={c.options.map((option, index) => ({
+        id: `${index}:${option.title}`,
+        title: option.title,
+        body: option.body,
+        answerPlaceholder: index === c.options.length - 1,
+      }))}
+      hint={c.hint}
+      secondaryLabel={c.ignore}
+      primaryLabel={c.continueLabel}
+      onSecondary={onDismiss}
+      onPrimary={onDismiss}
+    />
   );
 }
 
@@ -1310,7 +1263,7 @@ export function App() {
   const [outputModalOpen, setOutputModalOpen] = useState(false);
   const [externalApprovalOverlayActive, setExternalApprovalOverlayActive] = useState(false);
   const [inlineApprovalOverlayActive, setInlineApprovalOverlayActive] = useState(false);
-  const [dismissedExternalApprovalId, setDismissedExternalApprovalId] = useState<string | null>(null);
+  const [dismissedApprovalId, setDismissedApprovalId] = useState<string | null>(null);
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const [selectedComponentsOpen, setSelectedComponentsOpen] = useState(false);
   const [selectedFixtureId, setSelectedFixtureId] = useState<PreviewFixtureId>("coding-agent");
@@ -1583,29 +1536,53 @@ export function App() {
   const pendingExternalApprovalTool = activeProject.toolCalls.approval === "hidden"
     ? findPendingApprovalTool(displayViewModel.timeline)
     : undefined;
-  const externalApprovalTool = pendingExternalApprovalTool ?? demoExternalApprovalTool(locale);
+  const pendingInlineApprovalTool = activeProject.toolCalls.approval === "inline"
+    ? findPendingApprovalTool(displayViewModel.timeline)
+    : undefined;
+  const demoTool = demoApprovalTool(locale);
+  const externalApprovalTool = pendingExternalApprovalTool ?? demoTool;
   const showExternalApprovalOverlay = Boolean(
-    externalApprovalOverlayActive && externalApprovalTool.id !== dismissedExternalApprovalId,
+    externalApprovalOverlayActive && externalApprovalTool.id !== dismissedApprovalId,
   );
   const externalApprovalOverlay = showExternalApprovalOverlay ? (
     <div className="preview-approval-overlay" data-preview-region="approval-overlay">
       <ExternalApprovalSurface
         tool={externalApprovalTool}
         approvalIconSlot={selectedApprovalIconSlot}
-        onConfirm={(decision) => {
-          if (runMode === "pi") void decidePiApproval(externalApprovalTool.id, decision);
-          setDismissedExternalApprovalId(externalApprovalTool.id);
+        onConfirm={async (decision) => {
+          if (runMode === "pi" && pendingExternalApprovalTool?.id === externalApprovalTool.id) {
+            await decidePiApproval(externalApprovalTool.id, decision);
+          }
+          setDismissedApprovalId(externalApprovalTool.id);
           setExternalApprovalOverlayActive(false);
         }}
       />
     </div>
   ) : null;
-  const inlineApprovalOverlay = inlineApprovalOverlayActive ? (
-    <div className="preview-approval-overlay" data-preview-region="approval-overlay" data-approval-kind="inline">
-      <InlineApprovalPrompt
-        locale={locale}
-        onDismiss={() => setInlineApprovalOverlayActive(false)}
+  const showInlineRuntimeApproval = Boolean(
+    pendingInlineApprovalTool && pendingInlineApprovalTool.id !== dismissedApprovalId,
+  );
+  const inlineRuntimeApprovalOverlay = showInlineRuntimeApproval && pendingInlineApprovalTool ? (
+    <div className="preview-approval-overlay" data-preview-region="approval-overlay" data-approval-kind="inline-runtime">
+      <InlineApprovalSurface
+        key={pendingInlineApprovalTool.id}
+        tool={pendingInlineApprovalTool}
+        onConfirm={async (decision) => {
+          if (runMode === "pi") {
+            await decidePiApproval(pendingInlineApprovalTool.id, decision);
+          }
+          setDismissedApprovalId(pendingInlineApprovalTool.id);
+          setInlineApprovalOverlayActive(false);
+        }}
       />
+    </div>
+  ) : null;
+  const showInlineApprovalDemo = Boolean(
+    inlineApprovalOverlayActive && !pendingInlineApprovalTool && demoTool.id !== dismissedApprovalId,
+  );
+  const inlineApprovalDemoOverlay = showInlineApprovalDemo ? (
+    <div className="preview-approval-overlay" data-preview-region="approval-overlay" data-approval-kind="inline">
+      <InlineApprovalDemo locale={locale} onDismiss={() => setInlineApprovalOverlayActive(false)} />
     </div>
   ) : null;
 
@@ -1720,7 +1697,7 @@ export function App() {
     setRunEventSource(undefined);
     setLiveMessages([]);
     setExternalApprovalOverlayActive(false);
-    setDismissedExternalApprovalId(null);
+    setDismissedApprovalId(null);
     setLivePreviewState("idle");
     setGitPreviewStateOverride(undefined);
     setForcePreviewToolsOpen(false);
@@ -1777,7 +1754,7 @@ export function App() {
     setRunEventSource("replay");
     setLiveMessages([]);
     setExternalApprovalOverlayActive(id === "tool-approval");
-    setDismissedExternalApprovalId(null);
+    setDismissedApprovalId(null);
     setGitPreviewStateOverride(undefined);
     setForcePreviewToolsOpen(false);
 
@@ -1817,7 +1794,7 @@ export function App() {
     setRunEventSource("replay");
     setLiveMessages([]);
     setExternalApprovalOverlayActive(card.slot === "tool.pending_approval" || card.slot.startsWith("permission."));
-    setDismissedExternalApprovalId(null);
+    setDismissedApprovalId(null);
     setGitPreviewStateOverride(undefined);
     setForcePreviewToolsOpen(false);
     setRunEvents(stateDemoEvents(card.slot, card.code, card.title) as AgentUXEvent[]);
@@ -1833,7 +1810,7 @@ export function App() {
     setRunEventSource("replay");
     setLiveMessages([]);
     setExternalApprovalOverlayActive(false);
-    setDismissedExternalApprovalId(null);
+    setDismissedApprovalId(null);
     setGitPreviewStateOverride(undefined);
     setForcePreviewToolsOpen(options.forceOpen ?? false);
     setRunEvents(toolActionsOverviewEvents(cards, stateSectionTitle("tool-calls", locale), locale));
@@ -1944,7 +1921,7 @@ export function App() {
     setSelectedFixtureId("coding-agent");
     setLiveMessages([]);
     setExternalApprovalOverlayActive(false);
-    setDismissedExternalApprovalId(null);
+    setDismissedApprovalId(null);
     setGitPreviewStateOverride(undefined);
     setWritingReplayKey((current) => current + 1);
     bumpPreviewRefresh();
@@ -1963,7 +1940,7 @@ export function App() {
     setRunEvents(toAgentUXEvents(scenario.fixture.events, { title: standardScenarioTitle(scenario, locale) }) as AgentUXEvent[]);
     setLiveMessages([]);
     setExternalApprovalOverlayActive(false);
-    setDismissedExternalApprovalId(null);
+    setDismissedApprovalId(null);
     setGitPreviewStateOverride(undefined);
     setWritingReplayKey((current) => current + 1);
     bumpPreviewRefresh();
@@ -1981,7 +1958,7 @@ export function App() {
     setRunEvents(conversationWritingPreviewEvents(locale));
     setLiveMessages([]);
     setExternalApprovalOverlayActive(false);
-    setDismissedExternalApprovalId(null);
+    setDismissedApprovalId(null);
     setGitPreviewStateOverride(undefined);
     setForcePreviewToolsOpen(false);
     setWritingReplayKey((current) => current + 1);
@@ -1999,7 +1976,7 @@ export function App() {
     setRunEvents(undefined);
     setLiveMessages([]);
     setExternalApprovalOverlayActive(false);
-    setDismissedExternalApprovalId(null);
+    setDismissedApprovalId(null);
     setGitPreviewStateOverride(undefined);
     setSelectedFixtureId((current) => fixtureForPresetOption(optionId, current));
     bumpPreviewRefresh();
@@ -2032,7 +2009,7 @@ export function App() {
     setLiveMessages([]);
     setExternalApprovalOverlayActive(false);
     setInlineApprovalOverlayActive(false);
-    setDismissedExternalApprovalId(null);
+    setDismissedApprovalId(null);
     setGitPreviewStateOverride(undefined);
     setForcePreviewToolsOpen(false);
     setRightCollapsed(false);
@@ -2211,7 +2188,7 @@ export function App() {
       const opensInlineApproval = optionId === "tool-approval-inline";
       setExternalApprovalOverlayActive(opensExternalApproval);
       setInlineApprovalOverlayActive(opensInlineApproval);
-      setDismissedExternalApprovalId(opensExternalApproval || opensInlineApproval ? null : pendingExternalApprovalTool?.id ?? null);
+      setDismissedApprovalId(opensExternalApproval || opensInlineApproval ? null : pendingExternalApprovalTool?.id ?? null);
       bumpPreviewRefresh();
       return;
     }
@@ -2229,7 +2206,7 @@ export function App() {
       setLiveMessages([]);
       setExternalApprovalOverlayActive(false);
       setInlineApprovalOverlayActive(false);
-      setDismissedExternalApprovalId(null);
+      setDismissedApprovalId(null);
       setGitPreviewStateOverride(undefined);
       setProject((current) => (keepSelected ? applyPresetOption(current, optionId) : togglePresetOption(current, optionId)));
       setForcePreviewToolsOpen(false);
@@ -2256,12 +2233,12 @@ export function App() {
     const opensInlineApproval = optionId === "tool-approval-inline";
     setExternalApprovalOverlayActive(opensExternalApproval);
     setInlineApprovalOverlayActive(false);
-    setDismissedExternalApprovalId(opensExternalApproval ? null : pendingExternalApprovalTool?.id ?? null);
+    setDismissedApprovalId(opensExternalApproval ? null : pendingExternalApprovalTool?.id ?? null);
 
     if (opensInlineApproval) {
       setExternalApprovalOverlayActive(false);
       setInlineApprovalOverlayActive(true);
-      setDismissedExternalApprovalId(null);
+      setDismissedApprovalId(null);
       bumpPreviewRefresh();
       scrollPreviewToAnchorAfterPreviewUpdate("external-approval");
       return;
@@ -2270,7 +2247,7 @@ export function App() {
     if (optionId === "tool-approval-hidden") {
       setExternalApprovalOverlayActive(true);
       setInlineApprovalOverlayActive(false);
-      setDismissedExternalApprovalId(null);
+      setDismissedApprovalId(null);
       bumpPreviewRefresh();
       scrollPreviewToAnchorAfterPreviewUpdate("external-approval");
       return;
@@ -2288,7 +2265,7 @@ export function App() {
       setRunEventSource("replay");
       setLiveMessages([]);
       setExternalApprovalOverlayActive(false);
-      setDismissedExternalApprovalId(null);
+      setDismissedApprovalId(null);
       setGitPreviewStateOverride(undefined);
       setForcePreviewToolsOpen(false);
       setRunEvents(thinkingPreviewEvents(locale));
@@ -2525,7 +2502,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
       setLivePreviewState("idle");
       setGitPreviewStateOverride(undefined);
       setExternalApprovalOverlayActive(false);
-      setDismissedExternalApprovalId(null);
+      setDismissedApprovalId(null);
       setForcePreviewToolsOpen(false);
       setPreviewPrompt("");
       bumpPreviewRefresh();
@@ -2604,7 +2581,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
     setLivePreviewState("idle");
     setGitPreviewStateOverride(undefined);
     setExternalApprovalOverlayActive(scenarioId === "tool-approval");
-    setDismissedExternalApprovalId(null);
+    setDismissedApprovalId(null);
     setForcePreviewToolsOpen(false);
     setWritingReplayKey((current) => current + 1);
     setSurfaceMode("saved-preview");
@@ -2875,11 +2852,13 @@ function selectPresetGroup(groupId: PresetGroupId) {
         }
         nextConversation = appendPiConversationEvents(nextConversation, [event]);
         commit.push(nextConversation);
-        if (event.type === "tool.call.awaiting_approval" && activeProject.toolCalls.approval === "hidden") {
+        if (event.type === "tool.call.awaiting_approval") {
           // An approval is waiting on the user, so it must be on screen this instant rather than
           // whenever the next frame happens to land.
           commit.flush();
-          setExternalApprovalOverlayActive(true);
+          if (activeProject.toolCalls.approval === "hidden") {
+            setExternalApprovalOverlayActive(true);
+          }
         }
       }
       commit.flush();
@@ -2965,6 +2944,7 @@ function selectPresetGroup(groupId: PresetGroupId) {
     try {
       await resolvePiApproval(toolCallId, decision);
       setExternalApprovalOverlayActive(false);
+      setInlineApprovalOverlayActive(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Pi approval failed.");
       throw error;
@@ -3718,9 +3698,12 @@ function selectPresetGroup(groupId: PresetGroupId) {
                       <Panel className="preview-panel" defaultSize={`${activeProject.layout.mainSize}%`} minSize="52%">
                         <section className="preview-stack" data-welcome={isWelcome ? "true" : undefined}>
                           {renderSlots(visibleLayoutSlots, "main", slotContext)}
-                          {renderSlots(visibleLayoutSlots, "composer", slotContext)}
+                          {/* Approvals before the composer: the question is answered above the field it
+                              would otherwise cover, and every approval surface shares one placement. */}
+                          {inlineRuntimeApprovalOverlay}
                           {externalApprovalOverlay}
-                          {inlineApprovalOverlay}
+                          {inlineApprovalDemoOverlay}
+                          {renderSlots(visibleLayoutSlots, "composer", slotContext)}
                         </section>
                       </Panel>
                       <PanelResizeHandle className="resize-handle" />
@@ -3733,9 +3716,10 @@ function selectPresetGroup(groupId: PresetGroupId) {
                   ) : (
                     <section className="preview-stack preview-stack-solo" data-welcome={isWelcome ? "true" : undefined}>
                       {renderSlots(visibleLayoutSlots, "main", slotContext)}
-                      {renderSlots(visibleLayoutSlots, "composer", slotContext)}
+                      {inlineRuntimeApprovalOverlay}
                       {externalApprovalOverlay}
-                      {inlineApprovalOverlay}
+                      {inlineApprovalDemoOverlay}
+                      {renderSlots(visibleLayoutSlots, "composer", slotContext)}
                     </section>
                   )}
                   {hasSidebar && leftCollapsed && !autoHiddenRails.left ? (

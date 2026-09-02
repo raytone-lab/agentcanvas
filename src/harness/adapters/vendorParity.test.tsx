@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { createAgentUXViewModel } from "@agent-ux/render-core";
+import { createAgentUXViewModel, type AgentUXToolTimelineItem } from "@agent-ux/render-core";
 import { replayAgentUXEvents } from "@agent-ux/runtime";
 
 import { IconSetProvider } from "../../agentmatrix";
-import { ChatFrame } from "../../components/agent-preview/ChatFrame";
+import { ChatFrame, InlineApprovalSurface } from "../../components/agent-preview/ChatFrame";
 import { OutputFrame } from "../../components/agent-preview/OutputFrame";
 import { LocaleProvider } from "../../i18n/LocaleContext";
 import {
@@ -466,19 +466,35 @@ describe("vendor parity on rendered output", () => {
     ] as PiWireEvent[]) adapter.apply(event);
 
     const viewModel = viewModelFor(adapter.events).viewModel;
-    const chinese = renderToStaticMarkup(
+    // The question no longer lives inside the tool card: inline approval is its own surface above
+    // the composer, so that is where the locale has to hold. The transcript is still asserted
+    // below, because the adapter's English must not reach the screen from either direction.
+    const approvalTool = (viewModel as unknown as { timeline: readonly AgentUXToolTimelineItem[] })
+      .timeline.find((item) => item.kind === "tool" && item.status === "awaiting_approval");
+    expect(approvalTool, "该运行应产出一条待审批的工具调用").toBeDefined();
+
+    const chineseApproval = renderToStaticMarkup(
+      <LocaleProvider initialLocale="zh">
+        <IconSetProvider>
+          <InlineApprovalSurface tool={approvalTool as AgentUXToolTimelineItem} />
+        </IconSetProvider>
+      </LocaleProvider>,
+    );
+    const chineseTranscript = renderToStaticMarkup(
       <LocaleProvider initialLocale="zh">
         <IconSetProvider>{chatFrame(viewModel)}</IconSetProvider>
       </LocaleProvider>,
     );
 
-    expect(chinese, "审批提问应使用当前语言").toContain("批准此工具调用？");
-    expect(chinese, "适配器不应把英文文案带到界面上").not.toContain("Allow Pi to run");
+    expect(chineseApproval, "审批提问应使用当前语言").toContain("批准此工具调用？");
+    expect(chineseApproval, "适配器不应把英文文案带到界面上").not.toContain("Allow Pi to run");
+    expect(chineseTranscript, "适配器不应把英文文案带到界面上").not.toContain("Allow Pi to run");
     // No tool name in the question: by this point `bash` has been canonicalized to the internal
     // concept `run_command`, and the header above already says what is about to run.
-    expect(chinese, "不应把内部概念名甩到句子里").not.toContain("run_command");
+    expect(chineseApproval, "不应把内部概念名甩到句子里").not.toContain("run_command");
     // English still reads correctly — the point is that it follows the locale, not that zh wins.
-    expect(render(chatFrame(viewModel))).toContain("Approve this tool call?");
+    expect(render(<InlineApprovalSurface tool={approvalTool as AgentUXToolTimelineItem} />))
+      .toContain("Approve this tool call?");
   });
 
   it("keeps vendor bookkeeping out of the transcript", () => {

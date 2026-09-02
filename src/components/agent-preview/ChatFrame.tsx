@@ -1,5 +1,5 @@
 import type { AgentUXArtifactTimelineItem, AgentUXTimelineItem, AgentUXToolTimelineItem, AgentUXViewModel } from "@agent-ux/render-core";
-import { ChevronDown, Clock3, Copy, Globe2, Pencil, Play, RotateCcw, Sparkles, User, Volume2 } from "lucide-react";
+import { ChevronDown, Copy, Globe2, Pencil, Play, RotateCcw, Sparkles, User, Volume2 } from "lucide-react";
 import { useState, type CSSProperties, type ReactElement } from "react";
 
 import { StateIcon, errorDomainSlot, incidentSlot, runtimeOpSlot, useIconSet, type IconSlot } from "../../agentmatrix";
@@ -23,7 +23,12 @@ export function ChatFrame({
   previewPrompts,
   writingReplayKey = 0,
   onOpenArtifact,
-  externalApprovalPlacement = "timeline",
+  // Defaults to the placement the editor previews. It used to default to "timeline", which
+  // only the editor was safe from because `App.tsx` passes "overlay" explicitly: the exported
+  // app never set the prop, so a real run there put the permission card *inside* the
+  // transcript, where it scrolls away from the field the user answers it with. Nothing asks
+  // for the timeline placement, so the fallback is now the correct one and it stays opt-in.
+  externalApprovalPlacement = "overlay",
   forceToolsOpen = false,
   toolCollapseSignal = 0,
   onApprovalDecision,
@@ -325,7 +330,6 @@ function TimelineItem({
             onOpenArtifact={onOpenArtifact}
             forceOpen={forceToolsOpen}
             collapseSignal={toolCollapseSignal}
-            onApprovalDecision={onApprovalDecision}
           />
         </>
       );
@@ -699,6 +703,169 @@ function isPendingApprovalTool(item: AgentUXToolTimelineItem): item is AgentUXTo
   return item.status === "awaiting_approval" && Boolean(item.approval);
 }
 
+export type InlineApprovalPromptOption = {
+  id: string;
+  title: string;
+  body?: string;
+  answerPlaceholder?: boolean;
+  disabled?: boolean;
+  onSelect?: () => void;
+};
+
+export function InlineApprovalPrompt({
+  ariaLabel,
+  kicker,
+  question,
+  options,
+  hint,
+  secondaryLabel,
+  primaryLabel,
+  pending = false,
+  approvalSurface,
+  onSecondary,
+  onPrimary,
+}: {
+  ariaLabel: string;
+  kicker: string;
+  question: string;
+  options: readonly InlineApprovalPromptOption[];
+  hint: string;
+  secondaryLabel: string;
+  primaryLabel: string;
+  pending?: boolean;
+  approvalSurface?: "inline";
+  onSecondary?: () => void;
+  onPrimary?: () => void;
+}) {
+  const [answer, setAnswer] = useState("");
+
+  return (
+    <aside
+      className="inline-approval-panel"
+      data-approval-surface={approvalSurface}
+      data-preview-anchor="external-approval"
+      aria-label={ariaLabel}
+      aria-busy={pending}
+    >
+      <div className="inline-approval-head">
+        <div>
+          <span>{kicker}</span>
+          <strong>{question}</strong>
+        </div>
+      </div>
+
+      <ol className="inline-approval-options">
+        {options.map((option, index) => (
+          <li
+            key={option.id}
+            data-placeholder={option.answerPlaceholder ? "true" : undefined}
+            data-interactive={option.onSelect ? "true" : undefined}
+          >
+            <span className="inline-approval-option-index">{index + 1}.</span>
+            {option.answerPlaceholder ? (
+              <input
+                className="inline-approval-answer"
+                type="text"
+                value={answer}
+                placeholder={option.title}
+                aria-label={option.title}
+                onChange={(event) => setAnswer(event.target.value)}
+              />
+            ) : option.onSelect ? (
+              <button
+                type="button"
+                className="inline-approval-option-button"
+                data-approval-action={option.id}
+                disabled={pending || option.disabled}
+                onClick={option.onSelect}
+              >
+                <strong>{option.title}</strong>
+                {option.body ? <span>{option.body}</span> : null}
+              </button>
+            ) : (
+              <div>
+                <strong>{option.title}</strong>
+                {option.body ? <span>{option.body}</span> : null}
+              </div>
+            )}
+          </li>
+        ))}
+      </ol>
+
+      <footer className="inline-approval-footer">
+        <span>
+          <span className="inline-approval-info" aria-hidden="true">i</span>
+          {hint}
+        </span>
+        <div>
+          <button
+            type="button"
+            className="inline-approval-secondary"
+            disabled={pending}
+            onClick={onSecondary}
+          >
+            {secondaryLabel}
+          </button>
+          <button
+            type="button"
+            className="inline-approval-primary"
+            disabled={pending}
+            onClick={onPrimary}
+          >
+            {primaryLabel}
+          </button>
+        </div>
+      </footer>
+    </aside>
+  );
+}
+
+export function InlineApprovalSurface({
+  tool,
+  onConfirm,
+}: {
+  tool: AgentUXToolTimelineItem;
+  onConfirm?: (decision: ApprovalDecision) => void | Promise<void>;
+}) {
+  const copy = useCopy();
+  const [pending, setPending] = useState(false);
+  const choices = approvalChoices(copy);
+  const prompt = tool.approval?.prompt ?? copy.chat.approval.promptFallback;
+
+  async function confirm(decision: ApprovalChoice) {
+    if (pending) return;
+    setPending(true);
+    try {
+      await onConfirm?.(decision);
+    } catch {
+      // The owner reports transport failures. Leave the prompt mounted and enabled for retry.
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <InlineApprovalPrompt
+      ariaLabel={copy.chat.approval.actionsLabel}
+      kicker={copy.chat.approval.permissionRequired}
+      question={prompt}
+      options={choices.map((choice) => ({
+        id: choice.id,
+        title: choice.label,
+        body: choice.hint,
+        onSelect: () => void confirm(choice.id),
+      }))}
+      hint={copy.chat.approval.chooseHint}
+      secondaryLabel={copy.chat.approval.no}
+      primaryLabel={copy.chat.approval.yes}
+      pending={pending}
+      approvalSurface="inline"
+      onSecondary={() => void confirm("no")}
+      onPrimary={() => void confirm("yes")}
+    />
+  );
+}
+
 export function ExternalApprovalSurface({
   tool,
   approvalIconSlot,
@@ -709,8 +876,8 @@ export function ExternalApprovalSurface({
   onConfirm?: (decision: ApprovalDecision) => void | Promise<void>;
 }) {
   const copy = useCopy();
-  const [selected, setSelected] = useState<ExternalApprovalChoice>("yes");
-  const choices = externalApprovalChoices(copy);
+  const [selected, setSelected] = useState<ApprovalChoice>("yes");
+  const choices = approvalChoices(copy);
   // Same precedence as the inline card: the backend's own question, else the dictionary's.
   const prompt = tool.approval?.prompt ?? copy.chat.approval.promptFallback;
   return (
@@ -775,9 +942,9 @@ export function ExternalApprovalSurface({
   );
 }
 
-type ExternalApprovalChoice = "yes" | "always" | "no";
+type ApprovalChoice = ApprovalDecision;
 
-function externalApprovalChoices(copy: UiCopy): Array<{ id: ExternalApprovalChoice; label: string; hint: string }> {
+function approvalChoices(copy: UiCopy): Array<{ id: ApprovalChoice; label: string; hint: string }> {
   return [
     {
       id: "yes",

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronDown, Clock3 } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { AgentUXToolTimelineItem } from "@agent-ux/render-core";
 
@@ -12,25 +12,6 @@ import type { AgentFrontendProject } from "../../schema/agentuxConfig";
 import { deriveDisclosureOpen } from "./disclosureState";
 import type { OutputPanelItem, OutputPanelOpenRequest } from "./OutputFrame";
 
-/**
- * The approval question, in the reader's language.
- *
- * A prompt the backend actually authored wins — the bundled fixtures phrase specific questions
- * ("Remove .agent/tmp-cache recursively?") that a generic line would throw away. Otherwise the
- * dictionary asks it, which is what keeps a real run from showing an English sentence inside a
- * Chinese screen.
- *
- * Deliberately without the tool's name. The header above already says what is about to run, and
- * by this point the name has been canonicalized to an internal concept (`bash` → `run_command`),
- * so interpolating it both repeats the header and leaks a machine name into a sentence.
- */
-function approvalPromptFor(
-  vendorPrompt: string | undefined,
-  copy: ReturnType<typeof useCopy>,
-): string {
-  return vendorPrompt ?? copy.chat.approval.promptFallback;
-}
-
 export function ToolCallCard({
   project,
   tool,
@@ -38,7 +19,6 @@ export function ToolCallCard({
   onOpenArtifact,
   forceOpen = false,
   collapseSignal = 0,
-  onApprovalDecision,
 }: {
   project: AgentFrontendProject;
   tool: AgentUXToolTimelineItem;
@@ -46,7 +26,6 @@ export function ToolCallCard({
   onOpenArtifact?: (artifact: OutputPanelOpenRequest) => void;
   forceOpen?: boolean;
   collapseSignal?: number;
-  onApprovalDecision?: (toolCallId: string, decision: ApprovalDecision) => void | Promise<void>;
 }) {
   const copy = useCopy();
   const { locale } = useLocale();
@@ -54,7 +33,6 @@ export function ToolCallCard({
   const [open, setOpen] = useState(desiredOpen);
   const userToggledRef = useRef(false);
   const spec = useMemo(() => buildToolDisplaySpec(tool), [tool]);
-  const pendingApproval = tool.status === "awaiting_approval" ? tool.approval : undefined;
   const toolStyle = project.theme.motion.toolCall;
   const hasTimelineRail = project.toolCalls.timelineRail;
   const detailMode = project.toolCalls.detail;
@@ -66,11 +44,9 @@ export function ToolCallCard({
   const hasFileReferences = fileReferences.length > 0;
   const inputBlock = !hasFileReferences && detailMode === "full" ? spec.inputBlock : undefined;
   const outputBlock = !hasFileReferences && (detailMode === "full" || detailMode === "output-only") ? spec.outputBlock : undefined;
-  const approval = project.toolCalls.approval === "inline" ? pendingApproval : undefined;
-  const showApproval = Boolean(approval);
   const shouldForceOpen = forceOpen || toolStyle === "expanded" || hasTimelineRail;
   const hideDisclosure = toolStyle === "expanded";
-  const bodyHasContent = detailMode !== "summary" && Boolean(inputBlock || outputBlock || showApproval || hasFileReferences);
+  const bodyHasContent = detailMode !== "summary" && Boolean(inputBlock || outputBlock || hasFileReferences);
   const renderedOpen = shouldForceOpen || open;
   const showProgress = project.toolCalls.progress === "bar";
   const hasExplicitRunningTitle = Boolean(tool.title && isExplicitRunningToolTitle(tool.title));
@@ -189,17 +165,6 @@ export function ToolCallCard({
             initial={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.16 }}
           >
-            {showApproval ? (
-              <div className="approval-box" data-approval-surface="inline">
-                <div className="approval-copy">
-                  <Clock3 size={14} />
-                  <span>{approvalPromptFor(approval?.prompt, copy)}</span>
-                </div>
-                <ApprovalDecisionActions
-                  onDecision={(decision) => onApprovalDecision?.(tool.id, decision)}
-                />
-              </div>
-            ) : null}
             {hasFileReferences ? (
               <ToolFileReferenceList
                 files={fileReferences}
@@ -289,52 +254,6 @@ function ToolFileReferenceList({
 }
 
 export type ApprovalDecision = "yes" | "always" | "no";
-
-export function ApprovalDecisionActions({
-  onDecision,
-}: {
-  onDecision?: (decision: ApprovalDecision) => void | Promise<void>;
-} = {}) {
-  const copy = useCopy();
-  const [decision, setDecision] = useState<ApprovalDecision | null>(null);
-  const [pending, setPending] = useState(false);
-
-  async function decide(next: ApprovalDecision) {
-    if (pending) return;
-    setPending(true);
-    try {
-      await onDecision?.(next);
-      setDecision(next);
-    } catch {
-      // The owner surfaces transport failures (the editor uses a toast). Keep the controls
-      // available so the user can retry instead of producing an unhandled rejected promise.
-    } finally {
-      setPending(false);
-    }
-  }
-
-  if (decision) {
-    return (
-      <div className="approval-actions" aria-label={copy.chat.approval.actionsLabel} data-decided={decision}>
-        <span className="approval-decision" role="status" data-decision={decision}>
-          {decision === "no" ? <StateIcon slot="permission.deny" size={14} /> : <StateIcon slot="permission.allow" size={14} />}
-          <span>{copy.chat.approval.decision[decision]}</span>
-        </span>
-        <button type="button" className="approval-undo" onClick={() => setDecision(null)}>
-          {copy.chat.approval.undo}
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="approval-actions" aria-label={copy.chat.approval.actionsLabel}>
-      <button type="button" disabled={pending} data-approval-action="yes" onClick={() => void decide("yes")}>{copy.chat.approval.yes}</button>
-      <button type="button" disabled={pending} data-approval-action="always" onClick={() => void decide("always")}>{copy.chat.approval.always}</button>
-      <button type="button" disabled={pending} data-approval-action="no" onClick={() => void decide("no")}>{copy.chat.approval.no}</button>
-    </div>
-  );
-}
 
 function isMcpTool(tool: AgentUXToolTimelineItem): boolean {
   return /\(mcp\)/i.test(tool.title ?? "") || /mcp/i.test(tool.name ?? "");

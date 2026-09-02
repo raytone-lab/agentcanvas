@@ -146,6 +146,45 @@ describe("App shell controls", () => {
     expect(markup).toContain("选择风格");
   });
 
+  it("asks for approval above the composer instead of under or over it", () => {
+    // Both preset previews used to answer this wrongly, in opposite directions: a
+    // bottom-anchored absolute overlay covered the composer during a conversation, and the
+    // welcome state's static override dropped the panel below the input. Every approval
+    // surface belongs above the field, and the field must stay visible — "type an answer
+    // instead" is one of the choices on the panel.
+    const appSource = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+    const composerSlots = '{renderSlots(visibleLayoutSlots, "composer", slotContext)}';
+
+    // Checked per stack, not across the whole file: the preview renders one stack with the
+    // right panel and one without, and a first-occurrence search would let a regression in
+    // the second one pass unnoticed.
+    const stacks = appSource
+      .split('<section className="preview-stack')
+      .slice(1)
+      .map((chunk) => chunk.slice(0, chunk.indexOf("</section>")));
+    expect(stacks).toHaveLength(2);
+
+    for (const stack of stacks) {
+      expect(stack).toContain(composerSlots);
+      for (const overlay of [
+        "{inlineRuntimeApprovalOverlay}",
+        "{externalApprovalOverlay}",
+        "{inlineApprovalDemoOverlay}",
+      ]) {
+        expect(stack.indexOf(overlay), `${overlay} 应渲染在输入框之前`).toBeGreaterThan(-1);
+        expect(stack.indexOf(overlay), `${overlay} 应渲染在输入框之前`)
+          .toBeLessThan(stack.indexOf(composerSlots));
+      }
+    }
+
+    const overlayRule = cssRule(styles, ".preview-approval-overlay");
+    expect(overlayRule).not.toContain("position: absolute");
+    expect(overlayRule).not.toContain("bottom:");
+    expect(cssRule(styles, '.preview-stack[data-welcome="true"] > .preview-approval-overlay'))
+      .not.toContain("margin-top:");
+  });
+
   it("lets speaker-label presets control chat labels instead of hard-hiding them in CSS", () => {
     const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
 

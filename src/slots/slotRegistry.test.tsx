@@ -28,7 +28,7 @@ describe("template slot visibility", () => {
     expect(slotsForTemplate(defaultCodingAgentProject.layout.slots, "tool-heavy").some((slot) => slot.component === "GitFrame")).toBe(true);
   });
 
-  it("keeps external approval in the main chat slot instead of the output slot", () => {
+  it("keeps external approval out of both the chat slot and the output slot", () => {
     const project = applyPresetOption(defaultCodingAgentProject, "tool-approval-hidden");
     const viewModel = {
       runId: "test",
@@ -72,8 +72,11 @@ describe("template slot visibility", () => {
       </>,
     );
 
-    expect(mainMarkup).toContain('data-approval-surface="external"');
-    expect(mainMarkup).toContain("Remove .agent/tmp-cache recursively?");
+    // The approval question is not a slot: the shell mounts it above the composer, in the main
+    // column. What the slots must still guarantee is that neither of them adopts it — the main
+    // chat would scroll it away, and the output panel is the wrong column entirely.
+    expect(mainMarkup).not.toContain('data-approval-surface="external"');
+    expect(mainMarkup).toContain("Remove temp cache");
     expect(rightPanelMarkup).toContain("Output ·");
     expect(rightPanelMarkup).toContain("Git");
     expect(rightPanelMarkup).not.toContain("Generate export");

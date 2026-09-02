@@ -713,6 +713,8 @@ import {
 } from "./components/agent-preview/OutputFrame";
 import { ProviderFloatingSettings } from "./components/agent-preview/ProviderFloatingSettings";
 import type { ComposerSubmitContext } from "./components/agent-preview/ComposerFrame";
+import { ExternalApprovalSurface, InlineApprovalSurface } from "./components/agent-preview/ChatFrame";
+import type { ApprovalDecision } from "./components/agent-preview/ToolCallCard";
 import { RightSidebarRailIcon, SidebarRailIcon } from "./components/common/RailIcons";
 import { SelectMenu } from "./components/ui/select-menu";
 import { gitPreviewStateFromEvents } from "./harness/gitAdapter";
@@ -800,6 +802,7 @@ export function AgentApp() {
   const [activePiConversationId, setActivePiConversationId] = useState(() => piConversations[0].id);
   const [piRunning, setPiRunning] = useState(false);
   const [piRuntimeState, setPiRuntimeState] = useState<PiRuntimeState>();
+  const [dismissedApprovalId, setDismissedApprovalId] = useState<string | null>(null);
   const piAbortRef = useRef<AbortController | undefined>(undefined);
 
   // Single entry for both modes: fixture replay (dev/preview) or the live backend
@@ -840,6 +843,37 @@ export function AgentApp() {
     () => ({ ...configuredProject, output: { ...configuredProject.output, source: outputSource } }),
     [configuredProject, outputSource],
   );
+  // Both approval modes answer above the composer, exactly where the configurator previewed
+  // them. Each mode needs its own surface here: \`ChatFrame\` no longer places either one in the
+  // transcript, so a mode without an overlay would leave a real run with nothing to click.
+  const pendingApprovalTool = displayViewModel.timeline.find((item) =>
+    item.kind === "tool" && item.status === "awaiting_approval" && Boolean(item.approval),
+  );
+  const liveApprovalTool = pendingApprovalTool && pendingApprovalTool.id !== dismissedApprovalId
+    ? pendingApprovalTool
+    : undefined;
+  const approveLive = async (toolCallId: string, decision: ApprovalDecision) => {
+    await resolvePiApproval(toolCallId, decision);
+    setDismissedApprovalId(toolCallId);
+  };
+  const inlineApprovalOverlay = liveApprovalTool && activeProject.toolCalls.approval === "inline" ? (
+    <div className="preview-approval-overlay" data-preview-region="approval-overlay" data-approval-kind="inline-runtime">
+      <InlineApprovalSurface
+        key={liveApprovalTool.id}
+        tool={liveApprovalTool}
+        onConfirm={(decision) => approveLive(liveApprovalTool.id, decision)}
+      />
+    </div>
+  ) : null;
+  const externalApprovalOverlay = liveApprovalTool && activeProject.toolCalls.approval === "hidden" ? (
+    <div className="preview-approval-overlay" data-preview-region="approval-overlay">
+      <ExternalApprovalSurface
+        key={liveApprovalTool.id}
+        tool={liveApprovalTool}
+        onConfirm={(decision) => approveLive(liveApprovalTool.id, decision)}
+      />
+    </div>
+  ) : null;
 
   useEffect(() => {
     const provider = defaultProviderConnection(project);
@@ -1219,6 +1253,8 @@ export function AgentApp() {
               <Panel defaultSize={mainSize} minSize="52%">
                 <section className="preview-stack" data-welcome={isWelcome ? "true" : undefined}>
                   {renderSlots(visibleLayoutSlots, "main", slotContext)}
+                  {inlineApprovalOverlay}
+                  {externalApprovalOverlay}
                   {renderSlots(visibleLayoutSlots, "composer", slotContext)}
                 </section>
               </Panel>
@@ -1232,6 +1268,8 @@ export function AgentApp() {
           ) : (
             <section className="preview-stack preview-stack-solo" data-welcome={isWelcome ? "true" : undefined}>
               {renderSlots(visibleLayoutSlots, "main", slotContext)}
+              {inlineApprovalOverlay}
+              {externalApprovalOverlay}
               {renderSlots(visibleLayoutSlots, "composer", slotContext)}
             </section>
           )}

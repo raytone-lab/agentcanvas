@@ -14,7 +14,7 @@ import { PresetOptionPreview } from "../PresetOptionPreview";
 import type { GitPreviewState } from "../../preview-runner/PreviewRunner";
 import { collectPreviewRunEvents, createPureFrontendPreviewRunner } from "../../preview-runner/PreviewRunner";
 import { ComposerFrame } from "./ComposerFrame";
-import { ChatFrame } from "./ChatFrame";
+import { ChatFrame, ExternalApprovalSurface, InlineApprovalSurface } from "./ChatFrame";
 import { GitFrame } from "./GitFrame";
 import { OutputFrame } from "./OutputFrame";
 import { ProviderFloatingSettings } from "./ProviderFloatingSettings";
@@ -608,15 +608,23 @@ describe("preset-driven preview rendering", () => {
       },
       open: true,
     } as never;
+    const inlineToolMarkup = render(
+      <ToolCallCard
+        project={applyPresetOption(defaultCodingAgentProject, "tool-approval-inline")}
+        tool={pendingTool}
+      />,
+    );
     const inlineMarkup = render(
-      <IconSetProvider>
-        <ToolCallCard
-          project={applyPresetOption(defaultCodingAgentProject, "tool-approval-inline")}
-          tool={pendingTool}
-        />
-      </IconSetProvider>,
+      <InlineApprovalSurface tool={pendingTool} />,
     );
     const externalMarkup = render(
+      <IconSetProvider>
+        <ExternalApprovalSurface tool={pendingTool} />
+      </IconSetProvider>,
+    );
+    // Neither approval mode may put the question in the transcript: it scrolls away from the
+    // composer the user answers it with, and in an exported app that was the only surface.
+    const externalChatMarkup = render(
       <IconSetProvider>
         <ChatFrame
           project={applyPresetOption(defaultCodingAgentProject, "tool-approval-hidden")}
@@ -632,11 +640,13 @@ describe("preset-driven preview rendering", () => {
     );
 
     expect(inlineMarkup).toContain('data-approval-surface="inline"');
+    expect(inlineMarkup).toContain('class="inline-approval-panel"');
     expect(inlineMarkup).toContain("Remove .agent/tmp-cache recursively?");
-    expect(inlineMarkup).toContain("rm -rf .agent/tmp-cache");
     expect(inlineMarkup).toContain('data-approval-action="yes"');
     expect(inlineMarkup).toContain('data-approval-action="always"');
     expect(inlineMarkup).toContain('data-approval-action="no"');
+    expect(inlineToolMarkup).not.toContain('data-approval-surface="inline"');
+    expect(inlineToolMarkup).not.toContain('data-approval-action="yes"');
     expect(externalMarkup).toContain('data-approval-surface="external"');
     expect(externalMarkup).toContain('data-preview-anchor="external-approval"');
     expect(externalMarkup).toContain("Remove temp cache");
@@ -645,6 +655,8 @@ describe("preset-driven preview rendering", () => {
     expect(externalMarkup).toContain('data-approval-action="always"');
     expect(externalMarkup).toContain('data-approval-action="no"');
     expect(externalMarkup).not.toContain('data-approval-surface="inline"');
+    expect(externalChatMarkup).not.toContain('data-approval-surface="external"');
+    expect(externalChatMarkup).not.toContain('data-approval-action="yes"');
     expect(outputMarkup).not.toContain('data-approval-surface="external"');
   });
 

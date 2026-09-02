@@ -3204,12 +3204,25 @@ textarea:focus-visible {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0), var(--surface-panel) 24%);
 }
 
+/*
+ * The approval prompt sits directly above the composer, in the stack's flow.
+ *
+ * Bottom-anchoring it absolutely gave the same rule two different wrong answers: in a
+ * conversation the panel was painted over the composer and hid the input field completely,
+ * and in the welcome state a separate override turned it static so it landed *below* the
+ * input. The prompt asks what should run next, so it belongs above the field — and the field
+ * has to stay visible, because "type an answer instead" is one of the listed choices.
+ *
+ * All three surfaces (external, the inline demo, the inline surface a live run mounts) share
+ * this placement; a preset preview that sat somewhere other than the real run would be
+ * previewing the wrong thing.
+ */
 .preview-approval-overlay {
-  position: absolute;
-  left: 22px;
-  right: 22px;
-  bottom: 16px;
   z-index: 12;
+  align-self: end;
+  justify-self: center;
+  width: 100%;
+  padding: 0 18px 6px;
   pointer-events: none;
   display: grid;
   justify-items: center;
@@ -3220,15 +3233,6 @@ textarea:focus-visible {
   /* Follows the composer rather than the stack, so the two always share an edge. */
   width: min(var(--composer-measure), 100%);
   max-width: none;
-  pointer-events: auto;
-}
-
-.preview-approval-overlay[data-approval-kind="inline"] {
-  left: 18px;
-  right: 18px;
-}
-
-.preview-approval-overlay .inline-approval-panel {
   pointer-events: auto;
 }
 
@@ -5773,6 +5777,31 @@ pre {
   color: var(--text-muted);
   font-size: var(--text-sm);
   font-weight: 400;
+}
+
+.inline-approval-option-button {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  line-height: 1.45;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inline-approval-option-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent);
+  outline-offset: 2px;
+}
+
+.inline-approval-option-button:disabled,
+.inline-approval-secondary:disabled,
+.inline-approval-primary:disabled {
+  cursor: wait;
+  opacity: 0.58;
 }
 
 .inline-approval-answer {
@@ -11312,20 +11341,11 @@ pre {
 }
 
 /*
- * In the welcome state the approval surface stops being an overlay and joins the flow.
- *
- * `.preview-approval-overlay` is bottom-anchored, which is right during a conversation: the
- * composer is already at the bottom and the panel floats just above the transcript. But the
- * welcome state centres the composer vertically, so a bottom-anchored panel grew upward into
- * it — 52px of overlap, landing squarely on the toolbar and send button.
- *
- * Going static costs nothing here: DOM order is already composer then approval, so the two
- * stack in the right order and centre together as one group.
+ * The welcome state centres the composer vertically; the approval panel is already in flow
+ * above it, so the two centre together as one group and only need the gap.
  */
 .preview-stack[data-welcome="true"] > .preview-approval-overlay {
-  position: static;
-  width: 100%;
-  margin-top: var(--space-2);
+  margin: 0 0 var(--space-2);
 }
 
 .preview-stack[data-welcome="true"] > .composer-frame {

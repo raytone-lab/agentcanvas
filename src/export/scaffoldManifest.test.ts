@@ -223,6 +223,32 @@ describe("scaffold package manifest", () => {
     expect(sidebar).not.toContain("{search && hasSessions ? (");
   });
 
+  it("exports both approval modes above the composer instead of inside the transcript", () => {
+    // A real run in an exported app had nowhere to answer but the transcript: the shell mounted
+    // no approval surface of its own, so `ChatFrame`'s old "timeline" default was the only thing
+    // rendering the question — inside a tool card that scrolls away from the composer.
+    const snapshot = createScaffoldExportSnapshot(defaultCodingAgentProject);
+    const shell = snapshot.fileContents["src/agent-shell.tsx"] ?? "";
+    const toolCard = snapshot.fileContents["src/components/agent-preview/ToolCallCard.tsx"] ?? "";
+    const chatFrame = snapshot.fileContents["src/components/agent-preview/ChatFrame.tsx"] ?? "";
+    const composerSlots = '{renderSlots(visibleLayoutSlots, "composer", slotContext)}';
+
+    expect(shell).toContain("ExternalApprovalSurface");
+    expect(shell).toContain("InlineApprovalSurface");
+    expect(shell).toContain('data-approval-kind="inline-runtime"');
+    // Neither mode may be left without a surface: "inline" and "hidden" are the only two.
+    expect(shell).toContain('activeProject.toolCalls.approval === "inline"');
+    expect(shell).toContain('activeProject.toolCalls.approval === "hidden"');
+
+    for (const overlay of ["{inlineApprovalOverlay}", "{externalApprovalOverlay}"]) {
+      expect(shell).toContain(overlay);
+      expect(shell.indexOf(overlay)).toBeLessThan(shell.indexOf(composerSlots));
+    }
+
+    expect(toolCard).not.toContain('data-approval-surface="inline"');
+    expect(chatFrame).toContain('externalApprovalPlacement = "overlay"');
+  });
+
   it("lets app.css own the shell layout instead of re-implementing it inline", () => {
     const snapshot = createScaffoldExportSnapshot(defaultCodingAgentProject);
     const shell = snapshot.fileContents["src/agent-shell.tsx"] ?? "";

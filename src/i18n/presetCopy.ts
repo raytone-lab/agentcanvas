@@ -223,11 +223,11 @@ const presetOptionZh: PresetOptionTable = {
   },
   "tool-approval-inline": {
     label: "内联审批",
-    description: "在工具卡片内显示“是”“始终”和“否”审批操作。",
+    description: "在输入框上方用紧凑的编号选项询问：是、始终、否，也可直接输入答案。",
   },
   "tool-approval-hidden": {
     label: "外部审批",
-    description: "将“是”“始终”和“否”操作移出工具卡片，放入对话时间线。",
+    description: "在输入框上方用完整的权限卡片询问，并一并展示工具参数。",
   },
 
   // Blocks
