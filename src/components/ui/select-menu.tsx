@@ -91,6 +91,8 @@ export function SelectMenu({
           className="ui-dropdown-menu ui-select-menu-content"
           sideOffset={6}
           align={align}
+          collisionPadding={12}
+          sticky="always"
         >
           <RDropdown.RadioGroup value={value} onValueChange={onValueChange}>
             {options.map((option) => (

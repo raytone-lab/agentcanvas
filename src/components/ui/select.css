@@ -99,7 +99,34 @@
 .ui-select-menu-value[data-placeholder="true"] {
   color: var(--text-muted);
 }
-/* Popup at least as wide as its trigger. */
+/* Keep long option lists inside the viewport. Eight compact rows are visible
+   before the menu scrolls, so controls below the trigger remain reachable. */
 .ui-select-menu-content {
+  width: max-content;
   min-width: var(--radix-dropdown-menu-trigger-width);
+  max-width: calc(100vw - (var(--space-3) * 2));
+  max-height: min(
+    calc(var(--control-lg) * 8),
+    var(--radix-dropdown-menu-content-available-height)
+  );
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-width: thin;
+}
+
+.ui-select-menu-content::-webkit-scrollbar {
+  width: var(--space-1);
+}
+
+.ui-select-menu-content::-webkit-scrollbar-thumb {
+  border-radius: var(--radius-full);
+  background: var(--border-strong);
+}
+
+.ui-select-menu-content .ui-dropdown-menu__item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
