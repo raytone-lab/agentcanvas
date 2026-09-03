@@ -300,7 +300,11 @@ export function createScaffoldPackageJson(project: AgentFrontendProject): Scaffo
       "@radix-ui/react-tabs": "^1.1.14",
       "@radix-ui/react-tooltip": "^1.2.8",
       "generative-loaders": "^0.1.1",
+      // Markdown rendering in the output panel: KaTeX for formulas, mermaid for
+      // diagrams (dynamically imported, so it stays out of the initial chunk).
+      katex: "^0.16.47",
       "lucide-react": "^1.16.0",
+      mermaid: "^11.17.2",
       motion: "^12.40.0",
       react: "^19.2.6",
       "react-dom": "^19.2.6",
@@ -308,6 +312,7 @@ export function createScaffoldPackageJson(project: AgentFrontendProject): Scaffo
       "thinking-orbs": "^0.1.1",
     },
     devDependencies: {
+      "@types/katex": "^0.16.8",
       "@types/node": "^24.0.0",
       "@types/react": "^19.2.15",
       "@types/react-dom": "^19.2.3",
@@ -701,6 +706,7 @@ export type ScaffoldExportSnapshot = {
 
 const AGENT_SHELL_SOURCE = `import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentUXEvent } from "@agent-ux/protocol";
+import type { AgentUXToolTimelineItem } from "@agent-ux/render-core";
 import { useAgentUXReplay } from "@agent-ux/react";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { PanelLeft, PanelRight } from "lucide-react";
@@ -846,7 +852,7 @@ export function AgentApp() {
   // Both approval modes answer above the composer, exactly where the configurator previewed
   // them. Each mode needs its own surface here: \`ChatFrame\` no longer places either one in the
   // transcript, so a mode without an overlay would leave a real run with nothing to click.
-  const pendingApprovalTool = displayViewModel.timeline.find((item) =>
+  const pendingApprovalTool = displayViewModel.timeline.find((item): item is AgentUXToolTimelineItem =>
     item.kind === "tool" && item.status === "awaiting_approval" && Boolean(item.approval),
   );
   const liveApprovalTool = pendingApprovalTool && pendingApprovalTool.id !== dismissedApprovalId
