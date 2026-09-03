@@ -2,7 +2,7 @@
 
 ## Design Source of Truth
 
-Before generating or changing any UI, read `DESIGN.md` (project root) — the visual + interaction spec (colors, typography, geometry, elevation, component contracts, motion). Use semantic tokens only; no raw hex or raw px motion durations. Component architecture lives in `docs/COMPONENT_SYSTEM.md`.
+Before generating or changing any UI, read `DESIGN.md` (project root) — the visual + interaction spec (colors, typography, geometry, elevation, component contracts, motion). Use semantic tokens only; no raw hex or raw px motion durations. Component architecture lives in `docs/COMPONENT_SYSTEM.md`. App orchestration layering (`src/app` state machine, viewmodel, projections, and the agent-preview facade boundaries) lives in `docs/APP_ARCHITECTURE.md`.
 
 ## Project Mode
 
