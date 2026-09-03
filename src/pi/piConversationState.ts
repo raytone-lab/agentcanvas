@@ -9,7 +9,7 @@ export type EphemeralPiConversation = {
   createdAt: number;
 };
 
-export type PiConversationSidebarItem = Pick<EphemeralPiConversation, "id" | "title">;
+export type PiConversationSidebarItem = Pick<EphemeralPiConversation, "id" | "title" | "createdAt">;
 
 export function createEphemeralPiConversation(
   id = createConversationId(),
@@ -58,7 +58,7 @@ export function replacePiConversation(
 export function piConversationSidebarItems(
   conversations: readonly EphemeralPiConversation[],
 ): readonly PiConversationSidebarItem[] {
-  return conversations.map(({ id, title }) => ({ id, title }));
+  return conversations.map(({ id, title, createdAt }) => ({ id, title, createdAt }));
 }
 
 function createConversationId(): string {

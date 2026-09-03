@@ -2,6 +2,7 @@
 // React-facing surface and `App.test.tsx` mocks it wholesale, which would leave this module
 // without an event-type list and silently reject every event.
 import { AGENT_UX_EVENT_TYPES, type AgentUXEvent } from "@agent-ux/protocol";
+import { limitEventText } from "./eventLimits";
 
 /**
  * Admission layer: our protocol and our components are the contract.
@@ -489,7 +490,7 @@ export function normalizeAgentUXEvents(
             title: basename(path),
             mimeType: mimeFor(path),
           }),
-          wrap("delta", { artifactId, format: "text", delta: content }),
+          wrap("delta", { artifactId, format: "text", delta: limitEventText(content) }),
           wrap("finished", { artifactId, status: "success", uri: `file://${path}` }),
         );
         derivedArtifacts.push({ toolCallId: id, path });

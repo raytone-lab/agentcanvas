@@ -21,6 +21,7 @@ export function ProviderFloatingSettings({
   project,
   defaultOpen = false,
   sessionKeys,
+  isRunning = false,
   onSetDefaultProvider,
   onUpdateProvider,
   onSessionKeyChange,
@@ -31,6 +32,8 @@ export function ProviderFloatingSettings({
   project: AgentFrontendProject;
   defaultOpen?: boolean;
   sessionKeys: Record<string, string>;
+  /** A live run owns the runtime model; host-affecting actions are disabled while true. */
+  isRunning?: boolean;
   onSetDefaultProvider: (id: ProviderConnectionId) => void;
   onUpdateProvider: (id: ProviderConnectionId, patch: ProviderPatch) => void;
   onSessionKeyChange: (id: ProviderConnectionId, value: string) => void;
@@ -161,15 +164,15 @@ export function ProviderFloatingSettings({
                   </label>
 
                   <div className="provider-floating-actions">
-                    <Button onClick={() => onTestProvider(provider, sessionKey)}>
+                    <Button disabled={isRunning} onClick={() => onTestProvider(provider, sessionKey)}>
                       <CheckCircle2 size={14} />
                       {copy.testKey}
                     </Button>
-                    <Button onClick={() => onFetchModels(provider, sessionKey)}>
+                    <Button disabled={isRunning} onClick={() => onFetchModels(provider, sessionKey)}>
                       <RefreshCw size={14} />
                       {copy.fetchModels}
                     </Button>
-                    <Button onClick={onSave}>
+                    <Button disabled={isRunning} onClick={onSave}>
                       <Save size={14} />
                       {copy.save}
                     </Button>

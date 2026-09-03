@@ -217,6 +217,11 @@ export function ComposerFrame({
   }
 
   function selectProviderModel(value: string) {
+    if (isRunning) {
+      // A live run owns the runtime model; switching mid-run would fight the host's
+      // configuration guard (and unsettle the running turn). Choose applies to the next run.
+      return;
+    }
     const [providerId, model] = value.split("::");
     if (!providerId || !model) {
       return;
@@ -455,6 +460,7 @@ export function ComposerFrame({
             <SelectMenu
               size="sm"
               align="end"
+              disabled={isRunning}
               ariaLabel={`${copy.composer.frame.provider} / ${copy.composer.frame.model}`}
               className="provider-model-picker provider-model-menu"
               value={providerModelValue}
@@ -504,6 +510,7 @@ export function ComposerFrame({
                           <DropdownMenuItem
                             key={value}
                             className="combined-model-budget-item"
+                            disabled={isRunning}
                             onSelect={() => selectProviderModel(value)}
                           >
                             <span className="combined-model-budget-copy">

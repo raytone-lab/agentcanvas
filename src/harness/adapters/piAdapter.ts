@@ -1,4 +1,5 @@
 import { agentUXEventBuilders, type AgentUXEvent } from "@agent-ux/protocol";
+import { limitEventText, limitToolResult } from "../../runtime/eventLimits";
 
 /**
  * Pi's SDK, JSON and RPC modes all expose the same session-event vocabulary. Keep this adapter
@@ -470,7 +471,7 @@ export function createPiEventAdapter(options: PiEventAdapterOptions = {}): PiEve
         } else {
           push(agentUXEventBuilders.toolCallResult(meta(`tool_result_${id}`), {
             toolCallId: id,
-            result: event.result,
+            result: limitToolResult(event.result),
             resultPreview: previewText(event.result),
           }), next);
           emitFileArtifact(tool, event.result, next, meta, push);
@@ -614,7 +615,7 @@ function emitFileArtifact(
   }), next);
   push(agentUXEventBuilders.artifactDelta(meta(`artifact_delta_${artifactId}`) as never, {
     artifactId,
-    delta: content,
+    delta: limitEventText(content),
     format: "text",
   }), next);
   push(agentUXEventBuilders.artifactFinished(meta(`artifact_finished_${artifactId}`) as never, {

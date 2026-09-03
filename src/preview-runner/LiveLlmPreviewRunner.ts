@@ -24,6 +24,7 @@ import {
 } from "../harness/adapters/anthropicAdapter";
 import { createEventWriter, type AgentUXEventWriter } from "../harness/adapters/eventWriter";
 import { simulateLiveToolCall } from "./liveToolSimulator";
+import { limitEventText } from "../runtime/eventLimits";
 
 export type LiveLlmMessage = {
   role: "user" | "assistant";
@@ -539,8 +540,8 @@ function createLiveLlmEventWriter(
         agentUXEventBuilders.artifactDelta(meta(`artifact_delta_${safeEventId(artifactId)}_${seq + 1}`), {
           artifactId,
           delta: artifact.format === "json" && typeof artifact.delta !== "string"
-            ? JSON.stringify(artifact.delta, null, 2)
-            : artifact.delta,
+            ? limitEventText(JSON.stringify(artifact.delta, null, 2))
+            : limitEventText(String(artifact.delta)),
           format: artifact.format,
         }),
         agentUXEventBuilders.artifactFinished(meta(`artifact_finished_${safeEventId(artifactId)}`), {

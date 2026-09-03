@@ -497,6 +497,7 @@ export function App() {
       <ProviderFloatingSettings
         project={runtimeProject}
         sessionKeys={provider.sessionKeys}
+        isRunning={state.liveRunning}
         onFetchModels={(provider_, key) => state.runMode === "pi" ? void controller.refreshPiProviderModels(provider_, key) : void provider.fetchProviderModels(provider_, key)}
         onSave={() => state.runMode === "pi" ? void controller.savePiProviderSettings() : controller.saveProviderSettings()}
         onSetDefaultProvider={(id) => state.runMode === "pi" ? void controller.selectPiProvider(id) : controller.setDefaultProvider(id)}

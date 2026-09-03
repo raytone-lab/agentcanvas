@@ -49,8 +49,8 @@ describe("ephemeral Pi conversation state", () => {
 
     expect(conversations.map((entry) => entry.id)).toEqual(["first", "second"]);
     expect(piConversationSidebarItems(conversations)).toEqual([
-      { id: "first", title: "Updated" },
-      { id: "second", title: "Second" },
+      { id: "first", title: "Updated", createdAt: 1 },
+      { id: "second", title: "Second", createdAt: 2 },
     ]);
   });
 });
