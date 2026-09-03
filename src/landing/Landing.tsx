@@ -26,6 +26,7 @@ import { useLocale } from "../i18n/LocaleContext";
 import { minimalThemePresetIds, nativeThemePresetIds, themeTokens } from "../theme/themeTokens";
 import { EXPORT_FILE_COUNT } from "./exportFacts";
 import { FileList } from "./FileList";
+import { HeroMark } from "./HeroMark";
 import { LocaleSwitch } from "./LocaleSwitch";
 import { RunSteps } from "./RunSteps";
 import { SlidingTabs } from "./SlidingTabs";
@@ -41,7 +42,7 @@ import {
   landingProviders,
   providerGroupCount,
 } from "./providers";
-import { heroPosterSrc, heroVideoSrc } from "./shots";
+import { heroVideoPosterSrc, heroVideoSrc } from "./shots";
 import { EDITOR_URL, GITHUB_REPO_URL } from "./siteConfig";
 import "./landing.css";
 
@@ -360,6 +361,10 @@ export function Landing() {
 
       <main id="lp-main">
         <section className="lp-shell lp-hero">
+          {/* Decorative only — the mark carries no information the headline does not already
+              state, and it sits behind the text rather than beside it so the hero keeps its
+              single column and the demo below stays the hero's real visual. */}
+          <HeroMark src="/agent-canvas-mark.svg" className="lp-hero-mark" />
           <p className="lp-kicker">
             {copy.hero.eyebrowTags.map((tag) => (
               <span key={tag}>{tag}</span>
@@ -388,7 +393,7 @@ export function Landing() {
           <figure className="lp-hero-shot">
             <HeroDemo
               videoSrc={heroVideoSrc}
-              posterSrc={heroPosterSrc}
+              posterSrc={heroVideoPosterSrc}
               alt={copy.hero.shotAlt}
               pauseLabel={copy.hero.demoPause}
               playLabel={copy.hero.demoPlay}

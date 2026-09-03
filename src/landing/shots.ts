@@ -17,21 +17,39 @@
  * A missing file is not a build error: the video falls back to the poster, and the poster
  * falls back to a labelled frame.
  *
- * `scripts/capture-editor-tour.mjs` is a third script and is *not* wired here: it records a
- * longer pass over every rail module for the README, which needs a GIF because GitHub will
- * not play a repository-local mp4. Its outputs are `editor-tour.{gif,mp4}`. Changing the
- * hero means re-running the two scripts above; the tour is regenerated separately with
- * `npm run capture:tour`.
+ * `scripts/capture-editor-tour.mjs` is the third script, and it is the one the hero now uses.
+ * It records a longer pass over every rail module and seeds `agentcanvas.locale` before the
+ * app boots, so its output is in English; `capture-landing-demo.mjs` has no locale handling
+ * at all, so `editor-demo.mp4` is whatever the editor defaults to, which is Chinese. An
+ * English hero was wanted and the tour is the only English recording in the repo.
+ *
+ * That trade is worth stating: the tour is 39.5s and 724 kB against the demo's 18.5s and
+ * 264 kB, and it sweeps every module rather than telling the demo's tighter story. Recording
+ * the demo in English instead — copying the tour script's three lines of locale seeding —
+ * would give the shorter cut back. Regenerate with `npm run capture:tour`.
  */
 
-/** ~18s loop: pick a thinking motion, open the tool group, then recolour three themes. */
-export const heroVideoSrc = "/landing/editor-demo.mp4";
+/** ~40s pass over all 11 rail modules, in English. */
+export const heroVideoSrc = "/landing/editor-tour.mp4";
 
 /**
- * The light-theme still. Three jobs: the hero video's poster, the reduced-motion and
- * video-error fallback, and the base image the callout labels are drawn onto.
+ * The hero video's poster, and its fallback when the video errors or motion is reduced.
+ *
+ * A frame lifted straight out of `heroVideoSrc` rather than a separately captured still: a
+ * poster from a different recording meant the first paint was in one language and the video
+ * in another. Taken at 20s, where the transcript is settled — earlier frames catch the
+ * typewriter mid-word, which reads as a truncation bug on a still.
  */
-export const heroPosterSrc = "/landing/editor.png";
+export const heroVideoPosterSrc = "/landing/editor-tour-poster.png";
+
+/**
+ * The light-theme still, and the near side of the theme wipe.
+ *
+ * Named for the job it still has. It used to double as the hero's poster, which is why it was
+ * called `heroPosterSrc`; once the hero got a poster cut from its own video, that name pointed
+ * at something it no longer did.
+ */
+export const lightShotSrc = "/landing/editor.png";
 
 /** The same editor state on a dark theme preset — the far side of the theme wipe. */
 export const darkShotSrc = "/landing/editor-dark.png";

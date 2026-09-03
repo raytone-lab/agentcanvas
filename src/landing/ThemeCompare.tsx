@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 
-import { heroPosterSrc, darkShotSrc } from "./shots";
+import { lightShotSrc, darkShotSrc } from "./shots";
 
 /**
  * Before/after wipe between two themes.
@@ -69,7 +69,7 @@ export function ThemeCompare({
     >
       <img className="lp-compare-base" src={darkShotSrc} alt={darkAlt} loading="lazy" decoding="async" />
       {/* Clipped to the wipe position. Its alt text carries the light-theme description. */}
-      <img className="lp-compare-top" src={heroPosterSrc} alt={lightAlt} loading="lazy" decoding="async" />
+      <img className="lp-compare-top" src={lightShotSrc} alt={lightAlt} loading="lazy" decoding="async" />
 
       <span className="lp-compare-badge" data-side="left" aria-hidden="true">
         {lightBadge}
