@@ -1,7 +1,7 @@
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import { piRuntimePlugin } from "./src/pi/piVitePlugin.ts";
+import { piRuntimePlugin, sameOriginRequestAllowed } from "./src/pi/piVitePlugin.ts";
 
 export default defineConfig({
   plugins: [react(), agentCanvasProviderProxy(), piRuntimePlugin()],
@@ -68,6 +68,17 @@ function agentCanvasProviderProxy(): Plugin {
         void (async () => {
           if (!req.url?.startsWith(prefix)) {
             next();
+            return;
+          }
+
+          // This proxy forwards to whatever URL the caller names and echoes the response
+          // with permissive CORS. A cross-origin page must never reach it — without this
+          // guard it is an open proxy through the user's machine (SSRF with readable
+          // responses, e.g. http://169.254.169.254/).
+          if (!sameOriginRequestAllowed(req)) {
+            res.statusCode = 403;
+            res.setHeader("content-type", "application/json; charset=utf-8");
+            res.end(JSON.stringify({ error: "Cross-origin provider proxy requests are not allowed." }));
             return;
           }
 
@@ -165,8 +176,13 @@ function headerValue(value: string | string[] | undefined): string | undefined {
 
 async function readRequestBody(req: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
+  let size = 0;
   for await (const chunk of req) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.length;
+    // Keep a runaway or hostile request from buffering unbounded memory upstream.
+    if (size > 10_000_000) throw new Error("Provider proxy request body is too large.");
+    chunks.push(buffer);
   }
   return Buffer.concat(chunks);
 }

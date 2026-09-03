@@ -6,7 +6,7 @@ import { appVersionLabel } from "../../appVersion";
 import { useCopy, useLocale } from "../../i18n/LocaleContext";
 import type { AgentFrontendProject } from "../../schema/agentuxConfig";
 
-export type SessionSidebarItem = { id: string; title: string };
+export type SessionSidebarItem = { id: string; title: string; createdAt?: number };
 
 /**
  * Conversation-history rail for the scaffolded agent product: new chat, search,
@@ -43,7 +43,7 @@ export function SessionSidebar({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchOverlayRoot, setSearchOverlayRoot] = useState<HTMLElement | null>(null);
   const [query, setQuery] = useState("");
-  const sessions = onSelectSession
+  const sessions: readonly SessionSidebarItem[] = onSelectSession
     ? sessionItems ?? sessionPrompts.map((prompt) => ({ id: prompt, title: prompt }))
     : [];
   const hasSessions = sessions.length > 0;
@@ -61,8 +61,18 @@ export function SessionSidebar({
     }
     return sessions.filter((session) => session.title.toLowerCase().includes(value));
   }, [query, sessions]);
-  const today = sessions.slice(0, 3);
-  const earlier = sessions.slice(3);
+  // Real sessions carry a createdAt; group them by the actual day. Rows without one
+  // (legacy prompt rows, demo filler) keep the positional fallback so a populated
+  // preview still reads naturally.
+  const allTimestamped = sessions.length > 0 && sessions.every((session) => typeof session.createdAt === "number");
+  const dayStart = new Date();
+  dayStart.setHours(0, 0, 0, 0);
+  const today = allTimestamped
+    ? sessions.filter((session) => (session.createdAt as number) >= dayStart.getTime())
+    : sessions.slice(0, 3);
+  const earlier = allTimestamped
+    ? sessions.filter((session) => (session.createdAt as number) < dayStart.getTime())
+    : sessions.slice(3);
   const searchToday = filteredSessions.filter((session) => today.some((entry) => entry.id === session.id));
   const searchEarlier = filteredSessions.filter((session) => earlier.some((entry) => entry.id === session.id));
   const resolveSearchOverlayRoot = () => {
@@ -184,7 +194,9 @@ export function SessionSidebar({
         <nav className="session-list">
           {grouping ? (
             <>
-              <SessionGroup label={c.groupToday} items={today} activeId={effectiveActive} onSelect={onSelectSession} />
+              {today.length > 0 ? (
+                <SessionGroup label={c.groupToday} items={today} activeId={effectiveActive} onSelect={onSelectSession} />
+              ) : null}
               {earlier.length > 0 ? (
                 <SessionGroup label={c.groupEarlier} items={earlier} activeId={effectiveActive} onSelect={onSelectSession} />
               ) : null}

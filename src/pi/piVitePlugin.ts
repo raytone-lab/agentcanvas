@@ -2,6 +2,9 @@ import type { Plugin } from "vite";
 
 import { PI_API_PREFIX } from "./piClient.ts";
 import { createPiHttpHost } from "./piHost.ts";
+import { sameOriginRequestAllowed } from "./requestOrigin.ts";
+
+export { sameOriginRequestAllowed } from "./requestOrigin.ts";
 
 /** Mount Pi into both `vite dev` and `vite preview`; the React bundle never imports the SDK. */
 export function piRuntimePlugin(options: { cwd?: string } = {}): Plugin {
@@ -13,6 +16,12 @@ export function piRuntimePlugin(options: { cwd?: string } = {}): Plugin {
     middlewares.use((req, res, next) => {
       if (!req.url?.startsWith(PI_API_PREFIX)) {
         next();
+        return;
+      }
+      if (!sameOriginRequestAllowed(req)) {
+        res.statusCode = 403;
+        res.setHeader("content-type", "application/json; charset=utf-8");
+        res.end(JSON.stringify({ error: "Cross-origin Pi requests are not allowed." }));
         return;
       }
       void getHost().handle(req, res).catch(next);

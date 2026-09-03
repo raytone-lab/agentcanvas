@@ -40,6 +40,7 @@ describe("Pi browser client", () => {
       start(controller) {
         controller.enqueue(encoder.encode('{"type":"run.started","payload":{}}\n{"type":"text.'));
         controller.enqueue(encoder.encode('delta","payload":{"delta":"Hi"}}\n'));
+        controller.enqueue(encoder.encode('{"type":"run.finished","payload":{"status":"success"}}\n'));
         controller.close();
       },
     });
@@ -47,7 +48,40 @@ describe("Pi browser client", () => {
     const events = [];
     for await (const event of runPiTurn({ prompt: "hello" }, { fetcher })) events.push(event);
 
-    expect(events.map((event) => event.type)).toEqual(["run.started", "text.delta"]);
+    expect(events.map((event) => event.type)).toEqual(["run.started", "text.delta", "run.finished"]);
+  });
+
+  it("throws when the stream ends without a terminal event", async () => {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode('{"type":"run.started","payload":{}}\n'));
+        controller.close();
+      },
+    });
+    const fetcher = (async () => new Response(stream, { status: 200 })) as typeof fetch;
+    const events: string[] = [];
+    await expect(async () => {
+      for await (const event of runPiTurn({ prompt: "hello" }, { fetcher })) events.push(event.type);
+    }).rejects.toThrow(/terminal event/);
+    // Events received before the failure are still delivered to the consumer.
+    expect(events).toEqual(["run.started"]);
+  });
+
+  it("does not throw for an aborted stream that ends early", async () => {
+    const encoder = new TextEncoder();
+    const controller = new AbortController();
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(encoder.encode('{"type":"run.started","payload":{}}\n'));
+        controller.abort();
+        c.close();
+      },
+    });
+    const fetcher = (async () => new Response(stream, { status: 200 })) as typeof fetch;
+    const events = [];
+    for await (const event of runPiTurn({ prompt: "hello" }, { fetcher, signal: controller.signal })) events.push(event);
+    expect(events.map((event) => event.type)).toEqual(["run.started"]);
   });
 
   it("passes an ephemeral conversation ID when creating a Pi session", async () => {

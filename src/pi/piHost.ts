@@ -17,6 +17,7 @@ import {
   type PiRuntimeConfiguration,
   type PiRuntimeState,
 } from "./piClient.ts";
+import { sameOriginRequestAllowed } from "./requestOrigin.ts";
 
 export type PiPermissionMode = NonNullable<PiPromptInput["permissionMode"]>;
 
@@ -42,17 +43,46 @@ type PendingApproval = {
 /** Shared by the Pi tool wrappers and the HTTP controller. */
 export class PiApprovalGate {
   private mode: PiPermissionMode = "request";
-  private readonly alwaysApproved = new Set<string>();
+  /** "Always allow" decisions are per-conversation: an allow in one session must not
+   *  silently approve the same tool in another (or in a fresh session). */
+  private readonly alwaysByConversation = new Map<string, Set<string>>();
+  private conversationId = "default";
   private readonly pending = new Map<string, PendingApproval>();
 
   setMode(mode: PiPermissionMode) {
     this.mode = mode;
   }
 
+  /** The conversation whose always-decisions `requiresApproval`/`wait` consult. A single
+   *  run is active at a time (the controller enforces it), so a mutable scope is safe. */
+  setConversation(conversationId: string) {
+    this.conversationId = conversationId;
+  }
+
+  /** A new session starts with an empty approval memory. */
+  resetConversation(conversationId: string) {
+    this.alwaysByConversation.delete(conversationId);
+  }
+
+  private alwaysApproved() {
+    let allowed = this.alwaysByConversation.get(this.conversationId);
+    if (!allowed) {
+      allowed = new Set();
+      this.alwaysByConversation.set(this.conversationId, allowed);
+    }
+    return allowed;
+  }
+
   requiresApproval(toolName: string, args: unknown): boolean {
-    if (this.mode === "allow-all" || this.alwaysApproved.has(toolName)) return false;
-    if (this.mode === "request") return MUTATING_TOOLS.has(toolName);
-    return toolName === "bash" && isRiskyCommand(stringField(asRecord(args), "command") ?? "");
+    if (this.mode === "allow-all" || this.alwaysApproved().has(toolName)) return false;
+    if (toolName === "bash") {
+      // request: any shell command asks. auto: only commands the risk check flags ask,
+      // and the check is deliberately conservative (see isRiskyCommand).
+      return this.mode === "request" || isRiskyCommand(stringField(asRecord(args), "command") ?? "");
+    }
+    // Non-shell tools behave the same under request and auto: the mutating ones still
+    // ask (a silent filesystem change is not what "auto" promises), read-only ones run.
+    return MUTATING_TOOLS.has(toolName);
   }
 
   async wait(toolCallId: string, toolName: string, args: unknown, signal?: AbortSignal): Promise<void> {
@@ -68,7 +98,7 @@ export class PiApprovalGate {
       this.pending.delete(toolCallId);
     });
     if (decision === "no") throw new Error("Tool execution was denied by the user.");
-    if (decision === "always") this.alwaysApproved.add(toolName);
+    if (decision === "always") this.alwaysApproved().add(toolName);
   }
 
   resolve(toolCallId: string, decision: PiApprovalDecision): boolean {
@@ -154,6 +184,7 @@ export function createPiRuntimeController(options: {
   return {
     state,
     async configure(input) {
+      if (running) throw new Error("Stop the active Pi run before changing its configuration.");
       const conversationId = normalizeConversationId(input.conversationId);
       const current = await bridge(conversationId);
       await current.configure(input);
@@ -166,6 +197,7 @@ export function createPiRuntimeController(options: {
       const conversationId = normalizeConversationId(input.conversationId);
       const current = await bridge(conversationId);
       approvalGate.setMode(input.permissionMode ?? "request");
+      approvalGate.setConversation(conversationId);
       if (input.provider || input.model || input.thinkingLevel) {
         await current.configure({ provider: input.provider, model: input.model, thinkingLevel: input.thinkingLevel });
       }
@@ -218,6 +250,8 @@ export function createPiRuntimeController(options: {
       // A new session starts with an empty transcript, so its tool set has to be announced
       // again or `CapabilityTray` would stay empty for the rest of the conversation's life.
       announcedCapabilities.delete(id);
+      // ... and with an empty approval memory: "always allow" must not survive a reset.
+      approvalGate.resetConversation(id);
       return state(id);
     },
     dispose() {
@@ -240,6 +274,12 @@ export function createPiHttpHost(options: {
     async handle(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
       const url = new URL(req.url ?? "/", "http://localhost");
       if (!url.pathname.startsWith(PI_API_PREFIX)) return false;
+      // Defense in depth: the vite plugin guards first; this keeps the controller safe
+      // however it is mounted (a cross-origin page must not drive tools in this cwd).
+      if (!sameOriginRequestAllowed(req)) {
+        sendJson(res, 403, { error: "Cross-origin Pi requests are not allowed." });
+        return true;
+      }
       setLocalHeaders(res);
       if (req.method === "OPTIONS") {
         res.statusCode = 204;
@@ -510,8 +550,41 @@ function guardTool<T extends { name: string; execute: (...args: any[]) => Promis
 
 const MUTATING_TOOLS = new Set(["bash", "edit", "write", "powershell"]);
 
+/**
+ * Shell-command risk check for `auto` permission mode.
+ *
+ * Deliberately conservative: anything that deletes, moves, chmods, streams to
+ * a file, downloads-and-executes, or runs an interpreter is flagged. This is
+ * a UX tripwire for the common cases — not a security boundary; treat `auto`
+ * as "trust this prompt's commands", which is what the docs say.
+ */
 function isRiskyCommand(command: string): boolean {
-  return /(^|[;&|]\s*)(sudo|rm\s+-|git\s+(push|reset|clean)|npm\s+publish|pnpm\s+publish|curl\b.*\|\s*(sh|bash)|chmod\s+-R|chown\s+-R)\b/i.test(command);
+  const leading = "(^|[;&|]\\s*)";
+  if (new RegExp(`${leading}(sudo|rm|rmdir|mv|chmod|chown|dd|mkfs|tee|curl|wget|python|python3|node|perl|ruby|sh|bash)\\b`, "i").test(command)) {
+    return true;
+  }
+  if (/git\s+(push|reset|clean|filter-branch)\b/i.test(command)) return true;
+  if (/npm\s+publish|pnpm\s+publish\b/i.test(command)) return true;
+  // Download-then-execute pipelines: curl|sh, wget|bash, python -c "…" etc. are already
+  // caught by the interpreter/curl keywords above; this catches indirect forms.
+  if (/\b(curl|wget)\b[^|]*\|\s*(sh|bash|python|python3|node)\b/i.test(command)) return true;
+  // Redirection to a real file (not /dev/null, not echo/cat/printf/read prose).
+  if (outputRedirectionToFile(command)) return true;
+  return false;
+}
+
+function outputRedirectionToFile(command: string): boolean {
+  const segments = command.split(/[;&|]\s*/);
+  for (const segment of segments) {
+    const trimmed = segment.trim();
+    if (!trimmed) continue;
+    // Non-writing builtins only: anything that can emit bytes (echo, cat, printf, tee…)
+    // must not silently redirect into a file under `auto`.
+    if (/^(true|false|export|read|cd)\b/i.test(trimmed)) continue;
+    const redirect = /(?:^|[^0-9])([12]?>|>>)\s*(\S+)/.exec(trimmed);
+    if (redirect && redirect[2] !== "/dev/null") return true;
+  }
+  return false;
 }
 
 function permissionMode(value: unknown): PiPermissionMode {

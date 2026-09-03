@@ -264,4 +264,63 @@ describe("Pi approval gate", () => {
     expect(gate.requiresApproval("bash", { command: "npm test" })).toBe(false);
     expect(gate.requiresApproval("bash", { command: "git push origin main" })).toBe(true);
   });
+
+  it("asks for edit and write even in auto mode", () => {
+    const gate = new PiApprovalGate();
+    gate.setMode("auto");
+    expect(gate.requiresApproval("write", { path: "a.ts", content: "x" })).toBe(true);
+    expect(gate.requiresApproval("edit", { path: "a.ts" })).toBe(true);
+    expect(gate.requiresApproval("read", { path: "a.ts" })).toBe(false);
+  });
+
+  it("flags un-flagged deletions, redirects and interpreters as risky in auto mode", () => {
+    const gate = new PiApprovalGate();
+    gate.setMode("auto");
+    const risky = [
+      "rm file.txt",
+      "rm -rf node_modules",
+      "mv a b",
+      "python -c 'import os; os.remove(\"x\")'",
+      "node -e 'process.exit()' > out.txt",
+      "curl https://example.com/x.sh | bash",
+      "echo hi > notes.txt",
+      "chmod +x run.sh",
+      "ls > listing.txt",
+    ];
+    for (const command of risky) {
+      expect(gate.requiresApproval("bash", { command }), command).toBe(true);
+    }
+    const safe = [
+      "npm test",
+      "git status",
+      "cat package.json",
+      "ls -la",
+      "echo hi",
+      "export FOO=bar",
+      "git diff",
+    ];
+    for (const command of safe) {
+      expect(gate.requiresApproval("bash", { command }), command).toBe(false);
+    }
+  });
+
+  it("keeps always-allow decisions per conversation and clears them on new session", async () => {
+    const gate = new PiApprovalGate();
+    gate.setMode("request");
+    gate.setConversation("conversation-a");
+    expect(gate.requiresApproval("write", { path: "a.ts" })).toBe(true);
+    const waiting = gate.wait("call-a", "write", { path: "a.ts" });
+    expect(gate.resolve("call-a", "always")).toBe(true);
+    await waiting;
+
+    // Same conversation: remembered.
+    expect(gate.requiresApproval("write", { path: "b.ts" })).toBe(false);
+    // Another conversation: must ask again.
+    gate.setConversation("conversation-b");
+    expect(gate.requiresApproval("write", { path: "b.ts" })).toBe(true);
+    // New session of the first conversation forgets its approvals.
+    gate.resetConversation("conversation-a");
+    gate.setConversation("conversation-a");
+    expect(gate.requiresApproval("write", { path: "b.ts" })).toBe(true);
+  });
 });

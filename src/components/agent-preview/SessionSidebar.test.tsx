@@ -109,4 +109,47 @@ describe("SessionSidebar session data contract", () => {
     await act(async () => rows[0]?.click());
     expect(onSelectSession).toHaveBeenCalledWith("first");
   });
+
+  it("groups timestamped sessions by the actual day instead of list position", async () => {
+    const onSelectSession = vi.fn();
+    const dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
+    const yesterday = dayStart.getTime() - 24 * 60 * 60 * 1000;
+    const today = dayStart.getTime() + 60 * 60 * 1000; // 01:00 today
+    const container = await renderSidebar({
+      // Positionally the older session comes first — a positional slice would put
+      // yesterday's row under "Today".
+      sessionItems: [
+        { id: "old", title: "Yesterday session", createdAt: yesterday },
+        { id: "recent", title: "Today session", createdAt: today },
+      ],
+      onSelectSession,
+    });
+    const groups = Array.from(container.querySelectorAll("h4")).map((heading) => heading.textContent);
+    const todayGroup = Array.from(container.querySelectorAll("h4"))
+      .find((heading) => heading.textContent === "Today")?.parentElement;
+    const todayTitles = todayGroup ? Array.from(todayGroup.querySelectorAll(".session-item")).map((row) => row.textContent) : [];
+
+    expect(groups).toContain("Today");
+    expect(groups).toContain("Earlier");
+    expect(todayTitles).toContain("Today session");
+    expect(todayTitles).not.toContain("Yesterday session");
+  });
+
+  it("falls back to positional grouping when sessions carry no timestamps", async () => {
+    const onSelectSession = vi.fn();
+    const container = await renderSidebar({
+      sessionItems: [
+        { id: "one", title: "First" },
+        { id: "two", title: "Second" },
+        { id: "three", title: "Third" },
+        { id: "four", title: "Fourth" },
+      ],
+      onSelectSession,
+    });
+    const todayGroup = Array.from(container.querySelectorAll("h4"))
+      .find((heading) => heading.textContent === "Today")?.parentElement;
+    const todayTitles = todayGroup ? Array.from(todayGroup.querySelectorAll(".session-item")).map((row) => row.textContent) : [];
+    expect(todayTitles).toEqual(["First", "Second", "Third"]);
+  });
 });
