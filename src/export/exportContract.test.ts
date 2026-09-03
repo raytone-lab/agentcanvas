@@ -212,7 +212,7 @@ describe("export contract: the exported app's first impression", () => {
     expect(shell).toContain("onNewSession: startNewSession");
     expect(shell).not.toContain("onNewSession: noop");
     expect(shell, "新建对话必须清空事件流与产物面板").toMatch(
-      /function startNewSession\(\)[\s\S]{0,300}setStreamId\(""\)/,
+      /(?:async )?function startNewSession\(\)[\s\S]{0,400}setStreamId\(""\)/,
     );
     expect(shell).toContain("startNewPiSession(conversation.id)");
   });

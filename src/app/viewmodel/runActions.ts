@@ -13,6 +13,7 @@ import {
   type PiRuntimeState,
 } from "../../pi/piClient";
 import { piErrorTurnEvents } from "../../pi/piErrorTurn";
+import { piCancelledTurnEvents } from "../../pi/piCancelledTurn";
 import { createPiFrameCommit } from "../../pi/piFrameCommit";
 import { piRuntimeConfigurationForProvider } from "../../pi/piProviderSync";
 import {
@@ -313,7 +314,13 @@ export function createRunActions(
     // from leaving the runtime on its old default (commonly Anthropic/Claude). The submitted
     // message is placed on the canvas first so a configuration failure is never a silent no-op.
     const piState = await synchronizePiRuntime(activeProject, true, nextConversation.id);
-    if (controller.signal.aborted || refs.piAbortControllerRef.current !== controller) return;
+    if (controller.signal.aborted || refs.piAbortControllerRef.current !== controller) {
+      // Stop arrived while the configuration round-trip was in flight. Clear our own ref —
+      // the finally block below is not reached on this path, so without this a stale
+      // controller would linger until the next run overwrites it.
+      if (refs.piAbortControllerRef.current === controller) refs.piAbortControllerRef.current = undefined;
+      return;
+    }
     if (!piState?.available) {
       nextConversation = appendPiConversationEvents(
         nextConversation,
@@ -361,13 +368,25 @@ export function createRunActions(
         }
       }
       commit.flush();
-      dispatch({ type: "patch", patch: { livePreviewState: "finished" } });
-      await refreshPiRuntime();
-      toast.success("Pi run completed.");
+      if (nextConversation.events.some((entry) => entry.type === "run.error")) {
+        // The server finished the stream with a run error (extension_error) instead of a
+        // clean success — report the turn as failed, not completed.
+        dispatch({ type: "patch", patch: { livePreviewState: "error" } });
+        toast.error(runErrorMessage(nextConversation.events));
+      } else {
+        dispatch({ type: "patch", patch: { livePreviewState: "finished" } });
+        await refreshPiRuntime();
+        toast.success("Pi run completed.");
+      }
     } catch (error) {
       if (controller.signal.aborted) {
         commit.cancel();
-        dispatch({ type: "patch", patch: { livePreviewState: "stopped" } });
+        // The abort severed the stream, so the server's own wrap-up events never arrive.
+        // Close whatever is still open locally (text/tool/reasoning blocks + a cancelled
+        // run terminal) so the transcript never keeps a half-finished turn.
+        const closed = appendPiConversationEvents(nextConversation, piCancelledTurnEvents(nextConversation.events));
+        dispatch({ type: "piConversationUpdated", conversation: closed, events: [...closed.events] });
+        dispatch({ type: "patch", patch: { livePreviewState: "stopped", externalApprovalOverlayActive: false, inlineApprovalOverlayActive: false, dismissedApprovalId: null } });
         toast.info("Pi run stopped.");
       } else {
         // Keep whatever the turn produced before it failed: the transcript up to the error is
@@ -454,6 +473,10 @@ export function createRunActions(
       dispatch({ type: "patch", patch: { externalApprovalOverlayActive: false, inlineApprovalOverlayActive: false } });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Pi approval failed.");
+      // The decision could not be delivered (the run it belonged to is gone, usually after
+      // a stop). Close the overlay regardless — leaving it up would strand it on a tool
+      // that can never be answered.
+      dispatch({ type: "patch", patch: { externalApprovalOverlayActive: false, inlineApprovalOverlayActive: false } });
       throw error;
     }
   }
@@ -464,7 +487,18 @@ export function createRunActions(
       refs.piAbortControllerRef.current.abort();
       void abortPiRun();
     }
-    dispatch({ type: "patch", patch: { livePreviewState: "stopped", liveRunning: false } });
+    // Clear any approval overlay a stopped run left waiting: its server-side pending
+    // entry was just cancelled, so answering it would only earn a 409.
+    dispatch({
+      type: "patch",
+      patch: {
+        livePreviewState: "stopped",
+        liveRunning: false,
+        externalApprovalOverlayActive: false,
+        inlineApprovalOverlayActive: false,
+        dismissedApprovalId: null,
+      },
+    });
   }
 
   function updateScenario(id: PreviewScenarioId) {
@@ -521,4 +555,15 @@ export function createRunActions(
     selectPiConversation,
     createNewPiConversation,
   };
+}
+
+/** Picks a readable message out of a stream that ended with a run error. */
+function runErrorMessage(events: readonly AgentUXEvent[]): string {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    if (events[index].type !== "run.error") continue;
+    const payload = events[index].payload as { message?: unknown; error?: unknown; code?: unknown } | undefined;
+    const message = payload?.message ?? payload?.error ?? payload?.code;
+    return typeof message === "string" && message.trim() ? message : "Pi run failed.";
+  }
+  return "Pi run failed.";
 }

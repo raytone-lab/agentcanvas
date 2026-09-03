@@ -141,6 +141,7 @@ const realSourceModules = import.meta.glob(
     "../agentmatrix/**/*.{ts,tsx,json}",
     "../agentux/**/*.{ts,tsx}",
     "../runtime/toolDisplaySpec.ts",
+    "../runtime/eventLimits.ts",
     // The admission layer travels with the export: the exported app is the one that talks to a
     // real backend, so it is the one that most needs a vendor's stream narrowed to what these
     // components can render — and needs to say so out loud when it cannot.
@@ -758,6 +759,7 @@ import {
   type EphemeralPiConversation,
 } from "./pi/piConversationState";
 import { piErrorTurnEvents } from "./pi/piErrorTurn";
+import { piCancelledTurnEvents } from "./pi/piCancelledTurn";
 import { createPiFrameCommit } from "./pi/piFrameCommit";
 
 const noop = () => {};
@@ -859,8 +861,13 @@ export function AgentApp() {
     ? pendingApprovalTool
     : undefined;
   const approveLive = async (toolCallId: string, decision: ApprovalDecision) => {
-    await resolvePiApproval(toolCallId, decision);
-    setDismissedApprovalId(toolCallId);
+    try {
+      await resolvePiApproval(toolCallId, decision);
+    } finally {
+      // Dismiss whether or not the decision landed: a stopped run answers 409, and leaving
+      // the overlay up would strand it on a tool that can never be answered.
+      setDismissedApprovalId(toolCallId);
+    }
   };
   const inlineApprovalOverlay = liveApprovalTool && activeProject.toolCalls.approval === "inline" ? (
     <div className="preview-approval-overlay" data-preview-region="approval-overlay" data-approval-kind="inline-runtime">
@@ -1044,7 +1051,14 @@ export function AgentApp() {
       // the error events were appended, and letting it land after the commit below would erase
       // them from the screen.
       commit.cancel();
-      if (!controller.signal.aborted) {
+      if (controller.signal.aborted) {
+        // The abort severed the stream, so the server's own wrap-up events never arrive.
+        // Close whatever is still open locally (text/tool/reasoning blocks + a cancelled
+        // run terminal) so the transcript never keeps a half-finished turn.
+        const closed = appendPiConversationEvents(nextConversation, piCancelledTurnEvents(nextConversation.events));
+        setPiConversations((current) => replacePiConversation(current, closed));
+        setPiEvents([...closed.events]);
+      } else {
         const message = error instanceof Error ? error.message : "Pi runtime failed.";
         // The prompt is only passed when this turn never emitted anything; mid-run the
         // transcript already shows it. Same helper the configurator uses, so a failed turn
@@ -1064,9 +1078,13 @@ export function AgentApp() {
     }
   }
 
-  function stopPi() {
+  async function stopPi() {
     piAbortRef.current?.abort();
-    void abortPiRun();
+    try {
+      await abortPiRun();
+    } catch {
+      // Server-side abort is best effort; the local state below is what matters.
+    }
     setPiRunning(false);
   }
 
@@ -1137,7 +1155,13 @@ export function AgentApp() {
    * Leaving the artifact panel populated would show products of a conversation that is no
    * longer on screen.
    */
-  function startNewSession() {
+  async function startNewSession() {
+    if (piRunning) {
+      // A run in flight would keep committing its transcript over the fresh session and the
+      // server would refuse the new session anyway. Stop it first (the await waits for the
+      // server-side abort to settle), then start fresh.
+      await stopPi();
+    }
     const conversation = createEphemeralPiConversation();
     setStreamId("");
     setPiConversations((current) => replacePiConversation(current, conversation));
@@ -1212,6 +1236,7 @@ export function AgentApp() {
       <ProviderFloatingSettings
         project={activeProject}
         sessionKeys={sessionKeys}
+        isRunning={piRunning}
         onFetchModels={(provider, key) => void fetchPiModels(provider, key)}
         onSave={() => void savePiSettings()}
         onSetDefaultProvider={(id) => void selectProvider(id)}

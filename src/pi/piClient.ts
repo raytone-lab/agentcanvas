@@ -107,6 +107,7 @@ export async function* runPiTurn(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let sawTerminal = false;
   try {
     for (;;) {
       const { value, done } = await reader.read();
@@ -116,12 +117,23 @@ export async function* runPiTurn(
       buffer = lines.pop() ?? "";
       for (const line of lines) {
         const event = parseEventLine(line);
-        if (event) yield event;
+        if (!event) continue;
+        if (event.type === "run.finished" || event.type === "run.error") sawTerminal = true;
+        yield event;
       }
     }
     buffer += decoder.decode();
     const event = parseEventLine(buffer);
-    if (event) yield event;
+    if (event) {
+      if (event.type === "run.finished" || event.type === "run.error") sawTerminal = true;
+      yield event;
+    }
+    // The server closes the stream cleanly only after a terminal event. A stream that
+    // just ends (bridge/configuration failed after the 200 headers were flushed) must
+    // not read as a successful turn — surface it as a transport error instead.
+    if (!sawTerminal && !options.signal?.aborted) {
+      throw new Error("Pi stream ended before a terminal event arrived.");
+    }
   } finally {
     reader.releaseLock();
   }
