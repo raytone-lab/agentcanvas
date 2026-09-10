@@ -496,6 +496,43 @@ export function missingRequirementsForProject(
   return missing;
 }
 
+/**
+ * Whether an option should read as selected in the rail.
+ *
+ * Not simply "is it active in the project". For the variant groups one option
+ * is always active by construction — `reasoning.show` has no off value, so some
+ * thinking style is always set — and showing those as selected meant the rail
+ * claimed a dozen picks while the canvas showed nothing. That is the
+ * contradiction: selected has to mean the canvas is showing it.
+ *
+ * So: an additive option reads its own state, and a variant reads as selected
+ * only if it was picked *and* is the one currently in force — picking a second
+ * variant in the same section must unselect the first.
+ *
+ * Themes are the exception. A palette is a variant with no off state, but the
+ * canvas genuinely shows it, so the project's own answer is the honest one.
+ */
+export function isOptionSelectedInRail(
+  project: AgentFrontendProject,
+  option: { id: string },
+  groupId: PresetGroupId,
+  picked: readonly string[] = [],
+): boolean {
+  if (groupId === "theme") return isPresetOptionActive(project, option.id);
+  if (isAddedContentOption(project, option.id)) return true;
+  return picked.includes(option.id) && isPresetOptionActive(project, option.id);
+}
+
+/**
+ * Options hidden from the rail.
+ *
+ * The two side columns' presence toggles. The canvas opens with three columns,
+ * so these read as permanently ticked, and a permanently ticked control is not
+ * a choice. They stay in the schema because the canvas toolbar's delete still
+ * turns them off — the column is removed there, not here.
+ */
+export const RAIL_HIDDEN_OPTION_IDS = new Set(["sidebar-visible", "output-visible"]);
+
 /** The option a layer row edits or deletes, or null if it maps to none. */
 export function optionIdForModule(moduleId: string): string | null {
   const presence = SLOT_PRESENCE_OPTIONS[moduleId];

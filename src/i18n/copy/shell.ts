@@ -96,8 +96,10 @@ const en = {
         description: "Hosted and local model provider defaults for the scaffold.",
       },
       output: {
-        label: "Right panel",
-        description: "The right panel region: whether it shows, and what it holds.",
+        // Named for the column it configures, matching the canvas label and the
+        // layer row. "Right panel" was a third name for one thing.
+        label: "Right column",
+        description: "What the right column holds.",
       },
       delivery: {
         label: "Delivery",
@@ -285,8 +287,8 @@ const zh: typeof en = {
         description: "脚手架的托管与本地模型提供方默认值。",
       },
       output: {
-        label: "右面板",
-        description: "右侧面板这块区域：显示与否，以及里面放什么。",
+        label: "右栏",
+        description: "右栏里放什么。",
       },
       delivery: {
         label: "交付",
@@ -479,8 +481,8 @@ const ja: typeof en = {
         description: "スキャフォールドが使うホスト型およびローカルのモデルプロバイダー既定値。",
       },
       output: {
-        label: "右パネル",
-        description: "右パネルの領域：表示の有無と、そこに何を置くか。",
+        label: "右カラム",
+        description: "右カラムに何を置くか。",
       },
       delivery: {
         label: "受け取り",

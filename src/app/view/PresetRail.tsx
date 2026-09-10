@@ -28,6 +28,7 @@ import type { MessageActionKey } from "../appTypes";
 import {
   FLOW_EXIT_GROUP_IDS,
   OPTION_GROUP_IDS,
+  isOptionSelectedInRail,
   groupsForNavSection,
   navSections,
   presetStyleOptions,
@@ -287,7 +288,7 @@ export function PresetRail({
                 ) : null}
                 <div className="preset-option-list">
                   {section.items.map((option) => {
-                    const active = isPresetOptionActive(project, option.id);
+                    const active = isOptionSelectedInRail(project, option, selectedPresetGroup.id, pickedOptionIds);
                     const showParams = active && hasWritingParams(option.id);
                     const optionLabel = translatePresetOptionLabel(option.id, option.label, locale);
                     // Named but unbuilt: inert and dimmed, with the description

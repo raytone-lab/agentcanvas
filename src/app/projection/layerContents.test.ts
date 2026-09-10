@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   PRESET_GROUP_REGIONS,
+  RAIL_HIDDEN_OPTION_IDS,
   isAddedContentOption,
+  isOptionSelectedInRail,
   layerContentsForProject,
   layersForProject,
   regionsWithChosenContent,
@@ -149,6 +151,49 @@ describe("layer contents", () => {
     expect(PRESET_GROUP_REGIONS.provider).toBeUndefined();
     for (const groupId of ["sidebar", "conversation", "composer", "output", "git", "ux-effects", "approval", "tool-calls", "blocks", "media-generation", "delivery"] as const) {
       expect(PRESET_GROUP_REGIONS[groupId]).toBeTruthy();
+    }
+  });
+});
+
+describe("rail selection honesty", () => {
+  it("shows nothing selected on a fresh project, except the theme", () => {
+    // Selected has to mean the canvas is showing it. The rail used to read
+    // "active in the project", and for the variant groups one option is always
+    // active by construction — `reasoning.show` has no off value — so the rail
+    // claimed a dozen picks while the canvas showed nothing.
+    for (const group of presetGroups) {
+      const selected = group.options.filter((option) =>
+        isOptionSelectedInRail(emptyStructureProject, option, group.id),
+      );
+      if (group.id === "theme") {
+        // A palette is a variant with no off state, and the canvas genuinely
+        // shows it, so the project's own answer is the honest one.
+        expect(selected.map((option) => option.id)).toEqual(["soft-glass"]);
+        continue;
+      }
+      expect(selected.map((option) => option.id), `${group.id} should open unselected`).toEqual([]);
+    }
+  });
+
+  it("moves the tick when a second variant in a section is picked", () => {
+    // Variants are mutually exclusive, and `pickedOptionIds` is a flat set, so
+    // selection has to check that the picked option is the one in force.
+    const picked = ["thinking-wave", "thinking-pulse"];
+    const project = togglePresetOption(emptyStructureProject, "thinking-pulse");
+    const group = presetGroups.find((entry) => entry.id === "ux-effects")!;
+    const wave = group.options.find((option) => option.id === "thinking-wave")!;
+    const pulse = group.options.find((option) => option.id === "thinking-pulse")!;
+    expect(isOptionSelectedInRail(project, pulse, "ux-effects", picked)).toBe(true);
+    expect(isOptionSelectedInRail(project, wave, "ux-effects", picked)).toBe(false);
+  });
+
+  it("keeps the side columns' presence toggles out of the rail", () => {
+    // The canvas opens with three columns, so these read as permanently ticked,
+    // and a permanently ticked control is not a choice. They stay in the schema
+    // because the canvas toolbar's delete still turns them off.
+    expect([...RAIL_HIDDEN_OPTION_IDS]).toEqual(["sidebar-visible", "output-visible"]);
+    for (const optionId of RAIL_HIDDEN_OPTION_IDS) {
+      expect(presetGroups.some((group) => group.options.some((option) => option.id === optionId))).toBe(true);
     }
   });
 });

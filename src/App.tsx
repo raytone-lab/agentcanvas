@@ -62,6 +62,7 @@ import {
   LAYER_HIGHLIGHT_SELECTORS,
   LAYER_PRESENCE_OPTIONS,
   PRESET_GROUP_COMPONENTS,
+  RAIL_HIDDEN_OPTION_IDS,
   REGION_LAYERS,
   canvasSlotsForProject,
   layersForProject,
@@ -381,14 +382,25 @@ export function App() {
   const showPresetSectionLabels = selectedPresetGroup.options.some((option) => option.section);
   // Output group: the sub-sections (data source, …) only make sense when the
   // output panel is on, so hide everything but the Layout toggle when it's off.
-  const outputPanelEnabled = isPresetOptionActive(project, "output-visible");
-  const sidebarPanelEnabled = isPresetOptionActive(project, "sidebar-visible");
-  const renderedPresetSections =
-    selectedPresetGroup.id === "output" && !outputPanelEnabled
-      ? selectedPresetSections.filter((section) => section.label === "Layout")
-      : selectedPresetGroup.id === "sidebar" && !sidebarPanelEnabled
-        ? selectedPresetSections.filter((section) => section.label === "Layout")
-      : selectedPresetSections;
+  /**
+   * The rail drops the two side columns' presence toggles.
+   *
+   * The canvas opens with three columns, so those two read as permanently
+   * ticked, and a permanently ticked control is not a choice. Their section
+   * goes with them — a "Layout" heading over nothing is worse than no heading.
+   * The options stay in the schema: the canvas toolbar's delete still turns
+   * them off, which is where a column is removed.
+   *
+   * The gating this replaces hid a group's *other* sections until its column
+   * was shown, which no longer holds — picking any content is what puts the
+   * component on the canvas now.
+   */
+  const renderedPresetSections = selectedPresetSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((option) => !RAIL_HIDDEN_OPTION_IDS.has(option.id)),
+    }))
+    .filter((section) => section.items.length > 0);
   const showDebugViewToggle = import.meta.env.DEV && state.surfaceMode === "builder";
   const builderUI = {
     showDebugBadges: showDebugViewToggle && state.workspaceView === "debug",
