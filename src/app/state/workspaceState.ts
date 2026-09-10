@@ -53,6 +53,12 @@ export type WorkspaceState = {
    * resizing the frame is for.
    */
   canvasZoom: number;
+  /**
+   * The option the rail should scroll to and flash, set by the canvas
+   * toolbar's Edit. Cleared once the rail has shown it, so re-selecting the
+   * same module flashes again rather than being a no-op.
+   */
+  pinnedOptionId: string | null;
   selectedGroup: PresetGroupId;
   presetDrawerOpen: boolean;
   selectedFixtureId: PreviewFixtureId;
@@ -140,6 +146,7 @@ export function createInitialWorkspaceState(locale: AppLocale): WorkspaceState {
     selectedLayerId: null,
     selectedSlotId: null,
     canvasZoom: 100,
+    pinnedOptionId: null,
     // First group of the Structure destination, so opening 架构 shows 左栏
     // expanded rather than whichever group happened to be the old default.
     selectedGroup: "sidebar",

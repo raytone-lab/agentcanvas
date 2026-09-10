@@ -27,6 +27,7 @@ import { previewCopy } from "../../i18n/copy/preview";
 import type { AppLocale } from "../../i18n/uiCopy";
 import type { PreviewScenarioId } from "../../preview-runner/PreviewRunner";
 import type { PresetStyleId } from "../../schema/agentuxConfig";
+import { presetGroups } from "../../schema/presets";
 import type { PresetGroupId, PresetOption } from "../../schema/presets";
 import { themeTokens } from "../../theme/themeTokens";
 
@@ -214,6 +215,53 @@ export const LAYER_HIGHLIGHT_SELECTORS: Record<string, string> = {
   "sidebar-grouping": ".session-group > h4",
   "sidebar-footer": ".session-footer",
 };
+
+/**
+ * The preset option a slot row stands for.
+ *
+ * A slot row names a component, and the thing that puts that component on the
+ * canvas is its presence toggle — so deleting the row is unticking that option,
+ * which is exactly what "the component on the left goes unselected" means.
+ */
+const SLOT_PRESENCE_OPTIONS: Record<string, string> = {
+  sessions: "sidebar-visible",
+  chat: "chat-visible",
+  composer: "composer-visible",
+  output: "output-visible",
+  git: "git-visible",
+};
+
+/**
+ * The options that put a whole column on the canvas.
+ *
+ * The centre column is absent on purpose: it cannot be deleted, from the rail
+ * or from the canvas. The right column lists both of its components, because
+ * the column is gone only when nothing is left in it.
+ */
+export const LAYER_PRESENCE_OPTIONS: Record<string, readonly string[]> = {
+  left: ["sidebar-visible"],
+  right: ["output-visible", "git-visible"],
+};
+
+/** The option a layer row edits or deletes, or null if it maps to none. */
+export function optionIdForModule(moduleId: string): string | null {
+  const presence = SLOT_PRESENCE_OPTIONS[moduleId];
+  if (presence) return presence;
+  const known = presetGroups.some((group) => group.options.some((option) => option.id === moduleId));
+  return known ? moduleId : null;
+}
+
+/** Where in the rail an option lives, so "edit" can jump straight to it. */
+export function railLocationForOption(
+  optionId: string,
+): { navSection: NavSectionId; groupId: PresetGroupId } | null {
+  const group = presetGroups.find((entry) => entry.options.some((option) => option.id === optionId));
+  if (!group) return null;
+  const navSection = navSections
+    .map((section) => section.id)
+    .find((section) => groupsForNavSection(section).includes(group.id));
+  return navSection ? { navSection, groupId: group.id } : null;
+}
 
 /** A row under a column: either the component itself, or something inside it. */
 export type LayerChild = {

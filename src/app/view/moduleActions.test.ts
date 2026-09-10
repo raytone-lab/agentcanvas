@@ -1,0 +1,58 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+
+import {
+  LAYER_HIGHLIGHT_SELECTORS,
+  LAYER_PRESENCE_OPTIONS,
+  optionIdForModule,
+  railLocationForOption,
+} from "../projection/presetRailData";
+import { isPresetOptionActive, togglePresetOption } from "../../schema/presetActions";
+import { emptyStructureProject } from "../../schema/agentuxConfig";
+
+const appSource = readFileSync(new URL("../../App.tsx", import.meta.url), "utf8");
+
+describe("canvas module actions", () => {
+  it("maps every highlightable module to an option the rail owns", () => {
+    // Delete unticks an option and Edit jumps to it, so a module with no option
+    // would give a toolbar whose buttons do nothing.
+    for (const moduleId of Object.keys(LAYER_HIGHLIGHT_SELECTORS)) {
+      const optionId = optionIdForModule(moduleId);
+      expect(optionId, `no option for ${moduleId}`).toBeTruthy();
+      expect(railLocationForOption(optionId!), `no rail location for ${optionId}`).toBeTruthy();
+    }
+  });
+
+  it("leaves the centre column with nothing to delete", () => {
+    // The centre cannot be deleted, from the rail or the canvas. It has no
+    // presence options, which is how the toolbar ends up showing Edit only.
+    expect(LAYER_PRESENCE_OPTIONS.center).toBeUndefined();
+    expect(LAYER_PRESENCE_OPTIONS.left).toEqual(["sidebar-visible"]);
+    expect(LAYER_PRESENCE_OPTIONS.right).toEqual(["output-visible", "git-visible"]);
+  });
+
+  it("turns the module off rather than toggling it", () => {
+    // The preset patches are self-flipping booleans, so applying one to an
+    // already-off option would switch it back on. Delete has to be a one-way
+    // door, which is why it checks first.
+    let project = emptyStructureProject;
+    expect(isPresetOptionActive(project, "sidebar-visible")).toBe(true);
+    project = togglePresetOption(project, "sidebar-visible");
+    expect(isPresetOptionActive(project, "sidebar-visible")).toBe(false);
+    // The guard App applies: only toggle what is currently active.
+    expect(appSource).toContain("isPresetOptionActive(next, optionId) ? togglePresetOption(next, optionId) : next");
+  });
+
+  it("suppresses canvas interaction in the configurator only", () => {
+    // The preview surface is where the real interactions are meant to be tried.
+    expect(appSource).toContain('if (state.surfaceMode !== "builder") return;');
+    // Capture phase, on real listeners: React's synthetic stopPropagation does
+    // not stop native listeners that components attach themselves.
+    expect(appSource).toContain('frame.addEventListener(type, suppress, { capture: true })');
+    for (const type of ["pointerdown", "mousedown", "click", "keydown", "input"]) {
+      expect(appSource).toContain(`"${type}"`);
+    }
+    // Column resizing is a layout edit, not a component interaction.
+    expect(appSource).toContain('closest(".resize-handle")');
+  });
+});

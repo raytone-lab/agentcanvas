@@ -588,6 +588,9 @@ export const defaultCodingAgentProject: AgentFrontendProject = {
  * approval overlay, which are not part of the three-column structure and would
  * otherwise show as two more empty layers with nothing to put in them.
  */
+/** The slots a new project opens with — one per column, nothing extra. */
+const OPENING_SLOT_IDS = ["sessions", "chat", "composer", "output"];
+
 export const emptyStructureProject: AgentFrontendProject = {
   ...defaultCodingAgentProject,
   // Unnamed until the reader names it. The Layers panel shows a localised
@@ -598,8 +601,18 @@ export const emptyStructureProject: AgentFrontendProject = {
   layout: {
     ...defaultCodingAgentProject.layout,
     regions: ["sidebar", "main", "composer", "right-panel"],
-    slots: defaultCodingAgentProject.layout.slots.map((slot) => ({ ...slot, enabled: false })),
+    // Each column's presence toggle is on, everything else is off: the three
+    // columns are there to be configured, and what goes *in* them is the
+    // reader's to pick. Git, the capability tray and the debug dock are
+    // components you add, not columns you start with.
+    slots: defaultCodingAgentProject.layout.slots.map((slot) => ({
+      ...slot,
+      enabled: OPENING_SLOT_IDS.includes(slot.id),
+    })),
   },
+  // The sidebar's "Content" section, unpicked. Same rule as the slots: the
+  // column is present, its contents are not chosen yet.
+  sidebar: { newButton: false, search: false, grouping: false, footer: false },
 };
 
 /** Project the branch-owned Canvas model into the portable v2 product contract. */

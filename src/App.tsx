@@ -32,9 +32,10 @@ import {
   defaultCodingAgentProject,
   emptyStructureProject,
   modelOptionsForProject,
+  type AgentCanvasRegion,
   type AgentFrontendProject,
 } from "./schema/agentuxConfig";
-import { isPresetOptionActive } from "./schema/presetActions";
+import { isPresetOptionActive, togglePresetOption } from "./schema/presetActions";
 import {
   presetGroupsForProject,
   projectPresetSummary,
@@ -46,6 +47,7 @@ import { InlineApprovalDemo, demoApprovalTool, findPendingApprovalTool } from ".
 import { PresetRail } from "./app/view/PresetRail";
 import { RegionLabels } from "./app/view/RegionLabels";
 import { Topbar } from "./app/view/Topbar";
+import { ModuleToolbar } from "./app/view/ModuleToolbar";
 import { clampZoom, zoomIn, zoomOut } from "./app/view/ZoomControl";
 import {
   collectDefaultOutputPanelItems,
@@ -54,10 +56,13 @@ import {
 import {
   NATIVE_HIDDEN_USER_AVATAR_IDS,
   PREVIEW_RESPONSIVE_WIDTHS,
-  SLOT_COMPONENT_SELECTORS,
+  LAYER_HIGHLIGHT_SELECTORS,
+  LAYER_PRESENCE_OPTIONS,
   STYLE_AVATAR_DEFAULTS,
   groupPresetOptions,
   rawStateCardToStateCard,
+  optionIdForModule,
+  railLocationForOption,
   resolveGroupForNavSection,
   visibleStateCards,
   type NavSectionId,
@@ -225,8 +230,20 @@ export function App() {
    * away), and the welcome state shows all three columns instead of hiding the
    * right one.
    */
-  const hasSidebar = activeProject.layout.regions.includes("sidebar");
-  const hasRightPanel = activeProject.layout.regions.includes("right-panel");
+  /**
+   * A side column shows when its region is declared *and* something is in it.
+   *
+   * Region alone is not enough any more: unticking 显示侧边栏 has to remove the
+   * column and let the centre take the width, which is what makes the canvas
+   * toolbar's delete meaningful. The centre column is deliberately not subject
+   * to this — it is region-driven below and cannot be deleted, so an empty
+   * centre still reads as the place a conversation will go.
+   */
+  const regionHasContent = (region: AgentCanvasRegion) =>
+    activeProject.layout.regions.includes(region) &&
+    activeProject.layout.slots.some((slot) => slot.enabled && slot.region === region);
+  const hasSidebar = regionHasContent("sidebar");
+  const hasRightPanel = regionHasContent("right-panel");
   const loaderCanvasPreviewActive = state.surfaceMode === "builder" && state.selectedGroup === "media-generation";
   // Mounted whenever the layout has one; `leftCollapsed` is a visual state the CSS drawer
   // owns, so gating the mount on it would remove the element the transition animates.
@@ -385,6 +402,60 @@ export function App() {
     }
   }, [iconSet, selectedPresetStyle, setSlot]);
 
+  /**
+   * In the configurator the canvas is a design surface, not a running app.
+   *
+   * Every component interaction is suppressed at the capture phase — before it
+   * reaches the component's own handler — and the click is spent on selecting
+   * the module instead. Suppressed rather than removed because the handlers are
+   * not the whole story: components keep their own state (the search popover,
+   * tool-card collapse), so cutting the props in `slotContext` would leave half
+   * the behaviour live.
+   *
+   * `inert` would have been the obvious tool and does not work here: Chrome
+   * takes an inert subtree out of hit-testing entirely, so `:hover` stops
+   * matching and `elementsFromPoint` cannot see it — measured. That would
+   * destroy the innermost-wins highlight, which is the thing this canvas is
+   * for.
+   *
+   * The preview surface is left alone: trying the real interactions is what it
+   * is for.
+   */
+  useEffect(() => {
+    if (state.surfaceMode !== "builder") return;
+    const frame = previewFrameRef.current;
+    if (!frame) return;
+
+    const suppress = (event: Event) => {
+      // Column resizing stays live. It edits the layout, which is the kind of
+      // thing this surface is for, rather than driving the mock agent.
+      if (event.target instanceof Element && event.target.closest(".resize-handle")) return;
+      event.stopPropagation();
+      // Not on pointerdown: preventing its default would also cancel the
+      // synthetic click, and the click is what carries the selection.
+      if (event.type !== "pointerdown" && event.type !== "click") event.preventDefault();
+    };
+
+    const select = (event: Event) => {
+      if (event.target instanceof Element && event.target.closest(".resize-handle")) return;
+      const moduleId = moduleIdAtTarget(event.target);
+      dispatch({
+        type: "patch",
+        patch: moduleId
+          ? { selectedSlotId: moduleId, selectedLayerId: null }
+          : { selectedSlotId: null, selectedLayerId: layerIdAtTarget(event.target) },
+      });
+    };
+
+    const SUPPRESSED = ["pointerdown", "mousedown", "mouseup", "click", "dblclick", "keydown", "input", "submit"];
+    for (const type of SUPPRESSED) frame.addEventListener(type, suppress, { capture: true });
+    frame.addEventListener("click", select, { capture: true });
+    return () => {
+      for (const type of SUPPRESSED) frame.removeEventListener(type, suppress, { capture: true });
+      frame.removeEventListener("click", select, { capture: true });
+    };
+  }, [dispatch, state.surfaceMode, state.workspaceView]);
+
   useEffect(() => {
     if (state.selectedLayerId === null && state.selectedSlotId === null) {
       return;
@@ -435,6 +506,67 @@ export function App() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [dispatch, state.canvasZoom]);
+
+  /**
+   * What the toolbar is pointing at, and what editing or deleting it means.
+   *
+   * A module selection resolves to one option; a column selection resolves to
+   * the options that put that column on the canvas. The centre column resolves
+   * to none, which is how it ends up undeletable — there is nothing to untick.
+   */
+  const toolbarTarget = state.selectedSlotId
+    ? LAYER_HIGHLIGHT_SELECTORS[state.selectedSlotId] ?? null
+    : state.selectedLayerId
+      ? { left: ".session-sidebar", center: ".preview-stack", right: ".right-panel" }[state.selectedLayerId] ?? null
+      : null;
+  const toolbarOptionIds = state.selectedSlotId
+    ? [optionIdForModule(state.selectedSlotId)].filter((id): id is string => id !== null)
+    : state.selectedLayerId
+      ? [...(LAYER_PRESENCE_OPTIONS[state.selectedLayerId] ?? [])]
+      : [];
+  const deletableOptionIds = toolbarOptionIds.filter((id) => isPresetOptionActive(activeProject, id));
+
+  const editSelectedModule = () => {
+    const location = railLocationForOption(toolbarOptionIds[0] ?? "");
+    if (!location) return;
+    dispatch({
+      type: "patch",
+      patch: {
+        navSection: location.navSection,
+        selectedGroup: location.groupId,
+        // The rail scrolls this option into view and flashes it, so "edit"
+        // lands on the control rather than just the right panel.
+        pinnedOptionId: toolbarOptionIds[0] ?? null,
+      },
+    });
+  };
+
+  const deleteSelected = () => {
+    if (deletableOptionIds.length === 0) return;
+    const apply = () => {
+      setProject((current) =>
+        deletableOptionIds.reduce(
+          (next, optionId) => (isPresetOptionActive(next, optionId) ? togglePresetOption(next, optionId) : next),
+          current,
+        ),
+      );
+      dispatch({ type: "patch", patch: { selectedSlotId: null, selectedLayerId: null } });
+    };
+
+    // Deleting a side column plays its collapse first, so the centre widens
+    // into the space instead of the column vanishing under the pointer. The
+    // left column already has that transition (`data-left-collapsed`); the
+    // right one swaps to a solo stack, which is immediate.
+    if (state.selectedLayerId === "left") {
+      dispatch({ type: "patch", patch: { leftCollapsed: true } });
+      window.setTimeout(() => {
+        apply();
+        dispatch({ type: "patch", patch: { leftCollapsed: false } });
+      }, COLUMN_EXIT_MS);
+      return;
+    }
+    apply();
+  };
 
   const pendingExternalApprovalTool = activeProject.toolCalls.approval === "hidden"
     ? findPendingApprovalTool(displayViewModel.timeline)
@@ -652,6 +784,8 @@ export function App() {
               onSelectSlot={(slotId) => dispatch({ type: "patch", patch: { selectedSlotId: slotId, selectedLayerId: null } })}
               onRenameProject={(name) => setProject((current) => ({ ...current, name }))}
               selectedComponentItems={selectedComponentItems}
+              pinnedOptionId={state.pinnedOptionId}
+              onPinnedOptionShown={() => dispatch({ type: "patch", patch: { pinnedOptionId: null } })}
               presetDrawerOpen={state.presetDrawerOpen}
               visiblePresetGroups={visiblePresetGroups}
               selectedGroupId={state.selectedGroup}
@@ -705,6 +839,7 @@ export function App() {
             // Only a magnified canvas scrolls. Left at `auto` the whole time,
             // sub-pixel rounding puts a scrollbar on an unzoomed canvas.
             data-canvas-zoomed={state.canvasZoom > 100 ? "true" : undefined}
+            data-canvas-inert={state.surfaceMode === "builder" ? "true" : undefined}
           >
             {state.workspaceView === "preview" || state.surfaceMode === "saved-preview" ? (
               <>
@@ -813,6 +948,21 @@ export function App() {
                   ) : null}
                 </div>
                 </div>
+                {/* Also outside the zoom wrapper: the toolbar keeps one size at
+                    every zoom level, and sitting outside `.preview-frame` keeps
+                    it clear of the capture-phase suppression that would
+                    otherwise swallow its own clicks. */}
+                {state.surfaceMode === "builder" ? (
+                  <ModuleToolbar
+                    copy={copy}
+                    target={toolbarTarget}
+                    surfaceRef={builderSurfaceRef}
+                    zoom={state.canvasZoom}
+                    canDelete={deletableOptionIds.length > 0}
+                    onEdit={editSelectedModule}
+                    onDelete={deleteSelected}
+                  />
+                ) : null}
                 {/* Outside the zoom wrapper on purpose: the overlay surface is
                     positioned against `.builder-surface`, and moving it inside
                     would change its containing block. */}
@@ -843,12 +993,46 @@ export function App() {
   );
 }
 
+/** Matches `--motion-slow`, the column collapse transition. */
+const COLUMN_EXIT_MS = 240;
+
 /** True when the event target is collecting text, so bare keys are not shortcuts. */
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;
   const tag = target.tagName;
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+}
+
+/**
+ * The innermost module under an element, as a layer-row id.
+ *
+ * Reads the highlight map backwards: the hover CSS lights the innermost
+ * matching ancestor, and this returns the id of that same element, so clicking
+ * selects exactly what hovering highlighted. Columns come last because every
+ * module is inside one.
+ */
+function moduleIdAtTarget(target: EventTarget | null): string | null {
+  if (!(target instanceof Element)) return null;
+  let best: { id: string; depth: number } | null = null;
+  for (const [moduleId, selector] of Object.entries(LAYER_HIGHLIGHT_SELECTORS)) {
+    const match = target.closest(selector);
+    if (!match) continue;
+    // Deeper match wins, which is what "innermost" means here.
+    let depth = 0;
+    for (let node: Element | null = match; node; node = node.parentElement) depth += 1;
+    if (!best || depth > best.depth) best = { id: moduleId, depth };
+  }
+  return best?.id ?? null;
+}
+
+/** The column under an element, as a layer id. */
+function layerIdAtTarget(target: EventTarget | null): string | null {
+  if (!(target instanceof Element)) return null;
+  if (target.closest(".session-sidebar")) return "left";
+  if (target.closest(".right-panel")) return "right";
+  if (target.closest(".preview-stack")) return "center";
+  return null;
 }
 
 /**
@@ -866,11 +1050,8 @@ function isTypingTarget(target: EventTarget | null): boolean {
 function isSelectionTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
   if (target.closest(".layers-panel .layers-row") !== null) return true;
-  return Object.values(SLOT_COMPONENT_SELECTORS).some((selector) => {
-    const match = target.closest(selector);
-    // An empty column's placeholder carries the component's class so it can
-    // inherit its width, but there is no component in it — clicking it is
-    // clicking blank canvas.
-    return match !== null && !match.classList.contains("region-empty");
-  });
+  // The toolbar acts on the selection, so clicking it must not clear it.
+  if (target.closest(".module-toolbar") !== null) return true;
+  if (target.closest(".preview-frame") !== null) return true;
+  return false;
 }

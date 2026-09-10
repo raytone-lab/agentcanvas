@@ -153,28 +153,55 @@ describe("App shell controls", () => {
     expect(thumbRule).toContain("background: color-mix(in srgb, var(--text-muted) 34%, transparent);");
   });
 
-  it("opens on three labelled columns with nothing in them", () => {
-    // The editor used to open on a populated agent (welcome greeting +
-    // composer). It now opens on the declared regions: the canvas always shows
-    // the current configuration, and the starting configuration has nothing
-    // enabled. The surface itself is unchanged — still the generated scaffold,
-    // not a separate mock.
+  it("opens on three columns, each present but with its contents unpicked", () => {
     const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
 
     expect(markup).toContain('class="builder-surface" data-output-zone="generated-scaffold"');
-    // Columns come from `layout.regions`, so all three are present even though
-    // every slot is disabled. This is the linkage the canvas exists for: an
-    // empty column is where the next component will land, and it has to be
-    // visible for that to mean anything.
+    // Every column's presence toggle is on, so all three are there to be
+    // configured; what goes *in* them is the reader's to pick.
     expect(markup.match(/class="region-label"/g)?.length).toBe(3);
     for (const layer of ["左栏", "中栏", "右栏"]) {
       expect(markup).toContain(layer);
     }
-    // An empty region renders a placeholder element rather than nothing, or the
-    // column would collapse to zero width.
-    expect(markup).toContain("region-empty");
-    // No populated agent on first paint.
-    expect(markup).not.toContain("Meet My Agent ~");
+    expect(emptyStructureProject.layout.slots.filter((slot) => slot.enabled).map((slot) => slot.id))
+      .toEqual(["sessions", "chat", "composer", "output"]);
+
+    // The sidebar's "Content" section starts unpicked — the column is present,
+    // its contents are not chosen. Same rule as the slots.
+    expect(emptyStructureProject.sidebar).toEqual({
+      newButton: false,
+      search: false,
+      grouping: false,
+      footer: false,
+    });
+    expect(markup).not.toContain("session-new");
+    expect(markup).not.toContain("session-footer");
+  });
+
+  it("keeps the centre column when it is empty, but not the side ones", () => {
+    // A side column with nothing in it is gone, so unticking 显示侧边栏 removes
+    // it and the centre takes the width — that is what makes the canvas
+    // toolbar's delete mean something. The centre is the exception: it cannot be
+    // deleted, so an empty centre still has to read as the place a conversation
+    // will go, which needs an element to hold the width open.
+    const emptied = {
+      ...emptyStructureProject,
+      layout: {
+        ...emptyStructureProject.layout,
+        slots: emptyStructureProject.layout.slots.map((slot) => ({ ...slot, enabled: false })),
+      },
+    };
+    expect(emptied.layout.regions).toContain("sidebar");
+    expect(emptied.layout.regions).toContain("right-panel");
+    // Presence is region AND content, so the declared-but-empty side regions
+    // do not render. Asserted on the rule rather than the markup because App
+    // owns its own project state.
+    const regionHasContent = (region: string) =>
+      emptied.layout.regions.includes(region as never) &&
+      emptied.layout.slots.some((slot) => slot.enabled && slot.region === region);
+    expect(regionHasContent("sidebar")).toBe(false);
+    expect(regionHasContent("right-panel")).toBe(false);
+    expect(emptied.layout.regions).toContain("main");
   });
 
   it("opens the rail on File, with the layer list showing", () => {

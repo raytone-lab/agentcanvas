@@ -13081,6 +13081,68 @@ pre {
 
 /* Icon-only topbar controls (preview). Square so the icon is optically centred
    rather than sitting in a text button's asymmetric padding. */
+/* Edit / delete for the selected canvas module. Positioned by measurement in
+   `ModuleToolbar`, so only its appearance is here. Sits above the canvas
+   content but below the topbar's menus. */
+.module-toolbar {
+  position: absolute;
+  z-index: 30;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--surface-panel);
+  box-shadow: 0 6px 18px rgba(13, 18, 28, 0.16), 0 1px 3px rgba(13, 18, 28, 0.08);
+  /* Measured before it is placed; the inline opacity hides that first frame. */
+  transition: opacity var(--motion-fast) var(--ease-out);
+}
+
+.module-toolbar-button {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-out);
+}
+
+.module-toolbar-button:hover {
+  background: color-mix(in srgb, var(--text-primary) 7%, transparent);
+}
+
+.module-toolbar-button[data-tone="danger"] {
+  color: #c2410c;
+}
+
+.module-toolbar-button[data-tone="danger"]:hover {
+  background: rgb(255 106 0 / 0.12);
+}
+
+/* In the configurator the canvas is a design surface: text selection would
+   drag-select the mock conversation instead of picking a module. */
+.builder-surface[data-canvas-inert="true"] .preview-frame {
+  user-select: none;
+}
+
+/* The option the canvas toolbar's Edit jumped to. Two flashes, then it stops —
+   long enough to find, short enough not to nag. */
+@keyframes preset-option-pin {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(255 106 0 / 0); }
+  30%, 70% { box-shadow: 0 0 0 2px rgb(255 106 0 / 0.55); }
+}
+
+.preset-option-cell[data-pinned="true"] .preset-option {
+  animation: preset-option-pin 1.2s var(--ease-out) 2;
+}
+
 /* Canvas zoom readout. Sits with the topbar's controls but reads as a field
    rather than a button — it is the current value, and it is editable. */
 .zoom-control {

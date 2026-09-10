@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, Clock3, Copy, GitMerge, Pencil, RotateCcw } from "lucide-react";
 
 import { StateGallery, type StateCard } from "../../components/agentmatrix/StateGallery";
@@ -60,6 +60,8 @@ export function PresetRail({
   onSelectSlot,
   onRenameProject,
   selectedComponentItems,
+  pinnedOptionId,
+  onPinnedOptionShown,
   presetDrawerOpen,
   visiblePresetGroups,
   selectedGroupId,
@@ -102,6 +104,9 @@ export function PresetRail({
   onSelectSlot: (slotId: string) => void;
   onRenameProject: (name: string) => void;
   selectedComponentItems: readonly SelectedComponentItem[];
+  /** Set by the canvas toolbar's Edit: scroll this option in and flash it. */
+  pinnedOptionId: string | null;
+  onPinnedOptionShown: () => void;
   presetDrawerOpen: boolean;
   visiblePresetGroups: PresetGroup[];
   selectedGroupId: PresetGroupId;
@@ -154,6 +159,17 @@ export function PresetRail({
   // which is work the panel does not need to do to be read top to bottom.
   // `null` means "the selected group is open", which is the default.
   const [collapsedGroupId, setCollapsedGroupId] = useState<PresetGroupId | null>(null);
+
+  // The option arrives pinned before the group that holds it has rendered, so
+  // this runs after paint and clears the pin once it has done its job.
+  useEffect(() => {
+    if (!pinnedOptionId) return;
+    const cell = document.querySelector(`.preset-option-cell[data-option-id="${pinnedOptionId}"]`);
+    if (!cell) return;
+    cell.scrollIntoView({ block: "center", behavior: "smooth" });
+    const timer = window.setTimeout(onPinnedOptionShown, 2600);
+    return () => window.clearTimeout(timer);
+  }, [pinnedOptionId, onPinnedOptionShown, navSection, selectedGroupId]);
 
   const panelBody = (
         <div className="preset-panel-body">
@@ -274,6 +290,7 @@ export function PresetRail({
                         key={option.id}
                         data-option-id={option.id}
                         data-theme-style={option.themeStyle}
+                        data-pinned={option.id === pinnedOptionId ? "true" : undefined}
                       >
                         <button
                           className="preset-option"

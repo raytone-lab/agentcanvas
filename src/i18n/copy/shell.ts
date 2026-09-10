@@ -113,6 +113,9 @@ const en = {
   editor: {
     noSelectedComponents: "No selected components yet",
     selectedComponentCount: "{count} selected components",
+    moduleToolbarAria: "Module actions",
+    moduleEdit: "Edit",
+    moduleDelete: "Delete",
     chooseStyle: "Choose style",
     underConstruction: "Under construction…",
     expandSidebar: "Expand sidebar",
@@ -290,6 +293,9 @@ const zh: typeof en = {
   editor: {
     noSelectedComponents: "还没有选择组件",
     selectedComponentCount: "已选组件 {count} 套",
+    moduleToolbarAria: "模块操作",
+    moduleEdit: "编辑",
+    moduleDelete: "删除",
     chooseStyle: "选择风格",
     underConstruction: "正在搭建中…",
     expandSidebar: "展开侧边栏",
@@ -473,6 +479,9 @@ const ja: typeof en = {
   editor: {
     noSelectedComponents: "コンポーネントが選択されていません",
     selectedComponentCount: "選択中のコンポーネント {count} 件",
+    moduleToolbarAria: "モジュール操作",
+    moduleEdit: "編集",
+    moduleDelete: "削除",
     chooseStyle: "スタイルを選ぶ",
     underConstruction: "準備中…",
     expandSidebar: "サイドバーを開く",
