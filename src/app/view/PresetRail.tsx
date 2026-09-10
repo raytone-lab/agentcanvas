@@ -171,35 +171,13 @@ export function PresetRail({
     return () => window.clearTimeout(timer);
   }, [pinnedOptionId, onPinnedOptionShown, navSection, selectedGroupId]);
 
-  const panelBody = (
-        <div className="preset-panel-body">
-          {styleSwitching ? (
-            <div className="preset-panel-skeleton" aria-hidden="true">
-              <span className="preset-skel-line" />
-              <span className="preset-skel-card" />
-              <span className="preset-skel-card" />
-              <span className="preset-skel-card" />
-              <span className="preset-skel-card" />
-              <span className="preset-skel-card" />
-            </div>
-          ) : selectedPresetStyle === "studio" ? (
-            <div className="preset-panel-building">{copy.shell.editor.underConstruction}</div>
-          ) : (
-            <>
-          {stateCards.length && selectedPresetGroup.id === "tool-calls" ? (
-            <section className="preset-option-section">
-              <h3>{stateSectionTitle(selectedPresetGroup.id, locale)}</h3>
-              <StateGallery
-                cards={stateCards}
-                activeCode={selectedStateCode}
-                isSelected={isStateCardSelected}
-                onSelect={onToolActionsOverview}
-                onPickIcon={onToolActionsOverview}
-                onDeselect={onToolActionsOverview}
-              />
-            </section>
-          ) : null}
-          {stateCards.length && selectedPresetGroup.id !== "tool-calls" ? (
+  /**
+   * The avatar gallery. Hoisted so it can sit on either side of the option
+   * sections: 对话区 puts 布局 first, because whether the conversation shows at
+   * all comes before which face it wears.
+   */
+  const stateGallerySection =
+    stateCards.length > 0 && selectedPresetGroup.id !== "tool-calls" ? (
             <section className="preset-option-section">
               <h3>{stateSectionTitle(selectedPresetGroup.id, locale)}</h3>
               <StateGallery
@@ -228,7 +206,38 @@ export function PresetRail({
                 </div>
               ) : null}
             </section>
+    ) : null;
+  // Groups whose gallery belongs after their options rather than before.
+  const galleryAfterOptions = selectedPresetGroup.id === "conversation";
+  const panelBody = (
+        <div className="preset-panel-body">
+          {styleSwitching ? (
+            <div className="preset-panel-skeleton" aria-hidden="true">
+              <span className="preset-skel-line" />
+              <span className="preset-skel-card" />
+              <span className="preset-skel-card" />
+              <span className="preset-skel-card" />
+              <span className="preset-skel-card" />
+              <span className="preset-skel-card" />
+            </div>
+          ) : selectedPresetStyle === "studio" ? (
+            <div className="preset-panel-building">{copy.shell.editor.underConstruction}</div>
+          ) : (
+            <>
+          {stateCards.length && selectedPresetGroup.id === "tool-calls" ? (
+            <section className="preset-option-section">
+              <h3>{stateSectionTitle(selectedPresetGroup.id, locale)}</h3>
+              <StateGallery
+                cards={stateCards}
+                activeCode={selectedStateCode}
+                isSelected={isStateCardSelected}
+                onSelect={onToolActionsOverview}
+                onPickIcon={onToolActionsOverview}
+                onDeselect={onToolActionsOverview}
+              />
+            </section>
           ) : null}
+          {galleryAfterOptions ? null : stateGallerySection}
           {selectedPresetGroup.id === "git" ? (
             <div className="am-comingsoon">
               <span className="am-comingsoon-icon" aria-hidden="true">
@@ -380,6 +389,7 @@ export function PresetRail({
           ) : null}
             </>
           )}
+          {galleryAfterOptions ? stateGallerySection : null}
         </div>
   );
 
