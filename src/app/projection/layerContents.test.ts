@@ -6,6 +6,7 @@ import {
   isAddedContentOption,
   isEventFlowReady,
   isOptionSelectedInRail,
+  isOptionShownInRail,
   layerContentsForProject,
   mountedComponentsForProject,
   layersForProject,
@@ -14,6 +15,7 @@ import {
 import { emptyStructureProject, type AgentFrontendProject } from "../../schema/agentuxConfig";
 import { isPresetOptionActive, togglePresetOption } from "../../schema/presetActions";
 import { presetGroups } from "../../schema/presets";
+import { presetRailSections } from "./presetRailData";
 
 /**
  * The starting project with named slots enabled and named content picked.
@@ -249,5 +251,33 @@ describe("rail selection honesty", () => {
     for (const optionId of RAIL_HIDDEN_OPTION_IDS) {
       expect(presetGroups.some((group) => group.options.some((option) => option.id === optionId))).toBe(true);
     }
+  });
+});
+
+describe("rail contents", () => {
+  it("leaves the unbuilt options out", () => {
+    // They were there to show the shape of what is coming, but as inert dimmed
+    // cards among live ones they read as things that ought to work. They stay
+    // in the schema, so the list of what this product intends to cover is
+    // still complete in one place.
+    const pending = presetGroups.flatMap((group) => group.options.filter((option) => option.pending));
+    expect(pending.length).toBeGreaterThan(0);
+    for (const option of pending) {
+      expect(isOptionShownInRail(option), option.id).toBe(false);
+    }
+    // And a real option still shows.
+    expect(isOptionShownInRail({ id: "thinking-wave" })).toBe(true);
+  });
+
+  it("has one stage left with nothing to configure", () => {
+    // 中断 is four placeholders and nothing else, so hiding them empties it.
+    // Kept on the axis all the same: the flow it names is real, and a gap in
+    // the sequence would read as though stopping a run had never been
+    // considered.
+    const interrupt = presetGroups.find((group) => group.id === "interrupt")!;
+    expect(interrupt.options.filter(isOptionShownInRail)).toEqual([]);
+    expect(presetRailSections.find((section) => section.id === "event-flow")?.groupIds).toContain(
+      "interrupt",
+    );
   });
 });

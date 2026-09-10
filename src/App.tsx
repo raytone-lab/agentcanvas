@@ -50,6 +50,7 @@ import { Topbar } from "./app/view/Topbar";
 import { IncompleteProjectDialog } from "./app/view/IncompleteProjectDialog";
 import { canvasTimelineEvents } from "./app/projection/canvasTimeline";
 import { ModuleToolbar } from "./app/view/ModuleToolbar";
+import { PointerHint, type PointerHintState } from "./app/view/PointerHint";
 import { clampZoom, zoomIn, zoomOut } from "./app/view/ZoomControl";
 import {
   collectDefaultOutputPanelItems,
@@ -62,7 +63,7 @@ import {
   LAYER_HIGHLIGHT_SELECTORS,
   LAYER_PRESENCE_OPTIONS,
   PRESET_GROUP_COMPONENTS,
-  RAIL_HIDDEN_OPTION_IDS,
+  isOptionShownInRail,
   REGION_LAYERS,
   canvasSlotsForProject,
   layersForProject,
@@ -405,10 +406,7 @@ export function App() {
    * component on the canvas now.
    */
   const renderedPresetSections = selectedPresetSections
-    .map((section) => ({
-      ...section,
-      items: section.items.filter((option) => !RAIL_HIDDEN_OPTION_IDS.has(option.id)),
-    }))
+    .map((section) => ({ ...section, items: section.items.filter(isOptionShownInRail) }))
     .filter((section) => section.items.length > 0);
   const showDebugViewToggle = import.meta.env.DEV && state.surfaceMode === "builder";
   const builderUI = {
@@ -630,6 +628,7 @@ export function App() {
   const sidebarDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const [draggingSidebar, setDraggingSidebar] = useState(false);
   const [panelLayout, setPanelLayout] = useState<{ main: number; right: number } | undefined>();
+  const [pointerHint, setPointerHint] = useState<PointerHintState>(null);
   const [pendingRun, setPendingRun] = useState<"preview" | "export" | null>(null);
   const missingRequirements = missingRequirementsForProject(activeProject, selectedComponentItems);
   const runOrAsk = (intent: "preview" | "export") => {
@@ -968,8 +967,8 @@ export function App() {
               pickedOptionIds={state.pickedOptionIds}
               pickedIconSlots={state.pickedIconSlots}
               eventFlowReady={mountedComponents.has("ChatFrame")}
-              onEventFlowLocked={() =>
-                toast(copy.shell.editor.flowNeedsConversation, { duration: 3000 })
+              onEventFlowLocked={(x, y) =>
+                setPointerHint({ x, y, text: copy.shell.editor.flowNeedsConversation })
               }
               pinnedOptionId={state.pinnedOptionId}
               onPinnedOptionShown={() => dispatch({ type: "patch", patch: { pinnedOptionId: null } })}
@@ -1243,6 +1242,7 @@ export function App() {
           </footer>
         ) : null}
       </div>
+      <PointerHint hint={pointerHint} onDismiss={() => setPointerHint(null)} />
       {state.surfaceMode === "builder" ? (
         <IncompleteProjectDialog
           copy={copy}

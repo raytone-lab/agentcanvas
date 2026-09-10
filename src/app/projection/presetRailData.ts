@@ -587,6 +587,19 @@ export const RAIL_HIDDEN_OPTION_IDS = new Set([
   "composer-visible",
 ]);
 
+/**
+ * Whether an option belongs in the rail at all.
+ *
+ * Named-but-unbuilt options are out. They were there to show the shape of what
+ * is coming, but as inert dimmed cards among live ones they read as things that
+ * ought to work — a choice that cannot be made is not worth the space. They
+ * stay in the schema, so the list of what this product intends to cover is
+ * still complete in one place.
+ */
+export function isOptionShownInRail(option: { id: string; pending?: boolean }): boolean {
+  return !option.pending && !RAIL_HIDDEN_OPTION_IDS.has(option.id);
+}
+
 /** The option a layer row edits or deletes, or null if it maps to none. */
 export function optionIdForModule(moduleId: string): string | null {
   const presence = SLOT_PRESENCE_OPTIONS[moduleId];

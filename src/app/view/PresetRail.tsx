@@ -118,8 +118,8 @@ export function PresetRail({
   pickedIconSlots: readonly string[];
   /** False until a conversation exists for the event flow's stages to show in. */
   eventFlowReady: boolean;
-  /** A click landed in the locked event flow; say what is missing. */
-  onEventFlowLocked: () => void;
+  /** A click landed in the locked event flow; say what is missing, where it landed. */
+  onEventFlowLocked: (x: number, y: number) => void;
   /** Set by the canvas toolbar's Edit: scroll this option in and flash it. */
   pinnedOptionId: string | null;
   onPinnedOptionShown: () => void;
@@ -574,7 +574,7 @@ export function PresetRail({
                 ? (event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    onEventFlowLocked();
+                    onEventFlowLocked(event.clientX, event.clientY);
                   }
                 : undefined
             }

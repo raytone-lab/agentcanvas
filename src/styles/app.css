@@ -12817,6 +12817,29 @@ pre {
   padding-left: 24px;
 }
 
+/* An answer at the pointer. A bottom-corner toast makes the reader look away
+   from what they just clicked to find out why nothing happened, and by then the
+   connection between the two is gone. */
+.pointer-hint {
+  position: fixed;
+  z-index: 90;
+  max-width: 228px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.6);
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: pointer-hint-in var(--motion-fast) var(--ease-out);
+}
+
+@keyframes pointer-hint-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* The event flow with nowhere to show itself. Dimmed rather than removed —
    the stages are still worth reading — and still clickable, so the click can be
    answered with what is missing instead of nothing happening. */
