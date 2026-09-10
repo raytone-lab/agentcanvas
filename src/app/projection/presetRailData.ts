@@ -336,6 +336,11 @@ export const LAYER_PRESENCE_OPTIONS: Record<string, readonly string[]> = {
  * did nothing until 显示对话流 was ticked first — the option was on and had
  * nowhere to show.
  */
+/** Every id the preset schema knows, so synthetic ids can be told apart. */
+const presetOptionIds = new Set(
+  presetGroups.flatMap((group) => group.options.map((option) => option.id)),
+);
+
 export const PRESET_GROUP_COMPONENTS: Partial<Record<PresetGroupId, SlotConfig["component"]>> = {
   sidebar: "SessionSidebar",
   conversation: "ChatFrame",
@@ -366,6 +371,13 @@ export const PRESET_GROUP_COMPONENTS: Partial<Record<PresetGroupId, SlotConfig["
  */
 export function isAddedContentOption(project: AgentFrontendProject, optionId: string): boolean {
   if (PRESENCE_OPTION_IDS.has(optionId)) return false;
+  // Not every row in the selected-components list is a preset option. Avatars
+  // arrive as `state:author.user` and message actions as `message-action:*`,
+  // ids `isPresetOptionActive` has never heard of — it answered false, so
+  // picking 用户头像 counted as nothing and the conversation stayed off the
+  // canvas. The projection only emits these when the underlying field is on,
+  // so their presence in the list *is* the answer.
+  if (!presetOptionIds.has(optionId)) return true;
   if (!isPresetOptionActive(project, optionId)) return false;
   return !isPresetOptionActive(togglePresetOption(project, optionId), optionId);
 }
@@ -422,6 +434,35 @@ export const LAYER_EDIT_OPTIONS: Record<string, string> = {
   center: "chat-visible",
   right: "output-visible",
 };
+
+/**
+ * What a project needs before it can be previewed or exported.
+ *
+ * A conversation and a composer: an agent frontend the reader cannot read or
+ * type into is not a frontend. The side columns are genuinely optional — plenty
+ * of agent UIs are a single column — so they are not required here.
+ *
+ * Each entry carries the option that would satisfy it, which is the first
+ * option of its group: the group's presence toggle, ordered first on purpose.
+ */
+export const REQUIRED_GROUP_IDS: readonly PresetGroupId[] = ["conversation", "composer"];
+
+export type MissingRequirement = { groupId: PresetGroupId; optionId: string };
+
+export function missingRequirementsForProject(
+  project: AgentFrontendProject,
+  items: readonly { id: string; groupId: PresetGroupId }[],
+): MissingRequirement[] {
+  const mounted = mountedComponentsForProject(project, items);
+  const missing: MissingRequirement[] = [];
+  for (const groupId of REQUIRED_GROUP_IDS) {
+    const component = PRESET_GROUP_COMPONENTS[groupId];
+    if (!component || mounted.has(component)) continue;
+    const optionId = presetGroups.find((group) => group.id === groupId)?.options[0]?.id;
+    if (optionId) missing.push({ groupId, optionId });
+  }
+  return missing;
+}
 
 /** The option a layer row edits or deletes, or null if it maps to none. */
 export function optionIdForModule(moduleId: string): string | null {

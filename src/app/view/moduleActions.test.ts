@@ -5,6 +5,7 @@ import {
   LAYER_EDIT_OPTIONS,
   LAYER_HIGHLIGHT_SELECTORS,
   LAYER_PRESENCE_OPTIONS,
+  missingRequirementsForProject,
   optionIdForModule,
   railLocationForOption,
 } from "../projection/presetRailData";
@@ -71,5 +72,43 @@ describe("canvas module actions", () => {
     }
     // Column resizing is a layout edit, not a component interaction.
     expect(appSource).toContain('closest(".resize-handle")');
+  });
+});
+
+describe("preview and export completeness", () => {
+  it("asks before running a project that cannot run", () => {
+    // A conversation and a composer: an agent frontend the reader cannot read
+    // or type into is not a frontend. The side columns stay optional — plenty
+    // of agent UIs are one column.
+    const missing = missingRequirementsForProject(emptyStructureProject, []);
+    expect(missing.map((item) => item.groupId)).toEqual(["conversation", "composer"]);
+    // Each carries the option that satisfies it: the group's first option,
+    // which is its presence toggle.
+    expect(missing.map((item) => item.optionId)).toEqual(["chat-visible", "composer-visible"]);
+  });
+
+  it("stops asking once the gaps are filled", () => {
+    const filled = missingRequirementsForProject(emptyStructureProject, []).reduce(
+      (project, item) => togglePresetOption(project, item.optionId),
+      emptyStructureProject,
+    );
+    expect(missingRequirementsForProject(filled, [])).toEqual([]);
+  });
+
+  it("counts content as satisfying the requirement, not just the toggle", () => {
+    // Building in any order is the point: picking 名称标签 puts a conversation
+    // on the canvas, so the project is no longer missing one.
+    const withLabels = togglePresetOption(emptyStructureProject, "speaker-labels");
+    const items = [{ id: "speaker-labels", groupId: "conversation" as const }];
+    expect(missingRequirementsForProject(withLabels, items).map((item) => item.groupId)).toEqual([
+      "composer",
+    ]);
+  });
+
+  it("waits for the filled project before running", () => {
+    // `saveScaffoldPreview` snapshots the project it was built with, so running
+    // in the same tick as the fill preserved the gaps that had just been
+    // filled — the preview opened with no conversation and no composer.
+    expect(appSource).toContain("if (!runAfterFill || missingRequirements.length > 0) return;");
   });
 });

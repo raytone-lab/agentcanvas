@@ -47,6 +47,7 @@ import { InlineApprovalDemo, demoApprovalTool, findPendingApprovalTool } from ".
 import { PresetRail } from "./app/view/PresetRail";
 import { RegionLabels } from "./app/view/RegionLabels";
 import { Topbar } from "./app/view/Topbar";
+import { IncompleteProjectDialog } from "./app/view/IncompleteProjectDialog";
 import { ModuleToolbar } from "./app/view/ModuleToolbar";
 import { clampZoom, zoomIn, zoomOut } from "./app/view/ZoomControl";
 import {
@@ -63,6 +64,7 @@ import {
   REGION_LAYERS,
   canvasSlotsForProject,
   layersForProject,
+  missingRequirementsForProject,
   mountedComponentsForProject,
   STYLE_AVATAR_DEFAULTS,
   groupPresetOptions,
@@ -558,6 +560,68 @@ export function App() {
       ? LAYER_EDIT_OPTIONS[state.selectedLayerId] ?? null
       : null;
 
+  /**
+   * Preview and export run only on a project that can actually run.
+   *
+   * The check is here rather than on the canvas: building in any order is the
+   * point, so a half-built agent is a normal state to look at and only a
+   * problem at the moment you try to run or ship it.
+   */
+  const [pendingRun, setPendingRun] = useState<"preview" | "export" | null>(null);
+  const missingRequirements = missingRequirementsForProject(activeProject, selectedComponentItems);
+  const runOrAsk = (intent: "preview" | "export") => {
+    if (missingRequirements.length > 0) {
+      setPendingRun(intent);
+      return;
+    }
+    if (intent === "preview") controller.saveScaffoldPreview();
+    else void controller.generateExport();
+  };
+  // Set while the filled-in project is on its way to state. The run has to wait
+  // for it: `saveScaffoldPreview` snapshots the project it was built with, so
+  // running in the same tick preserved the very gaps that had just been filled
+  // — measured, the preview opened with no conversation and no composer.
+  const [runAfterFill, setRunAfterFill] = useState<"preview" | "export" | null>(null);
+  const fillInAndRun = () => {
+    const intent = pendingRun;
+    setPendingRun(null);
+    setProject((current) =>
+      missingRequirements.reduce(
+        (next, item) => (isPresetOptionActive(next, item.optionId) ? next : togglePresetOption(next, item.optionId)),
+        current,
+      ),
+    );
+    setRunAfterFill(intent);
+  };
+  const keepBuilding = () => {
+    setPendingRun(null);
+    // Pinned to the first thing that is missing, so "I will finish it" lands on
+    // the control that finishes it.
+    const first = missingRequirements[0];
+    if (!first) return;
+    const location = railLocationForOption(first.optionId);
+    if (!location) return;
+    dispatch({
+      type: "patch",
+      patch: {
+        navSection: location.navSection,
+        selectedGroup: location.groupId,
+        pinnedOptionId: first.optionId,
+      },
+    });
+  };
+
+  useEffect(() => {
+    if (!runAfterFill || missingRequirements.length > 0) return;
+    const intent = runAfterFill;
+    setRunAfterFill(null);
+    if (intent === "preview") controller.saveScaffoldPreview();
+    else void controller.generateExport();
+    // `controller` is rebuilt every render, so it is deliberately not a
+    // dependency: the guard above is what decides when this runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runAfterFill, missingRequirements.length]);
+
   const editSelectedModule = () => {
     const location = railLocationForOption(editOptionId ?? "");
     if (!location) return;
@@ -812,12 +876,12 @@ export function App() {
           showDebugViewToggle={showDebugViewToggle}
           workspaceView={state.workspaceView}
           onWorkspaceViewToggle={() => dispatch({ type: "patch", patch: { workspaceView: state.workspaceView === "preview" ? "debug" : "preview" } })}
-          onEnterPreview={controller.saveScaffoldPreview}
+          onEnterPreview={() => runOrAsk("preview")}
           selectedComponentSummary={selectedComponentSummary}
           selectedComponentItems={selectedComponentItems}
           canvasZoom={state.canvasZoom}
           onCanvasZoomChange={(zoom) => dispatch({ type: "patch", patch: { canvasZoom: clampZoom(zoom) } })}
-          onExport={() => void controller.generateExport()}
+          onExport={() => runOrAsk("export")}
         />
 
         <div className="workspace-layout" data-mode={state.surfaceMode} data-drawer-open={state.surfaceMode === "builder" ? state.presetDrawerOpen : undefined}>
@@ -1038,6 +1102,15 @@ export function App() {
           </footer>
         ) : null}
       </div>
+      {state.surfaceMode === "builder" ? (
+        <IncompleteProjectDialog
+          copy={copy}
+          locale={locale}
+          missing={pendingRun ? missingRequirements : []}
+          onFillIn={fillInAndRun}
+          onKeepBuilding={keepBuilding}
+        />
+      ) : null}
       </IconStyleProvider>
     </>
   );

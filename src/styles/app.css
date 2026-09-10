@@ -13165,6 +13165,16 @@ pre {
   animation: preset-option-pin 1.2s var(--ease-out) 2;
 }
 
+/* Preview/export completeness prompt. Two ways out, side by side, with
+   finishing it yourself on the left because it is the one that keeps the reader
+   in the flow they were already in. */
+.incomplete-dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
 /* Canvas zoom readout. Sits with the topbar's controls but reads as a field
    rather than a button — it is the current value, and it is editable. */
 .zoom-control {
