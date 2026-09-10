@@ -248,8 +248,8 @@ describe("App shell controls", () => {
     );
 
     const inputRule = ruleFor(".layers-panel-title-input");
-    expect(inputRule).toContain("border: 1px solid #ff6a00;");
-    expect(ruleFor(".layers-panel-title-input::selection")).toContain("rgb(255 106 0 / 0.2)");
+    expect(inputRule).toContain("border: 1px solid var(--select-line);");
+    expect(ruleFor(".layers-panel-title-input::selection")).toContain("var(--select-fill)");
 
     // Label and field share padding and type so the row does not jump when it
     // swaps.
@@ -394,6 +394,47 @@ describe("App shell controls", () => {
     expect(placeholderRule).not.toContain("border: 0;");
     expect(cssRule(styles, '.preview-frame[data-style-preset="native"] .right-panel')).toContain(
       "border-left: 1px solid var(--preview-soft-line);",
+    );
+  });
+
+  it("keeps the selection accent in one place", () => {
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+    const root = cssRule(styles, ":root");
+
+    // The point of the token set: one value to edit. Every other surface
+    // derives from it, so a recolour cannot leave a stale orange behind.
+    expect(styles.match(/#ff6a00|rgb\(255 106 0/gi) ?? []).toHaveLength(1);
+    expect(root).toContain("--select-color: #ff6a00;");
+    for (const derived of [
+      "--select-line: var(--select-color);",
+      "--select-fill: color-mix(in srgb, var(--select-color) 20%, transparent);",
+      "--select-wash: color-mix(in srgb, var(--select-color) 12%, transparent);",
+      "--select-text: var(--select-color);",
+    ]) {
+      expect(root).toContain(derived);
+    }
+
+    // The rail's selected destination reads as selection; hover is left as it
+    // was, because the two answer different questions ("this is selected"
+    // versus "you can click this").
+    const activeTile = cssRule(styles, '.nav-section-tile[data-active="true"] .nav-section-glyph');
+    expect(activeTile).toContain("background: var(--select-fill);");
+    expect(activeTile).toContain("color: var(--select-text);");
+    expect(cssRule(styles, ".nav-section-tile:hover .nav-section-glyph")).toContain(
+      "color-mix(in srgb, var(--text-primary) 6%, transparent)",
+    );
+    // Equal specificity, so order decides: selected must come after hover, or
+    // hovering the selected tile would grey it back out.
+    expect(styles.indexOf(".nav-section-tile:hover .nav-section-glyph")).toBeLessThan(
+      styles.indexOf('.nav-section-tile[data-active="true"] .nav-section-glyph'),
+    );
+
+    // The tokens are at :root, not on the canvas frame. Declared there, they
+    // were unresolved for the layer rows outside it — the row's orange fill
+    // silently did nothing and only its border showed, via a hardcoded
+    // fallback.
+    expect(cssRule(styles, '.layers-row[data-active="true"]')).toContain(
+      "box-shadow: inset 0 0 0 1px var(--select-line);",
     );
   });
 

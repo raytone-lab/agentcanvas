@@ -67,6 +67,31 @@
   --motion-fast: 120ms;
   --motion-base: 160ms;
   --motion-slow: 240ms;
+
+  /* ── Selection accent ──────────────────────────────────────────────────
+     Everything that says "this is the thing you are about to act on" reads
+     from here: the canvas overlay and its module highlights, the layer rows,
+     the rail's active destination, the module toolbar, the project-name and
+     zoom fields, and text selection inside the editor's own inputs.
+
+     To recolour selection across the whole product, change --select-color.
+     The rest derive from it, so nothing can drift out of step.
+
+       --select-color  the accent itself; the only value to edit
+       --select-line   1px borders and rings
+       --select-fill   filled surfaces (20%) — canvas overlay, active tiles
+       --select-wash   lighter fill (12%) for small hover surfaces
+       --select-ring   mid fill (55%) for the attention flash
+       --select-text   icons and labels drawn in the accent
+       --select-strong readable accent for text on light fills
+     ─────────────────────────────────────────────────────────────────────── */
+  --select-color: #ff6a00;
+  --select-line: var(--select-color);
+  --select-fill: color-mix(in srgb, var(--select-color) 20%, transparent);
+  --select-wash: color-mix(in srgb, var(--select-color) 12%, transparent);
+  --select-ring: color-mix(in srgb, var(--select-color) 55%, transparent);
+  --select-text: var(--select-color);
+  --select-strong: color-mix(in srgb, var(--select-color) 82%, #000000);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.45, 0, 0.25, 1);
   --shadow-sm: 0 1px 2px rgba(13, 18, 28, 0.05);
@@ -12573,9 +12598,13 @@ pre {
 
 /* Figma's active destination is a tinted block behind a tinted icon, not a
    gray one — the selection reads as "you are here" instead of "hovered". */
+/* Selected reads as selection, not as a second kind of accent. Hover is
+   deliberately left as it was — it answers "you can click this", which is a
+   different question. This rule follows the hover rule at equal specificity,
+   so hovering the selected tile keeps the selected look. */
 .nav-section-tile[data-active="true"] .nav-section-glyph {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
+  background: var(--select-fill);
+  color: var(--select-text);
 }
 
 .nav-section-tile[data-active="true"] .nav-section-label {
@@ -12631,9 +12660,9 @@ pre {
   padding: 3px 6px;
   /* Must match .layers-panel-title exactly — see the note there. */
   line-height: 20px;
-  /* The selection orange, matching the canvas highlight — being edited and
+  /* The selection accent, matching the canvas highlight — being edited and
      being selected are the same state as far as the reader is concerned. */
-  border: 1px solid #ff6a00;
+  border: 1px solid var(--select-line);
   border-radius: 6px;
   background: var(--surface-panel);
   color: var(--text-primary);
@@ -12644,7 +12673,7 @@ pre {
 }
 
 .layers-panel-title-input::selection {
-  background: rgb(255 106 0 / 0.2);
+  background: var(--select-fill);
 }
 
 .layers-panel-section {
@@ -12728,11 +12757,6 @@ pre {
 
 .layers-row:hover {
   background: color-mix(in srgb, var(--text-primary) 5%, transparent);
-  color: var(--text-primary);
-}
-
-.layers-row[data-active="true"] {
-  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
   color: var(--text-primary);
 }
 
@@ -12962,11 +12986,6 @@ pre {
  * inside it.
  * ================================================================== */
 
-.preview-frame {
-  --select-line: #ff6a00;
-  --select-fill: rgb(255 106 0 / 0.2);
-}
-
 .preview-frame :is(.session-sidebar, .preview-stack, .right-panel, .chat-frame, .composer-frame, .artifact-frame, .git-panel) {
   position: relative;
 }
@@ -13060,11 +13079,11 @@ pre {
 .layers-row[data-active="true"] {
   background: var(--select-fill);
   color: var(--text-primary);
-  box-shadow: inset 0 0 0 1px var(--select-line, #ff6a00);
+  box-shadow: inset 0 0 0 1px var(--select-line);
 }
 
 .region-label[data-active="true"] {
-  color: #ff6a00;
+  color: var(--select-text);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -13119,11 +13138,11 @@ pre {
 }
 
 .module-toolbar-button[data-tone="danger"] {
-  color: #c2410c;
+  color: var(--select-strong);
 }
 
 .module-toolbar-button[data-tone="danger"]:hover {
-  background: rgb(255 106 0 / 0.12);
+  background: var(--select-wash);
 }
 
 /* In the configurator the canvas is a design surface: text selection would
@@ -13135,8 +13154,8 @@ pre {
 /* The option the canvas toolbar's Edit jumped to. Two flashes, then it stops —
    long enough to find, short enough not to nag. */
 @keyframes preset-option-pin {
-  0%, 100% { box-shadow: 0 0 0 0 rgb(255 106 0 / 0); }
-  30%, 70% { box-shadow: 0 0 0 2px rgb(255 106 0 / 0.55); }
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  30%, 70% { box-shadow: 0 0 0 2px var(--select-ring); }
 }
 
 .preset-option-cell[data-pinned="true"] .preset-option {
@@ -13197,7 +13216,7 @@ pre {
 .zoom-menu-field {
   width: 100%;
   padding: 5px 8px;
-  border: 1px solid #ff6a00;
+  border: 1px solid var(--select-line);
   border-radius: 6px;
   background: var(--surface-panel);
   color: var(--text-primary);
@@ -13209,7 +13228,7 @@ pre {
 }
 
 .zoom-menu-field::selection {
-  background: rgb(255 106 0 / 0.2);
+  background: var(--select-fill);
 }
 
 .zoom-menu-items {
