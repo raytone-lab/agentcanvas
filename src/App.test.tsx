@@ -688,6 +688,21 @@ describe("event flow axis", () => {
     );
   });
 
+  it("lets the centre column be highlighted when it is empty", () => {
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+
+    // The selection overlay lives on `::after`. The welcome wash used to have a
+    // second layer there, and the rule that switched that layer off for an
+    // empty canvas was switching off the highlight with it: selecting 中栏 set
+    // `opacity: 1` on a box that still had `display: none`. Measured before the
+    // fix, and the left and right columns worked because their overlays are on
+    // different elements.
+    expect(styles).not.toContain('.preview-stack[data-welcome="true"]::after');
+    expect(
+      cssRule(styles, '.preview-frame .preview-stack[data-welcome="true"]:empty::before'),
+    ).toContain("display: none;");
+  });
+
   it("treats errors and interrupts as exits, not steps", () => {
     // An error can land while thinking, mid tool call or at delivery, and the
     // reader can stop at any of those points. Neither happens "after tools and

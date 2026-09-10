@@ -11561,13 +11561,6 @@ pre {
 }
 
 .preview-stack[data-welcome="true"]::before,
-.preview-stack[data-welcome="true"]::after {
-  position: absolute;
-  pointer-events: none;
-  content: "";
-  z-index: -1;
-}
-
 .preview-stack[data-welcome="true"]::before {
   top: 0;
   right: 0;
@@ -11578,10 +11571,6 @@ pre {
     radial-gradient(1500px 1380px at 104% -48%, rgba(166, 202, 255, 0.6) 0%, rgba(166, 202, 255, 0) 42%),
     radial-gradient(620px 460px at 36% -18%, rgba(182, 255, 239, 0.3) 0%, rgba(182, 255, 239, 0) 46%);
   mask-image: linear-gradient(180deg, #000 0%, #000 54%, rgba(0, 0, 0, 0) 100%);
-}
-
-.preview-stack[data-welcome="true"]::after {
-  display: none;
 }
 
 .preview-frame[data-style-preset="illustrated"] .preview-stack[data-welcome="true"]::before {
@@ -13015,12 +13004,16 @@ pre {
   min-height: 100%;
 }
 
-/* The welcome state paints two tinted radial washes over the centre column.
-   With nothing configured there is no welcome content for them to sit behind,
-   so an unconfigured canvas is three plain panels — the tint made the middle
-   column look like a different kind of surface from its neighbours. */
-.preview-frame .preview-stack[data-welcome="true"]:empty::before,
-.preview-frame .preview-stack[data-welcome="true"]:empty::after {
+/* The welcome state paints a tinted radial wash over the centre column. With
+   nothing configured there is no welcome content for it to sit behind, so an
+   unconfigured canvas is three plain panels — the tint made the middle column
+   look like a different kind of surface from its neighbours.
+
+   `::before` only. This used to name `::after` as well, from when the wash had
+   a second layer there; the selection overlay lives on `::after` now, so that
+   half was silently hiding the centre column's highlight — selecting 中栏 set
+   `opacity: 1` on a box that had `display: none`. */
+.preview-frame .preview-stack[data-welcome="true"]:empty::before {
   display: none;
 }
 
