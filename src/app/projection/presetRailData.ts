@@ -1,6 +1,7 @@
 import {
   Blocks,
   CircleAlert,
+  CircleStop,
   Cpu,
   File,
   GitBranch,
@@ -171,8 +172,9 @@ const PRESENCE_MOUNTS_COMPONENT = new Set<SlotConfig["component"]>(["ChatFrame",
 export function mountedComponentsForProject(
   project: AgentFrontendProject,
   items: readonly { id: string; groupId: PresetGroupId }[],
+  picked: readonly string[] = [],
 ): Set<SlotConfig["component"]> {
-  const mounted = componentsWithChosenContent(project, items);
+  const mounted = componentsWithChosenContent(project, items, picked);
   for (const slot of project.layout.slots) {
     if (slot.enabled && PRESENCE_MOUNTS_COMPONENT.has(slot.component)) mounted.add(slot.component);
   }
@@ -183,8 +185,9 @@ export function mountedComponentsForProject(
 export function canvasSlotsForProject(
   project: AgentFrontendProject,
   items: readonly { id: string; groupId: PresetGroupId }[],
+  picked: readonly string[] = [],
 ): SlotConfig[] {
-  const mounted = mountedComponentsForProject(project, items);
+  const mounted = mountedComponentsForProject(project, items, picked);
   return project.layout.slots.map((slot) => ({ ...slot, enabled: mounted.has(slot.component) }));
 }
 
@@ -251,6 +254,7 @@ export const PRESET_GROUP_REGIONS: Partial<Record<PresetGroupId, AgentCanvasRegi
   approval: "main",
   "tool-calls": "main",
   blocks: "main",
+  interrupt: "main",
   "media-generation": "main",
   // Output source and renderer describe the right panel's contents, which is
   // also how `isEffectiveSelectedComponent` treats them — they stop counting
@@ -341,6 +345,11 @@ const presetOptionIds = new Set(
   presetGroups.flatMap((group) => group.options.map((option) => option.id)),
 );
 
+/** Option id to the group that owns it. */
+export const OPTION_GROUP_IDS = new Map(
+  presetGroups.flatMap((group) => group.options.map((option) => [option.id, group.id] as const)),
+);
+
 export const PRESET_GROUP_COMPONENTS: Partial<Record<PresetGroupId, SlotConfig["component"]>> = {
   sidebar: "SessionSidebar",
   conversation: "ChatFrame",
@@ -348,6 +357,7 @@ export const PRESET_GROUP_COMPONENTS: Partial<Record<PresetGroupId, SlotConfig["
   approval: "ChatFrame",
   "tool-calls": "ChatFrame",
   blocks: "ChatFrame",
+  interrupt: "ChatFrame",
   "media-generation": "ChatFrame",
   composer: "ComposerFrame",
   output: "OutputFrame",
@@ -397,11 +407,23 @@ export function isAddedContentOption(project: AgentFrontendProject, optionId: st
 export function componentsWithChosenContent(
   project: AgentFrontendProject,
   items: readonly { id: string; groupId: PresetGroupId }[],
+  /**
+   * Clicked option ids. Needed for the same reason the timeline needs them: a
+   * variant is always active, so only the click says it was asked for. Without
+   * this, picking a thinking animation composed a conversation and then had no
+   * conversation component to draw it in.
+   */
+  picked: readonly string[] = [],
 ): Set<SlotConfig["component"]> {
   const components = new Set<SlotConfig["component"]>();
   for (const item of items) {
     if (!isAddedContentOption(project, item.id)) continue;
     const component = PRESET_GROUP_COMPONENTS[item.groupId];
+    if (component) components.add(component);
+  }
+  for (const optionId of picked) {
+    const groupId = OPTION_GROUP_IDS.get(optionId);
+    const component = groupId ? PRESET_GROUP_COMPONENTS[groupId] : undefined;
     if (component) components.add(component);
   }
   return components;
@@ -506,9 +528,10 @@ export function layerContentsForProject(
   project: AgentFrontendProject,
   locale?: AppLocale,
   selectedOptions?: readonly { id: string; groupId: PresetGroupId; label: string }[],
+  picked: readonly string[] = [],
 ) {
   // The same rule the canvas draws by, so the tree lists exactly what is on it.
-  const mounted = mountedComponentsForProject(project, selectedOptions ?? []);
+  const mounted = mountedComponentsForProject(project, selectedOptions ?? [], picked);
   return layersForProject(project, mounted).map((layer) => {
     const slots = project.layout.slots.filter(
       (slot) => layer.regions.includes(slot.region) && mounted.has(slot.component),
@@ -557,6 +580,7 @@ export const presetGroupIcons: Record<PresetGroupId, LucideIcon> = {
   approval: ShieldQuestionMark,
   "tool-calls": Wrench,
   blocks: CircleAlert,
+  interrupt: CircleStop,
   composer: PenLine,
   provider: Plug,
   // PanelRight is all but indistinguishable from the left nav's PanelLeft at
@@ -606,7 +630,15 @@ export const presetRailSections: {
     // for generated media → what comes back.
     id: "event-flow",
     label: { zh: "事件流", en: "Event flow", ja: "イベント" },
-    groupIds: ["ux-effects", "approval", "tool-calls", "blocks", "media-generation", "delivery"],
+    groupIds: [
+      "ux-effects",
+      "approval",
+      "tool-calls",
+      "blocks",
+      "interrupt",
+      "media-generation",
+      "delivery",
+    ],
   },
   {
     id: "appearance",

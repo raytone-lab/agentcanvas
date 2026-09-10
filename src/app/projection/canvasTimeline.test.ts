@@ -87,3 +87,47 @@ describe("canvas timeline", () => {
     expect(again).toEqual(events);
   });
 });
+
+describe("multi-turn transcript", () => {
+  it("keeps a thinking animation visible after a delivery pick", () => {
+    // The reason the canvas shows more than one turn. Thinking and delivery are
+    // two instants of the same turn, so a single frozen moment can only show
+    // one of them — pick the animation, then pick a renderer, and the animation
+    // was gone.
+    const project = togglePresetOption(emptyStructureProject, "thinking-wave");
+    const parts = canvasTimelineParts({
+      project,
+      items: [],
+      picked: ["thinking-wave", "renderer-markdown"],
+    });
+    expect(parts.artifact).toBe(true);
+    expect(parts.liveTurn).toBe(true);
+    expect(parts.liveReasoning).toBe(true);
+
+    const types = canvasTimelineEvents({
+      project,
+      items: [],
+      picked: ["thinking-wave", "renderer-markdown"],
+      locale: "zh",
+    }).map((event) => event.type);
+    // A finished first turn carrying the artifact, then a second turn that has
+    // not ended — no `run.finished`, or the animation would render as history.
+    expect(types).toContain("artifact.created");
+    // Two messages, not three: both picks are agent-side, so the finished turn
+    // carries only the reply. Nothing is shown that was not picked, which is
+    // the rule the canvas is built on.
+    expect(types.filter((type) => type === "text.started")).toHaveLength(2);
+    expect(types).not.toContain("run.finished");
+    expect(types.at(-1)).toBe("reasoning.delta");
+  });
+
+  it("ends the run when nothing transient is picked", () => {
+    const types = canvasTimelineEvents({
+      project: emptyStructureProject,
+      items: [],
+      picked: ["renderer-markdown"],
+      locale: "zh",
+    }).map((event) => event.type);
+    expect(types.at(-1)).toBe("run.finished");
+  });
+});

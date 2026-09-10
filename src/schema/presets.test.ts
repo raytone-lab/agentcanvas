@@ -14,6 +14,7 @@ const RAIL_ORDER = [
   "approval",
   "tool-calls",
   "blocks",
+  "interrupt",
   "media-generation",
   "delivery",
   "theme",
@@ -187,5 +188,21 @@ describe("template preset groups", () => {
       "commit-message",
       "commit-action",
     ]);
+  });
+});
+
+describe("interrupt flow", () => {
+  it("names stopping and resuming even though they are unbuilt", () => {
+    // The list of event flows should be complete where the components are not,
+    // so a gap reads as "not yet" rather than "never considered". Stopping a
+    // run had no place in the rail at all.
+    const group = presetGroups.find((entry) => entry.id === "interrupt");
+    expect(group?.options.map((option) => option.id)).toEqual([
+      "stop-button",
+      "stopped-state",
+      "retry-turn",
+      "resume-turn",
+    ]);
+    expect(group?.options.every((option) => option.pending)).toBe(true);
   });
 });

@@ -282,7 +282,11 @@ export function App() {
    * to this — it is region-driven below and cannot be deleted, so an empty
    * centre still reads as the place a conversation will go.
    */
-  const mountedComponents = mountedComponentsForProject(activeProject, selectedComponentItems);
+  const mountedComponents = mountedComponentsForProject(
+    activeProject,
+    selectedComponentItems,
+    state.pickedOptionIds,
+  );
   const configuredLayerIds = new Set(
     layersForProject(activeProject, mountedComponents).map((layer) => layer.id),
   );
@@ -872,7 +876,7 @@ export function App() {
   // is picked. The project itself is untouched — this is what the canvas shows,
   // not a silent edit.
   const canvasSlots = slotsForTemplate(
-    canvasSlotsForProject(activeProject, selectedComponentItems),
+    canvasSlotsForProject(activeProject, selectedComponentItems, state.pickedOptionIds),
     activeProject.template,
   );
   const renderRegion = (region: AgentCanvasRegion) =>
@@ -937,6 +941,7 @@ export function App() {
               onSelectSlot={(slotId) => dispatch({ type: "patch", patch: { selectedSlotId: slotId, selectedLayerId: null } })}
               onRenameProject={(name) => setProject((current) => ({ ...current, name }))}
               selectedComponentItems={selectedComponentItems}
+              pickedOptionIds={state.pickedOptionIds}
               pinnedOptionId={state.pinnedOptionId}
               onPinnedOptionShown={() => dispatch({ type: "patch", patch: { pinnedOptionId: null } })}
               presetDrawerOpen={state.presetDrawerOpen}
@@ -1013,6 +1018,7 @@ export function App() {
                   selectedLayerId={state.selectedLayerId}
                   rightPanelVisible={rightPanelVisible}
                   selectedComponentItems={selectedComponentItems}
+                  pickedOptionIds={state.pickedOptionIds}
                 />
                 <div
                   ref={previewFrameRef}

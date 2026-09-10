@@ -26,6 +26,7 @@ export function RegionLabels({
   selectedLayerId,
   rightPanelVisible,
   selectedComponentItems,
+  pickedOptionIds,
 }: {
   project: AgentFrontendProject;
   locale: AppLocale;
@@ -33,12 +34,13 @@ export function RegionLabels({
   rightPanelVisible: boolean;
   /** Counted in the label badge, same as the Layers tree counts them. */
   selectedComponentItems: readonly { id: string; groupId: PresetGroupId; label: string }[];
+  pickedOptionIds: readonly string[];
 }) {
   // `layerContentsForProject` already drops a column the project does not have.
   // The extra filter is only about whether the right column *fits*: it is
   // auto-hidden on a narrow window, and a label over a column that is not
   // showing is the bug this component exists to avoid.
-  const layers = layerContentsForProject(project, locale, selectedComponentItems).filter(
+  const layers = layerContentsForProject(project, locale, selectedComponentItems, pickedOptionIds).filter(
     (layer) => (layer.id === "right" ? rightPanelVisible : true),
   );
   if (layers.length === 0) return null;

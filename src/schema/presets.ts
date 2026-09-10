@@ -19,6 +19,7 @@ export type PresetGroupId =
   | "provider"
   | "output"
   | "delivery"
+  | "interrupt"
   | "theme"
   | "git";
 
@@ -200,6 +201,23 @@ export const presetGroups: PresetGroup[] = [
     options: [
       { id: "error-collapse", label: "Error collapse", description: "Toggle user-safe error copy with debug detail kept out of the main chat.", section: "Failure states" },
       { id: "context-usage-meter", label: "Context meter", description: "Show context-window usage beside the composer and fold older messages at the limit.", section: "Limits", pending: true },
+    ],
+  },
+
+  /**
+   * Stopping a run and picking it back up. Named but unbuilt, like the other
+   * placeholders: the list of event flows should be complete even where the
+   * components are not, so a gap reads as "not yet" rather than "never
+   * considered".
+   */
+  {
+    id: "interrupt",
+    label: "Interrupt",
+    options: [
+      { id: "stop-button", label: "Stop button", description: "Turn the send control into a stop control while a turn is running.", section: "Stopping", pending: true },
+      { id: "stopped-state", label: "Stopped state", description: "Mark a turn the reader cut short, keeping whatever it had produced.", section: "Stopping", pending: true },
+      { id: "retry-turn", label: "Retry turn", description: "Re-run the reader's last message from the turn that failed or was stopped.", section: "Picking it up", pending: true },
+      { id: "resume-turn", label: "Resume", description: "Continue a stopped turn from where it left off instead of starting over.", section: "Picking it up", pending: true },
     ],
   },
 

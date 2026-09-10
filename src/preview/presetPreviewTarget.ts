@@ -184,6 +184,9 @@ export function previewAnchorForPresetGroup(groupId: PresetGroupId): PreviewAnch
       return "tool-call";
     case "blocks":
       return "error-block";
+    // Stopping and resuming happen on the turn itself.
+    case "interrupt":
+      return "chat";
     case "composer":
     case "provider":
     case "approval":

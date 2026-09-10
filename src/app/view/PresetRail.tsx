@@ -60,6 +60,7 @@ export function PresetRail({
   onSelectSlot,
   onRenameProject,
   selectedComponentItems,
+  pickedOptionIds,
   pinnedOptionId,
   onPinnedOptionShown,
   presetDrawerOpen,
@@ -104,6 +105,8 @@ export function PresetRail({
   onSelectSlot: (slotId: string) => void;
   onRenameProject: (name: string) => void;
   selectedComponentItems: readonly SelectedComponentItem[];
+  /** Clicked options, which the layer tree needs for variant-only picks. */
+  pickedOptionIds: readonly string[];
   /** Set by the canvas toolbar's Edit: scroll this option in and flash it. */
   pinnedOptionId: string | null;
   onPinnedOptionShown: () => void;
@@ -474,6 +477,7 @@ export function PresetRail({
             onSelectSlot={onSelectSlot}
             onRenameProject={onRenameProject}
             selectedComponentItems={selectedComponentItems}
+            pickedOptionIds={pickedOptionIds}
             title={copy.shell.presetRail.layers.title}
             layersLabel={copy.shell.presetRail.layers.sectionTitle}
           />

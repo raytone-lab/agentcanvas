@@ -41,6 +41,11 @@ const SAMPLE = {
     zh: "正在理解你的需求。",
     ja: "依頼内容を確認しています。",
   },
+  followUp: {
+    en: "Take another look for me.",
+    zh: "再帮我看一下。",
+    ja: "もう一度見てもらえますか。",
+  },
   toolTitle: { en: "Read file", zh: "读取文件", ja: "ファイルを読む" },
   artifactTitle: { en: "Notes.md", zh: "Notes.md", ja: "Notes.md" },
 } satisfies Record<string, Record<AppLocale, string>>;
@@ -65,6 +70,26 @@ const AGENT_SIDE_GROUPS = new Set<PresetGroupId>([
  * thing being configured.
  */
 const BOTH_SIDES_OPTION_IDS = new Set(["speaker-labels"]);
+
+/**
+ * Options that can only be seen while a turn is still running.
+ *
+ * This is the whole reason the canvas shows more than one turn. The event flow
+ * is a stretch of time, not a moment: a thinking animation and a delivered
+ * artifact are two instants of the same turn, so freezing the canvas at one
+ * instant makes the other pick invisible. A transcript does not have that
+ * problem — history is complete and the tail is live — so persistent picks go
+ * on a finished turn and these go on the running one.
+ *
+ * Matched by prefix rather than by the schema's section names: sections are
+ * display strings, and "Tool approval" holds `model-tools`, which is a composer
+ * switch rather than a moment in a run.
+ */
+const TRANSIENT_ID_PREFIXES = ["thinking-", "media-", "tool-approval-"];
+
+function isTransientOption(optionId: string): boolean {
+  return TRANSIENT_ID_PREFIXES.some((prefix) => optionId.startsWith(prefix));
+}
 
 /** Option id to the group it belongs to, for reading clicks by group. */
 const optionGroupIds = new Map(
@@ -163,6 +188,13 @@ export function canvasTimelineParts({
     reasoning: clickedIn("ux-effects"),
     tools: clickedIn("tool-calls"),
     artifact: clickedIn("delivery"),
+    /**
+     * A second, still-running turn, carrying the picks that only exist while a
+     * turn runs. Without it, picking a thinking animation and then an artifact
+     * renderer made the animation invisible — the turn was over.
+     */
+    liveTurn: asked.some((item) => isTransientOption(item.id)),
+    liveReasoning: asked.some((item) => item.id.startsWith("thinking-")),
   };
 }
 
@@ -235,6 +267,33 @@ export function canvasTimelineEvents({
     );
   }
 
-  events.push(event("run.finished", {}));
+  if (!parts.liveTurn) {
+    events.push(event("run.finished", {}));
+    return events;
+  }
+
+  // A second turn, left running. The reader's follow-up, then whatever was
+  // picked that only shows mid-turn — and no `run.finished`, because the point
+  // is that this turn has not ended.
+  events.push(
+    event("text.started", { textId: "txt_user2", role: "user", format: "markdown" }, { messageId: "msg_user2" }),
+    event(
+      "text.delta",
+      { textId: "txt_user2", delta: SAMPLE.followUp[locale] },
+      { messageId: "msg_user2" },
+    ),
+    event("text.finished", { textId: "txt_user2" }, { messageId: "msg_user2" }),
+  );
+  if (parts.liveReasoning) {
+    events.push(
+      event("reasoning.status", { reasoningId: "rsn_live", status: "thinking", label: "Thinking" }),
+      event("reasoning.delta", {
+        reasoningId: "rsn_live",
+        kind: "summary",
+        delta: SAMPLE.thinking[locale],
+        format: "markdown",
+      }),
+    );
+  }
   return events;
 }

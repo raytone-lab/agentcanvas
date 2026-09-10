@@ -83,6 +83,10 @@ const en = {
         label: "Outcomes",
         description: "Result and incident states such as completed, failed, cancelled, retrying, exhausted, and terminal.",
       },
+      interrupt: {
+        label: "Interrupt",
+        description: "Stopping a running turn and picking it back up: stop, stopped, retry, resume.",
+      },
       composer: {
         label: "Composer",
         description: "Input controls for files, budget, models, tools, and prompts.",
@@ -267,6 +271,10 @@ const zh: typeof en = {
       blocks: {
         label: "结果报错",
         description: "完成、失败、已取消、重试、耗尽和终止等结果与异常状态。",
+      },
+      interrupt: {
+        label: "中断",
+        description: "停止正在运行的回合，以及之后怎么接上：停止、已停止、重试、继续。",
       },
       composer: {
         label: "输入框",
@@ -457,6 +465,10 @@ const ja: typeof en = {
       blocks: {
         label: "結果とエラー",
         description: "完了・失敗・キャンセル・リトライ・リトライ上限・停止といった結果と障害の状態。",
+      },
+      interrupt: {
+        label: "中断",
+        description: "実行中のターンを止め、その後どう再開するか：停止、停止済み、リトライ、再開。",
       },
       composer: {
         label: "入力欄",

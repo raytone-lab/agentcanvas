@@ -30,6 +30,7 @@ export function LayersPanel({
   onSelectSlot,
   onRenameProject,
   selectedComponentItems,
+  pickedOptionIds,
   title,
   layersLabel,
 }: {
@@ -46,11 +47,13 @@ export function LayersPanel({
    * not a separate list somewhere else.
    */
   selectedComponentItems: readonly SelectedComponentItem[];
+  /** Clicked options; a variant-only pick is invisible to the project. */
+  pickedOptionIds: readonly string[];
   /** Shown while the project has no name, like Figma's "Untitled". */
   title: string;
   layersLabel: string;
 }) {
-  const layers = layerContentsForProject(project, locale, selectedComponentItems);
+  const layers = layerContentsForProject(project, locale, selectedComponentItems, pickedOptionIds);
 
   return (
     <div className="layers-panel">
