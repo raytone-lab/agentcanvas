@@ -526,12 +526,19 @@ export function isOptionSelectedInRail(
 /**
  * Options hidden from the rail.
  *
- * The two side columns' presence toggles. The canvas opens with three columns,
- * so these read as permanently ticked, and a permanently ticked control is not
- * a choice. They stay in the schema because the canvas toolbar's delete still
- * turns them off — the column is removed there, not here.
+ * Controls that can only ever be on, which is not a choice. The two side
+ * columns' toggles, because the canvas opens with three columns; and the
+ * composer's, because an agent frontend without a way to type is not one, so
+ * it is there from the start.
+ *
+ * All three stay in the schema. The canvas toolbar's delete still turns the
+ * column ones off — a column is removed there, not here.
  */
-export const RAIL_HIDDEN_OPTION_IDS = new Set(["sidebar-visible", "output-visible"]);
+export const RAIL_HIDDEN_OPTION_IDS = new Set([
+  "sidebar-visible",
+  "output-visible",
+  "composer-visible",
+]);
 
 /** The option a layer row edits or deletes, or null if it maps to none. */
 export function optionIdForModule(moduleId: string): string | null {

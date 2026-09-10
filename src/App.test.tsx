@@ -166,12 +166,12 @@ describe("App shell controls", () => {
     for (const layer of ["左栏", "中栏", "右栏"]) {
       expect(markup).toContain(layer);
     }
-    // Only the two side columns' presence toggles. Neither mounts its
-    // component, so the columns open empty; `chat` and `composer` are off
-    // because their toggles *do* mount — the centre column is always there, so
-    // they have no column to create.
+    // The side columns' presence toggles, which create columns without
+    // mounting anything, plus the composer — an agent frontend without a way to
+    // type is not one, so it is there from the start in its plainest form.
+    // `chat` stays off: a conversation is content, and content is picked.
     expect(emptyStructureProject.layout.slots.filter((slot) => slot.enabled).map((slot) => slot.id))
-      .toEqual(["sessions", "output"]);
+      .toEqual(["sessions", "composer", "output"]);
 
     // The sidebar's "Content" section starts unpicked — the column is present,
     // its contents are not chosen. Same rule as the slots.

@@ -591,16 +591,20 @@ export const defaultCodingAgentProject: AgentFrontendProject = {
 /**
  * The slots a new project opens with.
  *
- * These two are the side columns' presence toggles: `sessions` is 显示侧边栏
- * and `output` is 显示输出面板, and having them on is what puts the left and
- * right columns on the canvas. Neither mounts its component — see
- * `PRESENCE_MOUNTS_COMPONENT` — so the columns open empty.
+ * `sessions` and `output` are the side columns' presence toggles: having them
+ * on is what puts the left and right columns on the canvas. Neither mounts its
+ * component — see `PRESENCE_MOUNTS_COMPONENT` — so those columns open empty.
  *
- * `chat` and `composer` are off because their toggles *do* mount: the centre
- * column is always there, so 显示对话流 and 显示输入框 have nothing to create
- * and put the conversation and the composer on the canvas instead.
+ * `composer` is different: an agent frontend without a way to type is not one,
+ * so it is there from the start, in its plainest form — a field and a send
+ * control, with none of its 功能 options picked. Its toggle is hidden from the
+ * rail for the same reason the side columns' are: a control that can only ever
+ * be on is not a choice.
+ *
+ * `chat` stays off. A conversation is content, and content is the reader's to
+ * pick.
  */
-const OPENING_SLOT_IDS = ["sessions", "output"];
+const OPENING_SLOT_IDS = ["sessions", "composer", "output"];
 
 export const emptyStructureProject: AgentFrontendProject = {
   ...defaultCodingAgentProject,

@@ -81,10 +81,12 @@ describe("preview and export completeness", () => {
     // or type into is not a frontend. The side columns stay optional — plenty
     // of agent UIs are one column.
     const missing = missingRequirementsForProject(emptyStructureProject, []);
-    expect(missing.map((item) => item.groupId)).toEqual(["conversation", "composer"]);
-    // Each carries the option that satisfies it: the group's first option,
-    // which is its presence toggle.
-    expect(missing.map((item) => item.optionId)).toEqual(["chat-visible", "composer-visible"]);
+    // Only the conversation: the composer is on from the start, because an
+    // agent frontend without a way to type is not one.
+    expect(missing.map((item) => item.groupId)).toEqual(["conversation"]);
+    // It carries the option that satisfies it: the group's first option, which
+    // is its presence toggle.
+    expect(missing.map((item) => item.optionId)).toEqual(["chat-visible"]);
   });
 
   it("stops asking once the gaps are filled", () => {
@@ -100,9 +102,7 @@ describe("preview and export completeness", () => {
     // on the canvas, so the project is no longer missing one.
     const withLabels = togglePresetOption(emptyStructureProject, "speaker-labels");
     const items = [{ id: "speaker-labels", groupId: "conversation" as const }];
-    expect(missingRequirementsForProject(withLabels, items).map((item) => item.groupId)).toEqual([
-      "composer",
-    ]);
+    expect(missingRequirementsForProject(withLabels, items)).toEqual([]);
   });
 
   it("waits for the filled project before running", () => {

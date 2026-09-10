@@ -90,16 +90,23 @@ describe("layer contents", () => {
     expect(centre?.children.map((child) => child.label)).toEqual(["输入框", "上传"]);
   });
 
-  it("opens with nothing in any column", () => {
-    // The canvas is what-you-see-is-what-you-get: on entry it is three empty
-    // frames in the project's theme, and it fills in as components are chosen.
-    // It used to open as a populated demo — a session list, a greeting, an
-    // output panel — none of which the reader had asked for.
+  it("opens with nothing picked in any column", () => {
+    // The canvas is what-you-see-is-what-you-get: on entry it holds only what
+    // is required, and fills in as components are chosen. It used to open as a
+    // populated demo — a session list, a greeting, an output panel — none of
+    // which the reader had asked for.
     const items = presetGroups.flatMap((group) =>
       group.options.map((option) => ({ id: option.id, groupId: group.id })),
     );
     expect(regionsWithChosenContent(emptyStructureProject, items).size).toBe(0);
-    for (const layer of layerContentsForProject(emptyStructureProject, "zh", [])) {
+
+    const layers = layerContentsForProject(emptyStructureProject, "zh", []);
+    // The composer is the one exception, and it is there because it is
+    // required rather than because it was picked.
+    expect(layers.find((layer) => layer.id === "center")?.children.map((child) => child.id)).toEqual([
+      "composer",
+    ]);
+    for (const layer of layers.filter((entry) => entry.id !== "center")) {
       expect(layer.children, `${layer.id} should open empty`).toEqual([]);
     }
   });
@@ -187,11 +194,16 @@ describe("rail selection honesty", () => {
     expect(isOptionSelectedInRail(project, wave, "ux-effects", picked)).toBe(false);
   });
 
-  it("keeps the side columns' presence toggles out of the rail", () => {
-    // The canvas opens with three columns, so these read as permanently ticked,
-    // and a permanently ticked control is not a choice. They stay in the schema
-    // because the canvas toolbar's delete still turns them off.
-    expect([...RAIL_HIDDEN_OPTION_IDS]).toEqual(["sidebar-visible", "output-visible"]);
+  it("keeps controls that can only ever be on out of the rail", () => {
+    // A control that is always ticked is not a choice: the canvas opens with
+    // three columns, and with a composer because an agent frontend without a
+    // way to type is not one. All three stay in the schema — the canvas
+    // toolbar's delete still turns the column ones off.
+    expect([...RAIL_HIDDEN_OPTION_IDS]).toEqual([
+      "sidebar-visible",
+      "output-visible",
+      "composer-visible",
+    ]);
     for (const optionId of RAIL_HIDDEN_OPTION_IDS) {
       expect(presetGroups.some((group) => group.options.some((option) => option.id === optionId))).toBe(true);
     }
