@@ -59,6 +59,18 @@ export type WorkspaceState = {
    * same module flashes again rather than being a no-op.
    */
   pinnedOptionId: string | null;
+  /**
+   * Options the reader has actually clicked, this session.
+   *
+   * Needed because the project cannot answer it for some groups. A thinking
+   * indicator, a tool-card layout and a media placeholder are each one of a
+   * mutually exclusive set with no "off" value in the schema — `reasoning.show`
+   * is "status" | "summary" | "thinking" and nothing else — so one is always
+   * set and "has a thinking block been asked for?" is unanswerable from state.
+   * Tracking the click is the only honest answer, and it is the rule anyway:
+   * picked means picked.
+   */
+  pickedOptionIds: readonly string[];
   selectedGroup: PresetGroupId;
   presetDrawerOpen: boolean;
   selectedFixtureId: PreviewFixtureId;
@@ -103,6 +115,7 @@ export type WorkspaceAction =
   | { type: "resetRun"; mode?: RunMode; prompt?: string }
   | { type: "enterWelcome" }
   | { type: "fixtureSelected"; fixtureId: PreviewFixtureId }
+  | { type: "optionPicked"; optionId: string }
   | { type: "presetFixtureSelected"; optionId: string }
   | { type: "beginStandardStream"; scenarioId: ScenarioId; externalApproval: boolean }
   | { type: "streamEvents"; events: AgentUXEvent[] }
@@ -147,6 +160,7 @@ export function createInitialWorkspaceState(locale: AppLocale): WorkspaceState {
     selectedSlotId: null,
     canvasZoom: 100,
     pinnedOptionId: null,
+    pickedOptionIds: [],
     // First group of the Structure destination, so opening 架构 shows 左栏
     // expanded rather than whichever group happened to be the old default.
     selectedGroup: "sidebar",
@@ -248,6 +262,15 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         livePreviewState: "idle",
         gitPreviewStateOverride: undefined,
         forcePreviewToolsOpen: false,
+      };
+    case "optionPicked":
+      return {
+        ...state,
+        // Toggled, not appended: clicking the same option again un-picks it,
+        // and the canvas has to follow that back down.
+        pickedOptionIds: state.pickedOptionIds.includes(action.optionId)
+          ? state.pickedOptionIds.filter((id) => id !== action.optionId)
+          : [...state.pickedOptionIds, action.optionId],
       };
     case "presetFixtureSelected":
       return {

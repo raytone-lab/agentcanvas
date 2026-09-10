@@ -48,6 +48,7 @@ import { PresetRail } from "./app/view/PresetRail";
 import { RegionLabels } from "./app/view/RegionLabels";
 import { Topbar } from "./app/view/Topbar";
 import { IncompleteProjectDialog } from "./app/view/IncompleteProjectDialog";
+import { canvasTimelineEvents } from "./app/projection/canvasTimeline";
 import { ModuleToolbar } from "./app/view/ModuleToolbar";
 import { clampZoom, zoomIn, zoomOut } from "./app/view/ZoomControl";
 import {
@@ -132,8 +133,42 @@ export function App() {
   // stream that already speaks our protocol this is the identity function (pinned by
   // "leaves a well-formed stream untouched" in eventNormalizer.test.ts), so fixtures and
   // previews render exactly as before.
-  const rawEvents = state.runEvents ?? fixtureEvents;
   const activeProject = state.surfaceMode === "saved-preview" && state.savedProject ? state.savedProject : project;
+  /**
+   * The configurator's conversation, composed from what has been picked.
+   *
+   * Fed in as the event stream rather than special-cased downstream, so
+   * admission, the view model and localisation all treat it exactly like a
+   * fixture or a live run.
+   *
+   * Only in the builder, and only when no *real* run is driving the surface —
+   * a live provider or a Pi session, which produce their own events.
+   *
+   * Fixture replay and the scenario gallery are deliberately not on that list.
+   * Both swap the canvas to a canned demo, and several preset controls trigger
+   * one: clicking an avatar loaded a whole coding run, and picking 思考中
+   * replaced the conversation with a scripted "普通回合" showcase. The canvas
+   * shows the project being configured, so a pick adds its block here instead.
+   */
+  const canvasTimelineItems = useMemo(
+    () => selectedComponentItemsForProject(activeProject, presetGroupsForProject(activeProject), locale),
+    [activeProject, locale],
+  );
+  const canvasEvents = useMemo(
+    () =>
+      canvasTimelineEvents({
+        project: activeProject,
+        items: canvasTimelineItems,
+        picked: state.pickedOptionIds,
+        locale,
+      }),
+    [activeProject, canvasTimelineItems, locale, state.pickedOptionIds],
+  );
+  const usesCanvasTimeline =
+    state.surfaceMode === "builder" &&
+    state.runEventSource !== "live" &&
+    state.runEventSource !== "pi";
+  const rawEvents = usesCanvasTimeline ? canvasEvents : state.runEvents ?? fixtureEvents;
   const harness = activeProject.runtime.harness;
   // The project configured in the editor is always the source of truth. Pi state confirms the
   // active runtime model but must never replace editor choices with Pi's previous/default model.
@@ -741,7 +776,11 @@ export function App() {
     admission,
     exportSnapshot: state.exportSnapshot,
     showDebugBadges: builderUI.showDebugBadges,
-    previewPrompt: state.showStandard || state.runMode === "pi" ? "" : state.previewPrompt,
+    // Blank while the composed timeline is driving the canvas: it already
+    // supplies the reader's turn, and the pending-prompt bubble put a second,
+    // differently worded question above it.
+    previewPrompt:
+      usesCanvasTimeline || state.showStandard || state.runMode === "pi" ? "" : state.previewPrompt,
     previewPrompts: state.runMode === "pi" ? undefined : livePreviewPrompts,
     writingReplayKey: state.writingReplayKey,
     forceToolsOpen: state.forcePreviewToolsOpen,

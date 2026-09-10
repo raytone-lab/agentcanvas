@@ -356,6 +356,12 @@ export function createPreviewActions(ctx: ControllerContext) {
   }
 
   function selectPreset(optionId: string) {
+    // Recorded here, before the branches below choose a preview path. Some
+    // options never reach `presetFixtureSelected` — a thinking effect runs a
+    // scenario stream instead — and the canvas needs to know they were picked
+    // whichever route they take, because their groups have no "off" value to
+    // read back from the project.
+    dispatch({ type: "optionPicked", optionId });
     const wasActive = isPresetOptionActive(project, optionId);
     if (optionId === "speaker-labels") {
       toggleSpeakerLabels();
