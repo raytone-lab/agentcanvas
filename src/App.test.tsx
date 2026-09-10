@@ -438,13 +438,12 @@ describe("App shell controls", () => {
       styles.indexOf('.nav-section-tile[data-active="true"] .nav-section-glyph'),
     );
 
-    // The tokens are at :root, not on the canvas frame. Declared there, they
-    // were unresolved for the layer rows outside it — the row's orange fill
-    // silently did nothing and only its border showed, via a hardcoded
-    // fallback.
-    expect(cssRule(styles, '.layers-row[data-active="true"]')).toContain(
-      "box-shadow: inset 0 0 0 1px var(--select-line);",
-    );
+    // Not in the rail, though. Selection there looks like hover: the accent is
+    // the canvas's language for "this is what you are acting on", and a ring in
+    // the rail competed with the canvas for that meaning.
+    const activeRow = cssRule(styles, '.layers-row[data-active="true"]');
+    expect(activeRow).toContain("color-mix(in srgb, var(--text-primary) 6%, transparent)");
+    expect(activeRow).not.toContain("--select-");
   });
 
   it("asks for approval above the composer instead of under or over it", () => {
@@ -669,7 +668,7 @@ describe("event flow axis", () => {
     expect(
       cssRule(
         styles,
-        '.preset-panel[data-nav-section="components"] .group-row-body > .preset-panel-body',
+        '.preset-panel[data-nav-section="components"] > .group-list .preset-panel-body',
       ),
     ).toContain("padding-left: 24px;");
 
