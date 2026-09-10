@@ -442,7 +442,7 @@ export function PresetRail({
               aria-pressed={isActive}
               onClick={() => onNavSectionChange(section.id)}
             >
-              <span className="nav-section-glyph" aria-hidden="true"><NavIcon size={18} /></span>
+              <span className="nav-section-glyph" aria-hidden="true"><NavIcon size={16} /></span>
               <span className="nav-section-label">{label}</span>
             </button>
           );

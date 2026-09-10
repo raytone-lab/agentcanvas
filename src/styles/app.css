@@ -159,9 +159,12 @@ p {
   --app-shell-pad-y: 0px;
   --workspace-top-gap: 0px;
   --workspace-col-gap: 0px;
-  /* Left nav = icon rail (--iconbar-col) + content panel; together = --rail-col. */
-  --iconbar-col: 68px;
-  --rail-col: 304px;
+  /* Left nav = icon rail (--iconbar-col) + content panel; together = --rail-col.
+     The rail carries a 30px glyph and a 10px label, so 56px leaves 13px of
+     breathing room each side; the panel keeps its 236px and the difference goes
+     back to the canvas. */
+  --iconbar-col: 56px;
+  --rail-col: 292px;
   /* Functional layer (topbar + left sidebar) shared background — design token. */
   --fn-bg: #F4F6FA;
   /* Functional-area (topbar + left) radius scale — harmonious, size-tiered.
@@ -12565,7 +12568,7 @@ pre {
   justify-items: center;
   align-content: center;
   gap: 5px;
-  padding: 9px 2px;
+  padding: 8px 1px;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -12576,8 +12579,8 @@ pre {
 .nav-section-glyph {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 30px;
+  width: 32px;
+  height: 28px;
   border-radius: 6px;
   color: var(--text-secondary);
   transition: background var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
