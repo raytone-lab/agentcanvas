@@ -280,9 +280,9 @@ export type SlotConfig = {
  * the project — the exported scaffold reads it to render the same style the
  * configurator previewed. "studio" is still under construction.
  */
-export type PresetStyleId = "native" | "illustrated" | "studio";
+export type PresetStyleId = "native" | "illustrated" | "studio" | "workbuddy";
 
-export const presetStyleIds: readonly PresetStyleId[] = ["native", "illustrated", "studio"];
+export const presetStyleIds: readonly PresetStyleId[] = ["native", "illustrated", "studio", "workbuddy"];
 
 export type AgentProductInterface = Pick<
   CompleteAgentCanvasExperienceV2,
@@ -568,6 +568,37 @@ export const defaultCodingAgentProject: AgentFrontendProject = {
     target: "vite-react",
     includeFixtures: true,
     includeHarnessAdapter: true,
+  },
+};
+
+/**
+ * What the editor opens on: the three canvas regions declared, nothing in them.
+ *
+ * The canvas shows whatever is currently configured, so an empty configuration
+ * is what makes it open on an empty three-column skeleton rather than on a
+ * fully-populated agent. Regions are declared and slots are all disabled —
+ * `layout.regions` is the structure, `layout.slots` is its contents.
+ *
+ * Separate from `defaultCodingAgentProject` rather than a change to it:
+ * 29 files reference that one (tests, fixtures, the export pipeline), and it is
+ * also the shape a generated project ships with. An export that produced an
+ * empty app would be a regression, not a redesign.
+ *
+ * `bottom-dock` and `overlay` are left out — they hold the debug dock and the
+ * approval overlay, which are not part of the three-column structure and would
+ * otherwise show as two more empty layers with nothing to put in them.
+ */
+export const emptyStructureProject: AgentFrontendProject = {
+  ...defaultCodingAgentProject,
+  // Unnamed until the reader names it. The Layers panel shows a localised
+  // placeholder while this is blank, and `createScaffoldPackageJson` already
+  // falls back to "agentux-scaffold" for a blank name, so an export of an
+  // un-renamed project is still valid.
+  name: "",
+  layout: {
+    ...defaultCodingAgentProject.layout,
+    regions: ["sidebar", "main", "composer", "right-panel"],
+    slots: defaultCodingAgentProject.layout.slots.map((slot) => ({ ...slot, enabled: false })),
   },
 };
 

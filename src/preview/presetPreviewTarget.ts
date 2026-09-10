@@ -1,4 +1,5 @@
 import { providerCatalog } from "../schema/agentuxConfig";
+import { isThemePresetId } from "../theme/themeTokens";
 import type { PresetGroupId } from "../schema/presets";
 
 export type PreviewAnchor =
@@ -18,6 +19,7 @@ export type PreviewAnchor =
   | "sidebar";
 
 const chatOptions = new Set([
+  "chat-visible",
   "writing-smooth",
   "writing-typewriter",
   "writing-chunked",
@@ -76,6 +78,7 @@ const toolCallOptions = new Set([
 ]);
 
 const composerOptions = new Set([
+  "composer-visible",
   "upload",
   "mic",
   "budget",
@@ -106,20 +109,10 @@ const outputOptions = new Set([
 
 const gitOptions = new Set(["git-visible", "branch-status", "changed-files", "diff-preview", "commit-message", "commit-action"]);
 
-const themeOptions = new Set([
-  "warm-graphite",
-  "cocoa-system",
-  "forest-ember",
-  "soft-glass",
-  "sand-workspace",
-  "apricot-agent",
-  "cold-mono",
-  "slate-blue",
-  "cyan-grid",
-  "ice-white",
-  "mist-blue",
-  "polar-mono",
-]);
+// Derived from the theme table rather than restated: this list was a copy of
+// the twelve ids that existed when it was written, so adding a theme silently
+// left it without a preview target.
+const isThemeOption = (optionId: string) => isThemePresetId(optionId);
 
 const errorBlockOptions = new Set(["error-collapse"]);
 
@@ -133,13 +126,12 @@ const mappedOptionIds = new Set([
   ...providerOptions,
   ...outputOptions,
   ...gitOptions,
-  ...themeOptions,
   ...errorBlockOptions,
   "message-actions",
 ]);
 
 export function hasPreviewAnchorForPresetOption(optionId: string): boolean {
-  return mappedOptionIds.has(optionId);
+  return mappedOptionIds.has(optionId) || isThemeOption(optionId);
 }
 
 export function previewAnchorForPresetOption(optionId: string): PreviewAnchor {
@@ -176,7 +168,7 @@ export function previewAnchorForPresetOption(optionId: string): PreviewAnchor {
   if (gitOptions.has(optionId)) {
     return "git";
   }
-  if (chatOptions.has(optionId) || themeOptions.has(optionId)) {
+  if (chatOptions.has(optionId) || isThemeOption(optionId)) {
     return "chat";
   }
   return "chat";
@@ -194,9 +186,10 @@ export function previewAnchorForPresetGroup(groupId: PresetGroupId): PreviewAnch
       return "error-block";
     case "composer":
     case "provider":
+    case "approval":
       return "composer";
     case "output":
-    case "render":
+    case "delivery":
       return "output";
     case "git":
       return "git";

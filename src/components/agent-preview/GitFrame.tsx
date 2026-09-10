@@ -1,4 +1,4 @@
-import { GitBranch } from "lucide-react";
+import { GitBranch } from "../../agentmatrix/uiIcons";
 
 import type { AgentFrontendProject } from "../../schema/agentuxConfig";
 import type { GitPreviewState } from "../../preview-runner/PreviewRunner";

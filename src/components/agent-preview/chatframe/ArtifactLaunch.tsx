@@ -1,5 +1,5 @@
 import type { AgentUXArtifactTimelineItem } from "@agent-ux/render-core";
-import { ChevronDown, Globe2, Play, Volume2 } from "lucide-react";
+import { ChevronDown, Globe2, Play, Volume2 } from "../../../agentmatrix/uiIcons";
 import type { CSSProperties } from "react";
 
 import type { UiCopy } from "../../../i18n/uiCopy";

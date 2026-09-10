@@ -1,44 +1,60 @@
 import { describe, expect, it } from "vitest";
 
+import { presetRailSections } from "../app/projection/presetRailData";
+import { hasPresetAction } from "./presetActions";
 import { presetGroups, presetGroupsForTemplate, resolvePresetGroupSelection } from "./presets";
+
+/** Structure first, then event flow in turn order, then appearance and integration. */
+const RAIL_ORDER = [
+  "sidebar",
+  "conversation",
+  "composer",
+  "output",
+  "ux-effects",
+  "approval",
+  "tool-calls",
+  "blocks",
+  "media-generation",
+  "delivery",
+  "theme",
+  "provider",
+] as const;
 
 describe("template preset groups", () => {
   it("keeps Git out of ordinary chat presets", () => {
-    expect(presetGroupsForTemplate("chat").map((group) => group.id)).toEqual([
-      "media-generation",
-      "conversation",
-      "sidebar",
-      "ux-effects",
-      "tool-calls",
-      "blocks",
-      "composer",
-      "provider",
-      "output",
-      "render",
-      "theme",
-    ]);
+    expect(presetGroupsForTemplate("chat").map((group) => group.id)).toEqual([...RAIL_ORDER]);
   });
 
   it("keeps Git available for the coding template", () => {
-    expect(presetGroupsForTemplate("coding").map((group) => group.id)).toEqual([
-      "media-generation",
-      "conversation",
-      "sidebar",
-      "ux-effects",
-      "tool-calls",
-      "blocks",
-      "composer",
-      "provider",
-      "output",
-      "render",
-      "git",
-      "theme",
-    ]);
+    expect(presetGroupsForTemplate("coding").map((group) => group.id)).toEqual([...RAIL_ORDER, "git"]);
   });
 
   it("moves a hidden selected group back to the first visible preset", () => {
-    expect(resolvePresetGroupSelection("git", "chat")).toBe("media-generation");
+    expect(resolvePresetGroupSelection("git", "chat")).toBe("sidebar");
     expect(resolvePresetGroupSelection("git", "coding")).toBe("git");
+  });
+
+  it("keeps every group reachable from the rail", () => {
+    // A group absent from every rail section has no icon and so cannot be
+    // opened — which is how the renderers stayed unreachable for a while.
+    const railed = new Set(presetRailSections.flatMap((section) => section.groupIds));
+    expect(presetGroups.filter((group) => !railed.has(group.id)).map((group) => group.id)).toEqual([]);
+  });
+
+  it("gives every non-pending option a preset action, and no pending one", () => {
+    // A card with no action is inert but looks live; a pending card is meant to
+    // be inert, so the two must not be confused for each other.
+    const inert = presetGroups
+      .flatMap((group) => group.options)
+      .filter((option) => !option.pending && !hasPresetAction(option.id))
+      .map((option) => option.id);
+    expect(inert).toEqual([]);
+
+    const wired = presetGroups
+      .flatMap((group) => group.options)
+      .filter((option) => option.pending && hasPresetAction(option.id))
+      .map((option) => option.id);
+    expect(wired).toEqual([]);
   });
 
   it("keeps prompt context out of the primary preset menu", () => {
@@ -48,17 +64,26 @@ describe("template preset groups", () => {
     );
   });
 
-  it("keeps low-frequency first-run states out of primary conversation presets", () => {
+  it("keeps the chat area to message chrome, with writing rhythm under delivery", () => {
     const conversation = presetGroups.find((group) => group.id === "conversation");
+    const delivery = presetGroups.find((group) => group.id === "delivery");
 
+    // Chrome is visible in an idle chat, so it is Structure; writing rhythm only
+    // exists while a reply streams, so it is Event flow.
+    // `chat-visible` leads: presence before appearance. Every slot starts
+    // disabled now, so a group without a presence toggle can only restyle a
+    // component nothing is able to turn on.
     expect(conversation?.options.map((option) => option.id)).toEqual([
-      "writing-smooth",
-      "writing-typewriter",
-      "writing-chunked",
+      "chat-visible",
       "speaker-labels",
       "message-actions",
     ]);
     expect(conversation?.options.some((option) => option.id.includes("empty"))).toBe(false);
+    expect(delivery?.options.filter((option) => option.id.startsWith("writing-")).map((option) => option.id)).toEqual([
+      "writing-smooth",
+      "writing-typewriter",
+      "writing-chunked",
+    ]);
   });
 
   it("keeps stop generation in composer run controls instead of message actions", () => {
@@ -67,15 +92,30 @@ describe("template preset groups", () => {
 
     expect(conversation?.options.find((option) => option.id === "message-actions")?.description).not.toContain("stop");
     expect(composer?.options.map((option) => option.id)).toEqual([
+      "composer-visible",
       "upload",
       "mic",
       "budget",
       "model-config",
+      "prompt-shortcuts",
+      "mention-picker",
+      "slash-command-palette",
+    ]);
+  });
+
+  it("gives the decision point its own group instead of a composer subsection", () => {
+    const approval = presetGroups.find((group) => group.id === "approval");
+    const composer = presetGroups.find((group) => group.id === "composer");
+
+    expect(approval?.options.map((option) => option.id)).toEqual([
       "model-tools",
       "tool-approval-inline",
       "tool-approval-hidden",
-      "prompt-shortcuts",
+      "choice-card-modal",
+      "sandbox-permission",
+      "hook-intercept-banner",
     ]);
+    expect(composer?.options.some((option) => option.id.startsWith("tool-approval"))).toBe(false);
   });
 
   it("exposes mainstream providers as a primary left-rail menu", () => {
@@ -95,11 +135,11 @@ describe("template preset groups", () => {
     ]);
   });
 
-  it("keeps artifact source separate from renderer choices", () => {
+  it("keeps the right panel region separate from what it delivers", () => {
     const tools = presetGroups.find((group) => group.id === "tool-calls");
     const blocks = presetGroups.find((group) => group.id === "blocks");
     const output = presetGroups.find((group) => group.id === "output");
-    const render = presetGroups.find((group) => group.id === "render");
+    const delivery = presetGroups.find((group) => group.id === "delivery");
 
     expect(tools?.options.map((option) => option.id)).toEqual([
       "command-cards",
@@ -107,22 +147,32 @@ describe("template preset groups", () => {
       "timeline-rail",
       "tool-detail-full",
       "tool-detail-output-only",
+      "tool-progress-bar",
+      "subagent-card",
+      "background-task-toast",
     ]);
     expect(blocks?.options.map((option) => option.id)).toEqual([
       "error-collapse",
+      "context-usage-meter",
     ]);
+    // The region only owns whether it exists; its contents are event flow.
     expect(output?.options.map((option) => option.id)).toEqual([
       "output-visible",
+      "task-list",
+      "exec-progress",
+      "workspace-files",
+    ]);
+    expect(delivery?.options.filter((option) => !option.id.startsWith("writing-")).map((option) => option.id)).toEqual([
       "output-source-artifact",
       "output-source-console",
-    ]);
-    expect(render?.options.map((option) => option.id)).toEqual([
       "renderer-auto",
       "renderer-code",
       "renderer-diff",
       "renderer-markdown",
       "renderer-preview",
       "renderer-data",
+      "code-block-actions",
+      "inline-visualization",
     ]);
   });
 

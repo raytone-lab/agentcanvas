@@ -1,33 +1,27 @@
 import { describe, expect, it } from "vitest";
 
 import previewSource from "../components/PresetOptionPreview.tsx?raw";
+import { isThemePresetId } from "../theme/themeTokens";
 import { presetGroups } from "./presets";
 
 describe("preset UI coverage", () => {
   it("renders every preset option with a specific card preview", () => {
-    const optionIds = presetGroups.flatMap((group) => group.options.map((option) => option.id));
-    const sharedPreviewIds = new Set([
-      "summary-first",
-      "reasoning-public-summary",
-      "warm-graphite",
-      "cocoa-system",
-      "forest-ember",
-      "soft-glass",
-      "sand-workspace",
-      "apricot-agent",
-      "cold-mono",
-      "slate-blue",
-      "cyan-grid",
-      "ice-white",
-      "mist-blue",
-      "polar-mono",
-    ]);
+    // Pending options intentionally fall through to the generic tile: they are
+    // dimmed and inert, so a bespoke preview would oversell them.
+    const optionIds = presetGroups.flatMap((group) =>
+      group.options.filter((option) => !option.pending).map((option) => option.id),
+    );
+    // Theme cards share one swatch preview, so they are derived from the theme
+    // table rather than listed — the previous literal list was the twelve ids
+    // that existed when it was written.
+    const sharedPreviewIds = new Set<string>(["summary-first", "reasoning-public-summary"]);
     const missing = optionIds.filter((optionId) =>
       !optionId.startsWith("provider-") &&
       !optionId.startsWith("media-image-") &&
       !optionId.startsWith("media-audio-") &&
       !optionId.startsWith("media-video-") &&
       !sharedPreviewIds.has(optionId) &&
+      !isThemePresetId(optionId) &&
       !previewSource.includes(`optionId === "${optionId}"`)
     );
 

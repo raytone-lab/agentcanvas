@@ -1,4 +1,4 @@
-import { Brain, Bug, ChevronRight, FileText, Gauge, Image as ImageIcon, MessageSquareText, Mic, Paperclip, Plus, Rocket, Search, Send, ShieldCheck, ShieldHalf, ShieldOff, Sparkles, Square, X } from "lucide-react";
+import { Brain, Bug, ChevronRight, FileText, Gauge, Image as ImageIcon, MessageSquareText, Mic, Paperclip, Plus, Rocket, Search, Send, ShieldCheck, ShieldHalf, ShieldOff, Sparkles, Square, X } from "../../agentmatrix/uiIcons";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import {
   defaultProviderConnection,

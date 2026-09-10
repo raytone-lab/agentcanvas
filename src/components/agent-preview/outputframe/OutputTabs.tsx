@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { X } from "../../../agentmatrix/uiIcons";
 import { useEffect, useRef } from "react";
 
 import type { OutputFrameCopy } from "./types";

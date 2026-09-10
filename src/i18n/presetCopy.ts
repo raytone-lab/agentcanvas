@@ -13,17 +13,25 @@ type PresetTextTable = Record<string, string>;
 type PresetOptionTable = Record<string, { label?: string; description?: string }>;
 
 /** Preset group id → display name. */
+/**
+ * Names are what the reader SEES, not our module names. "状态" excluded nothing
+ * and so carried no information; "加载器" named a component where the reader
+ * experiences a wait; "左侧栏" named a position where the reader wants a
+ * function. Kept to 4 characters or fewer so they stay on one line in the 68px
+ * rail (9px type, ~56px usable).
+ */
 const presetGroupNameZh: PresetTextTable = {
-  conversation: "对话",
-  "media-generation": "加载器",
-  sidebar: "左侧栏",
-  "ux-effects": "思考",
-  "tool-calls": "工具",
-  blocks: "状态",
-  composer: "输入区",
+  conversation: "对话区",
+  "media-generation": "生成中",
+  sidebar: "左栏",
+  "ux-effects": "思考中",
+  approval: "需要确认",
+  "tool-calls": "工具调用",
+  blocks: "结果报错",
+  composer: "输入框",
   provider: "模型",
-  output: "输出",
-  render: "渲染",
+  output: "右面板",
+  delivery: "交付",
   git: "Git",
   theme: "主题",
 };
@@ -31,22 +39,31 @@ const presetGroupNameZh: PresetTextTable = {
 
 /** PENDING NATIVE REVIEW — see the note in ./copy/shell.ts for the conventions used. */
 const presetGroupNameJa: PresetTextTable = {
-  conversation: "チャット",
-  "media-generation": "ローダー",
-  sidebar: "左レール",
-  "ux-effects": "思考",
-  "tool-calls": "ツール",
-  blocks: "ステータス",
+  conversation: "会話エリア",
+  "media-generation": "生成中",
+  sidebar: "左カラム",
+  "ux-effects": "思考中",
+  approval: "確認",
+  "tool-calls": "ツール呼出",
+  blocks: "結果とエラー",
   composer: "入力欄",
   provider: "モデル",
-  output: "出力",
-  render: "レンダリング",
+  output: "右パネル",
+  delivery: "受け取り",
   git: "Git",
   theme: "テーマ",
 };
 
 /** Section label (English schema text) → translated label. */
 const presetSectionZh: PresetTextTable = {
+  "Panel content": "面板内容",
+  "Plan mode": "计划模式",
+  "Tool approval": "工具审批",
+  "Decision point": "决策点",
+  Progress: "进度",
+  Variants: "变体",
+  Limits: "上限",
+  "In-reply": "回复内嵌",
   Writing: "消息输出模式",
   "Message chrome": "消息外观",
   Recovery: "消息操作",
@@ -84,6 +101,14 @@ const presetSectionZh: PresetTextTable = {
 
 /** PENDING NATIVE REVIEW — see the note in ./copy/shell.ts for the conventions used. */
 const presetSectionJa: PresetTextTable = {
+  "Panel content": "パネルの内容",
+  "Plan mode": "プランモード",
+  "Tool approval": "ツールの承認",
+  "Decision point": "判断が必要な場面",
+  Progress: "進捗",
+  Variants: "バリエーション",
+  Limits: "上限",
+  "In-reply": "返信内に表示",
   Writing: "メッセージの出力",
   "Message chrome": "メッセージの外観",
   Recovery: "メッセージの操作",
@@ -120,6 +145,22 @@ const presetSectionJa: PresetTextTable = {
 
 /** Preset option id → translated label/description. */
 const presetOptionZh: PresetOptionTable = {
+  // Named in the configurator but not built yet (`pending` in presets.ts).
+  "workspace-switcher": { label: "工作区切换", description: "在左导航里切换工作区。" },
+  "mention-picker": { label: "@ 提及", description: "输入 @ 弹出文件与连接器的选择器。" },
+  "slash-command-palette": { label: "/ 命令", description: "输入 / 弹出技能与命令面板。" },
+  "task-list": { label: "任务列表", description: "在右面板里列出本次运行的任务。" },
+  "exec-progress": { label: "执行进度", description: "在右面板里显示整体运行进度。" },
+  "workspace-files": { label: "工作区文件", description: "在右面板里显示工作区文件树。" },
+  "plan-card": { label: "计划卡片", description: "计划模式下列出步骤，等你确认或修改后再开始执行。" },
+  "choice-card-modal": { label: "选择卡片", description: "阻塞式弹窗，2~4 个选项、一个推荐默认项，外加自由输入的逃生舱。" },
+  "sandbox-permission": { label: "沙箱权限", description: "命令执行前的阻塞确认，显示命令原文与风险等级。" },
+  "hook-intercept-banner": { label: "钩子拦截", description: "提交钩子拒绝这条消息时出现的非阻塞提示条。" },
+  "subagent-card": { label: "子代理卡片", description: "工具卡片的变体：显示子代理名称、任务与状态。" },
+  "background-task-toast": { label: "后台任务", description: "后台任务完成时的非阻塞通知。" },
+  "context-usage-meter": { label: "上下文用量", description: "在输入框旁显示上下文窗口用量，到上限时折叠更早的消息。" },
+  "code-block-actions": { label: "代码块操作", description: "回复里代码块上的复制、应用与编辑按钮。" },
+  "inline-visualization": { label: "内嵌图表", description: "把图表或流程图渲染成回复里的独立卡片。Mermaid 与 KaTeX 已经能在 Markdown 里渲染。" },
   // Conversation
   "writing-smooth": { label: "平滑流式", description: "以稳定的流式方式呈现助手文本，不加额外修饰。" },
   "writing-typewriter": { label: "打字机", description: "采用逐字符的节奏书写，适合专注的对话。" },
@@ -127,6 +168,8 @@ const presetOptionZh: PresetOptionTable = {
   "speaker-labels": { label: "名称标签", description: "在对话轮次上显示 YOU 与 AGENT 标签。" },
   // Sidebar
   "sidebar-visible": { label: "显示侧边栏", description: "在产品外壳中显示会话历史侧边栏。" },
+  "chat-visible": { label: "显示对话流", description: "在中栏显示对话流。" },
+  "composer-visible": { label: "显示输入框", description: "在对话流下方显示输入框。" },
   "sidebar-new-button": { label: "新建对话按钮", description: "在侧边栏顶部显示新建对话操作。" },
   "sidebar-search": { label: "搜索框", description: "显示用于筛选会话的搜索框。" },
   "sidebar-grouping": { label: "按日期分组", description: "把会话按「今天 / 更早」分组显示。" },

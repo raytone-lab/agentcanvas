@@ -1,4 +1,4 @@
-import { Copy, Pencil, RotateCcw } from "lucide-react";
+import { Copy, Pencil, RotateCcw } from "../../../agentmatrix/uiIcons";
 import type { ReactElement } from "react";
 
 import { useCopy } from "../../../i18n/LocaleContext";

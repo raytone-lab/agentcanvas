@@ -1,4 +1,4 @@
-import { Braces, FileAudio2, FileCode2, FileText, FileVideo2, ImageIcon, PanelsTopLeft } from "lucide-react";
+import { Braces, FileAudio2, FileCode2, FileText, FileVideo2, ImageIcon, PanelsTopLeft } from "../../../agentmatrix/uiIcons";
 import type { ReactNode } from "react";
 
 import type { ConcreteArtifactRenderer } from "./types";

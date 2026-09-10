@@ -1,4 +1,4 @@
-import { Download, Files } from "lucide-react";
+import { Download, Files } from "../../agentmatrix/uiIcons";
 
 import type { ScaffoldExportSnapshot } from "../../export/scaffoldManifest";
 import { useCopy } from "../../i18n/LocaleContext";

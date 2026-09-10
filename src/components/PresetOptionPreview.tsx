@@ -6,8 +6,10 @@ import {
   GitCommitHorizontal,
   Image,
   Mic,
+  MessageSquare,
   PanelLeft,
   PanelRight,
+  PenLine,
   Paperclip,
   Plus,
   RotateCcw,
@@ -140,6 +142,20 @@ export function PresetOptionPreview({ optionId }: { optionId: string }) {
     return (
       <Tile kind="icon">
         <PanelLeft size={18} />
+      </Tile>
+    );
+  }
+  if (optionId === "chat-visible") {
+    return (
+      <Tile kind="icon">
+        <MessageSquare size={18} />
+      </Tile>
+    );
+  }
+  if (optionId === "composer-visible") {
+    return (
+      <Tile kind="icon">
+        <PenLine size={18} />
       </Tile>
     );
   }

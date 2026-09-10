@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { PanelLeft, PanelRight } from "lucide-react";
 import { Toaster } from "sonner";
@@ -30,6 +30,7 @@ import { applyTheme } from "./theme/applyTheme";
 import { themeTokens } from "./theme/themeTokens";
 import {
   defaultCodingAgentProject,
+  emptyStructureProject,
   modelOptionsForProject,
   type AgentFrontendProject,
 } from "./schema/agentuxConfig";
@@ -43,7 +44,9 @@ import { piConversationSidebarItems } from "./pi/piConversationState";
 
 import { InlineApprovalDemo, demoApprovalTool, findPendingApprovalTool } from "./app/view/InlineApprovalDemo";
 import { PresetRail } from "./app/view/PresetRail";
+import { RegionLabels } from "./app/view/RegionLabels";
 import { Topbar } from "./app/view/Topbar";
+import { clampZoom, zoomIn, zoomOut } from "./app/view/ZoomControl";
 import {
   collectDefaultOutputPanelItems,
   outputPanelItemsSignature,
@@ -51,10 +54,13 @@ import {
 import {
   NATIVE_HIDDEN_USER_AVATAR_IDS,
   PREVIEW_RESPONSIVE_WIDTHS,
+  SLOT_COMPONENT_SELECTORS,
   STYLE_AVATAR_DEFAULTS,
   groupPresetOptions,
   rawStateCardToStateCard,
+  resolveGroupForNavSection,
   visibleStateCards,
+  type NavSectionId,
 } from "./app/projection/presetRailData";
 import { liveLlmGitPreviewState, standardScenarioTitle } from "./app/projection/previewDefaults";
 import {
@@ -79,7 +85,10 @@ export function App() {
   const copy = useCopy();
   const { locale, setLocale } = useLocale();
   const { iconSet, setSlot } = useIconSet();
-  const [project, setProject] = useState<AgentFrontendProject>(defaultCodingAgentProject);
+  // Opens on the empty three-column skeleton. `defaultCodingAgentProject` stays
+  // the shape an *exported* project ships with; this is only the editor's
+  // starting point. See emptyStructureProject for why they are separate.
+  const [project, setProject] = useState<AgentFrontendProject>(emptyStructureProject);
   const { state, dispatch, refs } = useWorkspaceState(locale);
   // Single source of truth: the style preset lives on the project so it travels with
   // the export (168 rules in app.css branch on `data-style-preset`). Derived rather
@@ -187,12 +196,9 @@ export function App() {
     [defaultOutputPanelItems],
   );
   const isWelcome = !state.showStandard && displayViewModel.timeline.length === 0;
-  // "render" (Render) is temporarily hidden from the nav; its group definition
-  // stays so previews/coverage keep working.
-  const visiblePresetGroups = useMemo(
-    () => presetGroupsForProject(project).filter((group) => group.id !== "render"),
-    [project],
-  );
+  // Every group is reachable now: the renderers that used to hide inside the
+  // filtered-out "render" group are sections of "delivery".
+  const visiblePresetGroups = useMemo(() => presetGroupsForProject(project), [project]);
   const selectedComponentItems = useMemo(
     () => selectedComponentItemsForProject(project, visiblePresetGroups, locale),
     [project, visiblePresetGroups, locale],
@@ -202,14 +208,25 @@ export function App() {
     () => slotsForTemplate(activeProject.layout.slots, activeProject.template),
     [activeProject.layout.slots, activeProject.template],
   );
-  const hasSidebar = visibleLayoutSlots.some((slot) => slot.enabled && slot.region === "sidebar");
-  // The Output panel is the right region's driver (like SessionSidebar drives the
-  // left rail): toggling Output off collapses the right panel and reflows the
-  // canvas. GitFrame is a coming-soon co-tenant, so it doesn't keep the panel
-  // open on its own.
-  const hasRightPanel = visibleLayoutSlots.some(
-    (slot) => slot.enabled && slot.region === "right-panel" && slot.component !== "GitFrame",
-  );
+  /**
+   * Columns come from `layout.regions`, not from which slots happen to be
+   * enabled.
+   *
+   * This is the difference between a canvas that reflects the configuration and
+   * one that reflects only its contents. Under the old rule a column vanished
+   * when it was empty, so an untouched project rendered no columns at all and
+   * enabling one component made the other two disappear — you could not see
+   * where the next component would land. Declared regions are the structure;
+   * slots are what sits in it, and an empty column is still a column.
+   *
+   * Two behaviours change as a result, both deliberately: turning the output
+   * panel off now leaves an empty right column instead of collapsing it (the
+   * column is declared, so it stays; `rightCollapsed` is still how you fold it
+   * away), and the welcome state shows all three columns instead of hiding the
+   * right one.
+   */
+  const hasSidebar = activeProject.layout.regions.includes("sidebar");
+  const hasRightPanel = activeProject.layout.regions.includes("right-panel");
   const loaderCanvasPreviewActive = state.surfaceMode === "builder" && state.selectedGroup === "media-generation";
   // Mounted whenever the layout has one; `leftCollapsed` is a visual state the CSS drawer
   // owns, so gating the mount on it would remove the element the transition animates.
@@ -224,8 +241,12 @@ export function App() {
    * should reopen, while a panel that does not fit needs the modal instead. Conflating the two
    * meant a collapsed panel sent every artifact to a modal.
    */
+  // `!isWelcome` is gone: the right column is part of the structure, so it shows
+  // before the first turn too. Auto-hide (narrow window) and the loader canvas
+  // still take precedence — those are about whether it fits, not whether it is
+  // configured.
   const rightPanelAvailable =
-    hasRightPanel && !state.autoHiddenRails.right && !isWelcome && !loaderCanvasPreviewActive;
+    hasRightPanel && !state.autoHiddenRails.right && !loaderCanvasPreviewActive;
   const rightPanelVisible = rightPanelAvailable && !state.rightCollapsed;
   useEffect(() => {
     if (defaultOutputPanelItems.length === 0) {
@@ -239,20 +260,38 @@ export function App() {
     // Populated, not opened. A run producing an artifact is not the reader asking to look at it,
     // and forcing the panel open here is what handed half the canvas to a panel nobody opened.
     // Clicking the artifact, or the drawer toggle, is the request.
+    // Items only. This used to also set `enabled: true` on the OutputFrame slot,
+    // which was invisible while every slot shipped enabled and became a silent
+    // auto-selection once they start disabled: rendering a conversation
+    // produced an artifact, the artifact enabled the output panel, and the next
+    // click on "show output panel" therefore turned it *off* — the panel looked
+    // unclickable. Whether a component is placed is the reader's choice; a run
+    // producing data is not that choice.
+    //
+    // `output.source` is left alone for the same reason: this effect re-runs as
+    // events arrive, so forcing "artifact" here silently undid a click on the
+    // console tab a moment after it happened.
     dispatch({ type: "outputPanelAutoFilled", items: defaultOutputPanelItems });
-    setProject((current) => ({
-      ...current,
-      // `output.source` is left alone. This effect re-runs as events arrive, so forcing
-      // "artifact" here silently undid a click on the console tab a moment after it happened —
-      // which is why the console looked unclickable rather than broken.
-      layout: {
-        ...current.layout,
-        slots: current.layout.slots.map((slot) =>
-          slot.component === "OutputFrame" ? { ...slot, enabled: true, region: "right-panel" } : slot,
-        ),
-      },
-    }));
-  }, [defaultOutputPanelItems, defaultOutputPanelSignature, loaderCanvasPreviewActive, dispatch, refs, setProject]);
+  }, [defaultOutputPanelItems, defaultOutputPanelSignature, loaderCanvasPreviewActive, dispatch, refs]);
+  /**
+   * Switching rail destination also points `selectedGroup` at the group that
+   * destination owns, so Theme and Model reuse the existing group panel rather
+   * than needing their own. Components restores whatever group was last open
+   * instead of resetting to the first one — losing your place every time you
+   * glance at Layers would make the rail annoying to use.
+   */
+  const handleNavSectionChange = (section: NavSectionId) => {
+    // One rule for every destination: keep the current group if it belongs to
+    // the destination, otherwise open its first. Replaces a chain of
+    // per-destination branches that each had to remember to preserve the
+    // group — and File, which owns no group, keeps whatever was open so
+    // glancing at Layers does not lose your place.
+    const nextGroup = resolveGroupForNavSection(section, state.selectedGroup);
+    dispatch({
+      type: "patch",
+      patch: nextGroup ? { navSection: section, selectedGroup: nextGroup } : { navSection: section },
+    });
+  };
   const selectedPresetGroup = visiblePresetGroups.find((group) => group.id === state.selectedGroup) ?? visiblePresetGroups[0];
   const stateCards: ReturnType<typeof rawStateCardToStateCard>[] = visibleStateCards(selectedPresetGroup.id).map((card) => rawStateCardToStateCard(card, locale));
   const defaultStateCode = selectedPresetGroup.id === "blocks" ? stateCards[0]?.code ?? null : null;
@@ -347,15 +386,55 @@ export function App() {
   }, [iconSet, selectedPresetStyle, setSlot]);
 
   useEffect(() => {
+    if (state.selectedLayerId === null && state.selectedSlotId === null) {
+      return;
+    }
+    // Clicking anywhere that is not itself a way to select clears the
+    // selection. On the document rather than the canvas: the highlight is just
+    // as stale after a click on the rail, the topbar, or the blank space under
+    // the layer list, and leaving it lit there is what made it look stuck.
+    const clearOnOutsidePointer = (event: PointerEvent) => {
+      if (isSelectionTarget(event.target)) return;
+      dispatch({ type: "patch", patch: { selectedLayerId: null, selectedSlotId: null } });
+    };
+    document.addEventListener("pointerdown", clearOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", clearOnOutsidePointer);
+  }, [dispatch, state.selectedLayerId, state.selectedSlotId]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setCommandOpen((open) => !open);
+        return;
+      }
+
+      // ⌘0 resets zoom even from inside a field — it is unambiguous, and the
+      // zoom menu's own percentage field relies on it.
+      if ((event.metaKey || event.ctrlKey) && event.key === "0") {
+        event.preventDefault();
+        dispatch({ type: "patch", patch: { canvasZoom: 100 } });
+        return;
+      }
+
+      // Bare +/- are typeable characters, so they only mean zoom when nothing
+      // is collecting text. Without this, naming a project "a+b" would zoom.
+      if (isTypingTarget(event.target)) {
+        return;
+      }
+      if (event.key === "+" || event.key === "=") {
+        event.preventDefault();
+        dispatch({ type: "patch", patch: { canvasZoom: zoomIn(state.canvasZoom) } });
+        return;
+      }
+      if (event.key === "-" || event.key === "_") {
+        event.preventDefault();
+        dispatch({ type: "patch", patch: { canvasZoom: zoomOut(state.canvasZoom) } });
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [dispatch, state.canvasZoom]);
 
   const pendingExternalApprovalTool = activeProject.toolCalls.approval === "hidden"
     ? findPendingApprovalTool(displayViewModel.timeline)
@@ -511,6 +590,10 @@ export function App() {
     ),
     externalApprovalPlacement: "overlay",
   };
+  // Resolved once so "does this column have anything in it" is one question
+  // rather than one per render site. An empty list is the normal case on open.
+  const sidebarSlots = renderSlots(visibleLayoutSlots, "sidebar", slotContext);
+  const rightPanelSlots = renderSlots(visibleLayoutSlots, "right-panel", slotContext);
   const previewOverlaySlots = renderSlots(
     visibleLayoutSlots.filter((slot) => slot.component === "OutputFrame"),
     "overlay",
@@ -521,7 +604,18 @@ export function App() {
     <>
       <Toaster richColors position="bottom-left" />
       <CommandMenu open={commandOpen} onOpenChange={setCommandOpen} onSelectFixture={controller.selectFixture} />
-      <IconStyleProvider value={selectedPresetStyle === "native" ? "bold" : "line"}>
+      {/* WorkBuddy draws 16px filled glyphs (codicon); the other styles are
+          two weights of lucide outlines. Scoped here so the CC-BY icon set
+          only loads for the style that asked for it. */}
+      <IconStyleProvider
+        value={
+          selectedPresetStyle === "workbuddy"
+            ? "codicon"
+            : selectedPresetStyle === "native"
+              ? "bold"
+              : "line"
+        }
+      >
       <div className="app-shell">
         <Topbar
           copy={copy}
@@ -536,9 +630,11 @@ export function App() {
           showDebugViewToggle={showDebugViewToggle}
           workspaceView={state.workspaceView}
           onWorkspaceViewToggle={() => dispatch({ type: "patch", patch: { workspaceView: state.workspaceView === "preview" ? "debug" : "preview" } })}
-          onSavePreview={controller.saveScaffoldPreview}
+          onEnterPreview={controller.saveScaffoldPreview}
           selectedComponentSummary={selectedComponentSummary}
           selectedComponentItems={selectedComponentItems}
+          canvasZoom={state.canvasZoom}
+          onCanvasZoomChange={(zoom) => dispatch({ type: "patch", patch: { canvasZoom: clampZoom(zoom) } })}
           onExport={() => void controller.generateExport()}
         />
 
@@ -548,6 +644,14 @@ export function App() {
               copy={copy}
               locale={locale}
               project={project}
+              navSection={state.navSection}
+              onNavSectionChange={handleNavSectionChange}
+              selectedLayerId={state.selectedLayerId}
+              onSelectLayer={(layerId) => dispatch({ type: "patch", patch: { selectedLayerId: layerId, selectedSlotId: null } })}
+              selectedSlotId={state.selectedSlotId}
+              onSelectSlot={(slotId) => dispatch({ type: "patch", patch: { selectedSlotId: slotId, selectedLayerId: null } })}
+              onRenameProject={(name) => setProject((current) => ({ ...current, name }))}
+              selectedComponentItems={selectedComponentItems}
               presetDrawerOpen={state.presetDrawerOpen}
               visiblePresetGroups={visiblePresetGroups}
               selectedGroupId={state.selectedGroup}
@@ -590,9 +694,38 @@ export function App() {
             />
           ) : null}
 
-          <main ref={builderSurfaceRef} className="builder-surface" data-output-zone="generated-scaffold">
+          <main
+            ref={builderSurfaceRef}
+            className="builder-surface"
+            data-output-zone="generated-scaffold"
+            // Zoom is a CSS variable rather than a prop threaded into every
+            // component: nothing inside the canvas needs to know it is being
+            // magnified, and nothing re-renders when it changes.
+            style={{ "--canvas-zoom": state.canvasZoom / 100 } as CSSProperties}
+            // Only a magnified canvas scrolls. Left at `auto` the whole time,
+            // sub-pixel rounding puts a scrollbar on an unzoomed canvas.
+            data-canvas-zoomed={state.canvasZoom > 100 ? "true" : undefined}
+          >
             {state.workspaceView === "preview" || state.surfaceMode === "saved-preview" ? (
               <>
+                {/* Zoom wrapper. The frame keeps its own layout size, so
+                    magnifying the canvas does not reflow the design being
+                    edited — a 200% canvas is a bigger picture of the same
+                    layout, not a narrower viewport. */}
+                <div className="canvas-zoom">
+                {/* Region labels, one per column, sitting in the gap above the
+                    frame. Outside the frame rather than inside it: the frame
+                    clips to its rounded corners, so a child at a negative
+                    offset was invisible — these were never actually on screen.
+                    They mirror the frame's column widths, so an empty column
+                    still announces which one it is. */}
+                <RegionLabels
+                  project={activeProject}
+                  locale={locale}
+                  selectedLayerId={state.selectedLayerId}
+                  rightPanelVisible={rightPanelVisible}
+                  selectedComponentItems={selectedComponentItems}
+                />
                 <div
                   ref={previewFrameRef}
                   className="preview-frame"
@@ -604,8 +737,18 @@ export function App() {
                   data-appearance={themeTokens[activeProject.theme.preset].appearance}
                   data-theme-preset={activeProject.theme.preset}
                   data-preview-refreshing={state.previewRefreshing}
+                  // Selection lives on the frame so CSS can reach whichever
+                  // column or component it names, without every component
+                  // having to accept a "selected" prop.
+                  data-selected-layer={state.selectedLayerId ?? undefined}
+                  // The row id itself, not the component it resolves to: a row
+                  // can name a module inside a component (a search field, a
+                  // version footer), which has no slot to look up.
+                  data-selected-module={state.selectedSlotId ?? undefined}
                 >
-                  {leftSidebarMounted ? renderSlots(visibleLayoutSlots, "sidebar", slotContext) : null}
+                  {leftSidebarMounted ? (
+                    sidebarSlots.length > 0 ? sidebarSlots : <div className="session-sidebar region-empty" />
+                  ) : null}
                   {rightPanelVisible ? (
                     <PanelGroup className="preview-panels" orientation="horizontal">
                       <Panel className="preview-panel" defaultSize={`${activeProject.layout.mainSize}%`} minSize="52%">
@@ -621,8 +764,8 @@ export function App() {
                       </Panel>
                       <PanelResizeHandle className="resize-handle" />
                       <Panel className="preview-panel" defaultSize={`${activeProject.layout.rightPanelSize}%`} minSize="24%">
-                        <aside className="right-panel">
-                          {renderSlots(visibleLayoutSlots, "right-panel", slotContext)}
+                        <aside className="right-panel" data-empty={rightPanelSlots.length === 0 ? "true" : undefined}>
+                          {rightPanelSlots}
                         </aside>
                       </Panel>
                     </PanelGroup>
@@ -669,6 +812,10 @@ export function App() {
                     />
                   ) : null}
                 </div>
+                </div>
+                {/* Outside the zoom wrapper on purpose: the overlay surface is
+                    positioned against `.builder-surface`, and moving it inside
+                    would change its containing block. */}
                 {previewOverlaySlots.length > 0 ? (
                   <aside className="preview-overlay-surface" data-preview-region="overlay">
                     {previewOverlaySlots}
@@ -694,4 +841,36 @@ export function App() {
       </IconStyleProvider>
     </>
   );
+}
+
+/** True when the event target is collecting text, so bare keys are not shortcuts. */
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tag = target.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+}
+
+/**
+ * Whether a pointerdown landed on something that selects.
+ *
+ * Two kinds of target: a row in the layer list, and a component on the canvas.
+ * The canvas selectors are the same map the selection overlay uses, so this
+ * cannot drift out of step with what the canvas is able to highlight — if a
+ * click can select it, a click elsewhere clears it.
+ *
+ * Scoped to `.layers-panel` because the group disclosures in Structure and
+ * Components share the `.layers-row` class, and opening a group is not
+ * selecting a layer.
+ */
+function isSelectionTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  if (target.closest(".layers-panel .layers-row") !== null) return true;
+  return Object.values(SLOT_COMPONENT_SELECTORS).some((selector) => {
+    const match = target.closest(selector);
+    // An empty column's placeholder carries the component's class so it can
+    // inherit its width, but there is no component in it — clicking it is
+    // clicking blank canvas.
+    return match !== null && !match.classList.contains("region-empty");
+  });
 }

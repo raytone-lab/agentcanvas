@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "../../agentmatrix/uiIcons";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { ThinkingOrb, type OrbState } from "thinking-orbs";
 import type { AgentUXReasoningTimelineItem } from "@agent-ux/render-core";

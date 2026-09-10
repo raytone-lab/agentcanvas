@@ -18,6 +18,7 @@ import {
 } from "../../pi/piConversationState";
 import type { PiRuntimeState } from "../../pi/piClient";
 import { defaultCodingAgentProject, type AgentFrontendProject } from "../../schema/agentuxConfig";
+import type { NavSectionId } from "../projection/presetRailData";
 import type { PresetGroupId } from "../../schema/presets";
 import { mergeOutputPanelItems } from "../projection/outputPanelProjection";
 import { defaultPreviewPromptForLocale } from "../projection/previewDefaults";
@@ -34,6 +35,24 @@ import type { RunMode } from "../appTypes";
 export type WorkspaceState = {
   surfaceMode: "builder" | "saved-preview";
   workspaceView: "preview" | "debug";
+  /**
+   * Which of the rail's four destinations is open (File / Theme / Components /
+   * Model). Separate from `selectedGroup`, which still tracks the preset group
+   * open *within* Components — collapsing the two would lose the group you were
+   * editing every time you looked at Layers.
+   */
+  navSection: NavSectionId;
+  /** Which canvas region the Layers list has selected, or null for none. */
+  selectedLayerId: string | null;
+  /** Which component inside a region is selected, by slot id. */
+  selectedSlotId: string | null;
+  /**
+   * Canvas magnification, as a percentage. Scales what the canvas *shows*
+   * without reflowing it — the frame keeps laying out at its real size, so
+   * zooming in is not a way to see the narrow-viewport layout. That is what
+   * resizing the frame is for.
+   */
+  canvasZoom: number;
   selectedGroup: PresetGroupId;
   presetDrawerOpen: boolean;
   selectedFixtureId: PreviewFixtureId;
@@ -116,7 +135,14 @@ export function createInitialWorkspaceState(locale: AppLocale): WorkspaceState {
   return {
     surfaceMode: "builder",
     workspaceView: "preview",
-    selectedGroup: "conversation",
+    // Figma opens on File with the layer list showing; so does this.
+    navSection: "file",
+    selectedLayerId: null,
+    selectedSlotId: null,
+    canvasZoom: 100,
+    // First group of the Structure destination, so opening 架构 shows 左栏
+    // expanded rather than whichever group happened to be the old default.
+    selectedGroup: "sidebar",
     presetDrawerOpen: false,
     selectedFixtureId: "coding-agent",
     standardScenarioId: "normal-turn",
@@ -140,7 +166,9 @@ export function createInitialWorkspaceState(locale: AppLocale): WorkspaceState {
     selectedScenarioId: resolveDefaultPreviewScenario(defaultCodingAgentProject),
     sentPrompts: [],
     leftCollapsed: false,
-    rightCollapsed: true,
+    // Open, not folded: the right column is part of the canvas structure now, so
+    // the editor should show all three on first paint rather than two.
+    rightCollapsed: false,
     autoHiddenRails: { left: false, right: false },
     piConversations: [initialConversation],
     activePiConversationId: initialConversation.id,

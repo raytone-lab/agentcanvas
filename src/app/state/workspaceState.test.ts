@@ -28,7 +28,9 @@ describe("workspaceReducer transitions", () => {
     expect(state.surfaceMode).toBe("builder");
     expect(state.runEvents).toEqual([]);
     expect(state.runMode).toBe("replay");
-    expect(state.rightCollapsed).toBe(true);
+    // Open: the right column is part of the canvas structure, so the editor
+    // opens showing all three columns rather than two.
+    expect(state.rightCollapsed).toBe(false);
     expect(state.piConversations).toHaveLength(1);
     expect(state.activePiConversationId).toBe(state.piConversations[0].id);
   });

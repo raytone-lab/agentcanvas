@@ -23,7 +23,14 @@ const en = {
     save: "Save",
     run: "Run",
     stop: "Stop",
-    exportScaffold: "Download Agent",
+    exportScaffold: "Export",
+    zoomAria: "Canvas zoom",
+    zoomValueAria: "Zoom percentage",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    zoomTo50: "Zoom to 50%",
+    zoomTo100: "Zoom to 100%",
+    zoomTo200: "Zoom to 200%",
     languageSwitchAria: "Switch language",
     languageEn: "EN",
     languageZh: "中文",
@@ -43,37 +50,41 @@ const en = {
     title: "UX Presets",
     defaultSection: "Options",
     activeBadge: "active",
+    pendingBadge: "pending",
+    layers: { title: "Untitled", sectionTitle: "Layers" },
     groups: {
       conversation: {
-        label: "Chat",
-        description: "Writing rhythm, message recovery actions, and first-run state.",
+        label: "Chat area",
+        description: "Message chrome and recovery: avatars, speaker labels, copy, edit and rerun.",
       },
       "media-generation": {
-        label: "Loaders",
-        description: "Generated image, audio, and video loading components.",
+        label: "Generating",
+        description: "The wait while an image, audio clip, or video is being generated.",
       },
       sidebar: {
-        label: "Left rail",
-        description: "Left conversation-history rail: visibility, new chat, search, grouping, version.",
+        label: "Left column",
+        description: "Left navigation rail: visibility, new chat, search, grouping, version.",
       },
       "ux-effects": {
         label: "Thinking",
         description: "Reasoning motion, summary order, and collapse behavior.",
       },
       "tool-calls": {
-        label: "Tools",
+        label: "Tool calls",
         description: "Tool actions such as reading files, editing, validating, searching, and running commands.",
       },
       approval: {
-        label: "Permissions",
-        description: "Composer approval access and pending approval placement.",
+        label: "Approval",
+        description: "Where the run stops for the reader: tool approval, choice cards, sandbox permission, hook intercepts.",
       },
       blocks: {
-        label: "Status",
+        // One word on purpose: "Results & errors" measures 66px and wraps to two
+        // lines in the 68px rail. "Outcomes" covers both halves and stays on one.
+        label: "Outcomes",
         description: "Result and incident states such as completed, failed, cancelled, retrying, exhausted, and terminal.",
       },
       composer: {
-        label: "Input",
+        label: "Composer",
         description: "Input controls for files, budget, models, tools, and prompts.",
       },
       provider: {
@@ -81,12 +92,12 @@ const en = {
         description: "Hosted and local model provider defaults for the scaffold.",
       },
       output: {
-        label: "Output",
-        description: "Output source and panel behavior.",
+        label: "Right panel",
+        description: "The right panel region: whether it shows, and what it holds.",
       },
-      render: {
-        label: "Render",
-        description: "Artifact renderer defaults for generated output.",
+      delivery: {
+        label: "Delivery",
+        description: "What the agent hands back: writing rhythm, output source, and artifact renderers.",
       },
       git: {
         label: "Git",
@@ -198,7 +209,14 @@ const zh: typeof en = {
     save: "保存",
     run: "运行",
     stop: "停止",
-    exportScaffold: "下载 Agent",
+    exportScaffold: "Export",
+    zoomAria: "画布缩放",
+    zoomValueAria: "缩放比例",
+    zoomIn: "放大",
+    zoomOut: "缩小",
+    zoomTo50: "缩放至 50%",
+    zoomTo100: "缩放至 100%",
+    zoomTo200: "缩放至 200%",
     languageSwitchAria: "切换语言",
     languageEn: "EN",
     languageZh: "中文",
@@ -212,21 +230,23 @@ const zh: typeof en = {
     title: "UX 预设",
     defaultSection: "选项",
     activeBadge: "已启用",
+    pendingBadge: "待建",
+    layers: { title: "未命名", sectionTitle: "图层" },
     groups: {
       conversation: {
-        label: "对话",
-        description: "书写节奏、消息恢复操作以及首次运行状态。",
+        label: "对话区",
+        description: "消息外观与恢复操作：头像、名称标签、复制、修改重发。",
       },
       "media-generation": {
-        label: "加载器",
-        description: "图片、音频和视频的加载组件。",
+        label: "生成中",
+        description: "图片、音频、视频生成时的等待动效。",
       },
       sidebar: {
-        label: "左侧栏",
-        description: "左侧会话历史栏：显示与否、新建对话、搜索、分组、版本号。",
+        label: "左栏",
+        description: "左侧导航栏：显示与否、新建对话、搜索、按日期分组、版本号。",
       },
       "ux-effects": {
-        label: "思考",
+        label: "思考中",
         description: "推理动效、摘要顺序以及折叠行为。",
       },
       "tool-calls": {
@@ -234,11 +254,11 @@ const zh: typeof en = {
         description: "读取文件、编辑、验证、搜索和运行命令等工具动作。",
       },
       approval: {
-        label: "权限",
-        description: "输入区审批入口，以及待审批操作在卡片内或对话流中的位置。",
+        label: "需要确认",
+        description: "运行停下来等你回答的地方：工具审批、选择卡片、沙箱权限、钩子拦截。",
       },
       blocks: {
-        label: "状态",
+        label: "结果报错",
         description: "完成、失败、已取消、重试、耗尽和终止等结果与异常状态。",
       },
       composer: {
@@ -246,16 +266,16 @@ const zh: typeof en = {
         description: "文件、预算、模型、工具与提示的输入控件。",
       },
       provider: {
-        label: "提供方",
+        label: "模型",
         description: "脚手架的托管与本地模型提供方默认值。",
       },
       output: {
-        label: "输出",
-        description: "输出来源与面板行为。",
+        label: "右面板",
+        description: "右侧面板这块区域：显示与否，以及里面放什么。",
       },
-      render: {
-        label: "渲染",
-        description: "生成输出的产物渲染器默认值。",
+      delivery: {
+        label: "交付",
+        description: "Agent 交回来的东西：书写节奏、输出来源与产物渲染器。",
       },
       git: {
         label: "Git",
@@ -372,7 +392,14 @@ const ja: typeof en = {
     save: "保存",
     run: "実行",
     stop: "停止",
-    exportScaffold: "Agent をダウンロード",
+    exportScaffold: "Export",
+    zoomAria: "キャンバスの拡大縮小",
+    zoomValueAria: "拡大率",
+    zoomIn: "拡大",
+    zoomOut: "縮小",
+    zoomTo50: "50% にする",
+    zoomTo100: "100% にする",
+    zoomTo200: "200% にする",
     languageSwitchAria: "言語を切り替える",
     languageEn: "EN",
     languageZh: "中文",
@@ -386,33 +413,35 @@ const ja: typeof en = {
     title: "UX プリセット",
     defaultSection: "オプション",
     activeBadge: "有効",
+    pendingBadge: "未実装",
+    layers: { title: "無題", sectionTitle: "レイヤー" },
     groups: {
       conversation: {
-        label: "チャット",
-        description: "文章の出力リズム、メッセージ操作、初回表示の状態。",
+        label: "会話エリア",
+        description: "メッセージの外観と復帰操作：アバター、話者ラベル、コピー、修正して再実行。",
       },
       "media-generation": {
-        label: "ローダー",
-        description: "画像・音声・動画の生成中に表示するローディングコンポーネント。",
+        label: "生成中",
+        description: "画像・音声・動画を生成している間の待ち時間の見せ方。",
       },
       sidebar: {
-        label: "左レール",
-        description: "左側の会話履歴：表示の有無、新規チャット、検索、グループ化、バージョン表記。",
+        label: "左カラム",
+        description: "左のナビゲーション：表示の有無、新規チャット、検索、日付でのグループ化、バージョン表記。",
       },
       "ux-effects": {
-        label: "思考",
+        label: "思考中",
         description: "推論のモーション、要約の表示順、折りたたみの挙動。",
       },
       "tool-calls": {
-        label: "ツール",
+        label: "ツール呼出",
         description: "ファイルの読み取り・編集・検証・検索・コマンド実行などのツール動作。",
       },
       approval: {
-        label: "権限",
-        description: "入力欄からの承認導線と、承認待ち操作をカード内か会話中のどこに置くか。",
+        label: "確認が必要",
+        description: "実行が止まって読み手に尋ねる場所：ツールの承認、選択カード、サンドボックス権限、フックの遮断。",
       },
       blocks: {
-        label: "ステータス",
+        label: "結果とエラー",
         description: "完了・失敗・キャンセル・リトライ・リトライ上限・停止といった結果と障害の状態。",
       },
       composer: {
@@ -424,12 +453,12 @@ const ja: typeof en = {
         description: "スキャフォールドが使うホスト型およびローカルのモデルプロバイダー既定値。",
       },
       output: {
-        label: "出力",
-        description: "出力のソースとパネルの挙動。",
+        label: "右パネル",
+        description: "右パネルの領域：表示の有無と、そこに何を置くか。",
       },
-      render: {
-        label: "レンダリング",
-        description: "生成された出力に使うアーティファクトレンダラーの既定値。",
+      delivery: {
+        label: "受け取り",
+        description: "エージェントが返すもの：書き出しのリズム、出力ソース、アーティファクトレンダラー。",
       },
       git: {
         label: "Git",

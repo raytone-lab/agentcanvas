@@ -10,7 +10,13 @@ import {
   type MediaGenerationVideoStyle,
   type ProviderCatalogId,
 } from "./agentuxConfig";
-import { isThemePresetId, minimalThemePresetIds, nativeThemePresetIds, type ThemePresetId } from "../theme/themeTokens";
+import {
+  isThemePresetId,
+  minimalThemePresetIds,
+  nativeThemePresetIds,
+  workbuddyThemePresetIds,
+  type ThemePresetId,
+} from "../theme/themeTokens";
 
 export type PresetPatch = (project: AgentFrontendProject) => AgentFrontendProject;
 
@@ -92,7 +98,14 @@ const providerPresetIds: Partial<Record<string, ProviderCatalogId>> = Object.fro
   providerCatalog.map((provider) => [`provider-${provider.id}`, provider.id]),
 );
 
-const selectableThemePresetIds: readonly ThemePresetId[] = [...nativeThemePresetIds, ...minimalThemePresetIds];
+// Every style's ids, or that style's theme cards render but do nothing:
+// `applyPresetOption` falls back to the identity patch for an id with no
+// entry, so a missing style here is a silently inert set of cards.
+const selectableThemePresetIds: readonly ThemePresetId[] = [
+  ...nativeThemePresetIds,
+  ...minimalThemePresetIds,
+  ...workbuddyThemePresetIds,
+];
 
 const mediaGenerationPresetConfig = {
   "media-image-grid": { kind: "imageStyle", style: "grid" },
@@ -171,6 +184,8 @@ const presetPatches: Record<string, PresetPatch> = {
     };
   },
   "sidebar-visible": (project) => toggleSlotEnabled(project, "SessionSidebar"),
+  "chat-visible": (project) => toggleSlotEnabled(project, "ChatFrame"),
+  "composer-visible": (project) => toggleSlotEnabled(project, "ComposerFrame"),
   "sidebar-new-button": (project) => ({
     ...project,
     sidebar: { ...project.sidebar, newButton: !project.sidebar.newButton },
@@ -440,6 +455,22 @@ export function applyPresetOption(project: AgentFrontendProject, optionId: strin
   return (presetPatches[optionId] ?? ((current) => current))(project);
 }
 
+/**
+ * Whether clicking this option would change the project at all.
+ *
+ * `applyPresetOption` falls back to the identity patch for an unknown id, so a
+ * card with no entry here is silently inert — it looks like a choice and does
+ * nothing. Tests use this to keep that from happening by accident, and to keep
+ * `pending` cards genuinely unwired.
+ */
+export function hasPresetAction(optionId: string): boolean {
+  return (
+    optionId in presetPatches ||
+    optionId in providerPresetIds ||
+    isThemePresetId(optionId)
+  );
+}
+
 // Cancelling a single-select option returns the field(s) it controls to the
 // baseline default. (Boolean toggles are cancelled by re-applying their patch,
 // which flips them off, so they need no entry here.)
@@ -548,6 +579,10 @@ export function isPresetOptionActive(project: AgentFrontendProject, optionId: st
         project.conversation.messageActions.edit;
     case "sidebar-visible":
       return slotEnabled(project, "SessionSidebar");
+    case "chat-visible":
+      return slotEnabled(project, "ChatFrame");
+    case "composer-visible":
+      return slotEnabled(project, "ComposerFrame");
     case "output-visible":
       return slotEnabled(project, "OutputFrame");
     case "git-visible":

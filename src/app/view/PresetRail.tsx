@@ -1,4 +1,5 @@
-import { Clock3, Copy, GitMerge, Pencil, RotateCcw } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, Clock3, Copy, GitMerge, Pencil, RotateCcw } from "lucide-react";
 
 import { StateGallery, type StateCard } from "../../components/agentmatrix/StateGallery";
 import { PresetOptionPreview } from "../../components/PresetOptionPreview";
@@ -8,6 +9,7 @@ import { WritingParamControls, hasWritingParams } from "../../components/agent-p
 import { Dialog, DialogClose, DialogContent } from "../../components/ui/dialog";
 import {
   translatePresetGroupName,
+  translatePresetOptionDescription,
   translatePresetOptionLabel,
   translatePresetSection,
 } from "../../i18n/presetCopy";
@@ -23,7 +25,15 @@ import type {
 } from "../../schema/agentuxConfig";
 import { themeTokens } from "../../theme/themeTokens";
 import type { MessageActionKey } from "../appTypes";
-import { presetGroupIcons, presetRailSections, presetStyleOptions, stateSectionTitle } from "../projection/presetRailData";
+import {
+  groupsForNavSection,
+  navSections,
+  presetStyleOptions,
+  stateSectionTitle,
+  type NavSectionId,
+} from "../projection/presetRailData";
+import { LayersPanel } from "./LayersPanel";
+import type { SelectedComponentItem } from "../projection/selectedComponents";
 
 type PresetGroup = {
   id: PresetGroupId;
@@ -42,6 +52,14 @@ export function PresetRail({
   copy,
   locale,
   project,
+  navSection,
+  onNavSectionChange,
+  selectedLayerId,
+  onSelectLayer,
+  selectedSlotId,
+  onSelectSlot,
+  onRenameProject,
+  selectedComponentItems,
   presetDrawerOpen,
   visiblePresetGroups,
   selectedGroupId,
@@ -76,6 +94,14 @@ export function PresetRail({
   copy: UiCopy;
   locale: AppLocale;
   project: AgentFrontendProject;
+  navSection: NavSectionId;
+  onNavSectionChange: (section: NavSectionId) => void;
+  selectedLayerId: string | null;
+  onSelectLayer: (layerId: string) => void;
+  selectedSlotId: string | null;
+  onSelectSlot: (slotId: string) => void;
+  onRenameProject: (name: string) => void;
+  selectedComponentItems: readonly SelectedComponentItem[];
   presetDrawerOpen: boolean;
   visiblePresetGroups: PresetGroup[];
   selectedGroupId: PresetGroupId;
@@ -119,109 +145,17 @@ export function PresetRail({
   onWelcomeGreetingChange: (greeting: string) => void;
   onWelcomeActivate: () => void;
 }) {
-  return (
-    <div className="preset-nav" data-open={presetDrawerOpen}>
-      <div className="preset-style-cards" role="tablist" aria-label={copy.shell.editor.chooseStyle}>
-        {presetStyleOptions.map((style) => (
-          <button
-            key={style.id}
-            className="preset-style-card"
-            type="button"
-            role="tab"
-            data-style={style.id}
-            data-active={style.id === selectedPresetStyle}
-            aria-selected={style.id === selectedPresetStyle}
-            onClick={(event) => onStyleSwitchRequest(style.id, event.currentTarget)}
-          >
-            <span className="preset-style-card-swatch" aria-hidden="true" />
-            <span className="preset-style-card-name">{style.label[locale]}</span>
-          </button>
-        ))}
-      </div>
-      <Dialog
-        open={pendingStyle !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            onPendingStyleChange(null);
-          }
-        }}
-      >
-        {pendingStyle === "studio" ? (
-          <DialogContent
-            title={copy.shell.editor.styleSwitch.unbuiltTitle.replace("{style}", pendingStyleLabel)}
-            description={copy.shell.editor.styleSwitch.unbuiltDescription}
-            width={380}
-          >
-            <div className="style-switch-actions">
-              <DialogClose className="primary-button">
-                {copy.shell.editor.styleSwitch.gotIt}
-              </DialogClose>
-            </div>
-          </DialogContent>
-        ) : pendingStyle ? (
-          <DialogContent
-            title={copy.shell.editor.styleSwitch.confirmTitle.replace("{style}", pendingStyleLabel)}
-            description={copy.shell.editor.styleSwitch.confirmDescription.replaceAll("{style}", pendingStyleLabel)}
-            width={380}
-          >
-            <div className="style-switch-actions">
-              <DialogClose className="secondary-button">
-                {copy.shell.editor.styleSwitch.cancel}
-              </DialogClose>
-              <button type="button" className="primary-button" onClick={onStyleSwitchConfirm}>
-                {copy.shell.editor.styleSwitch.confirm}
-              </button>
-            </div>
-          </DialogContent>
-        ) : null}
-      </Dialog>
-      <div className="preset-columns">
-      <aside className="preset-iconbar" aria-label={copy.shell.presetRail.title}>
-        {presetRailSections.map((section) => {
-          const groups = section.groupIds
-            .map((id) => visiblePresetGroups.find((group) => group.id === id))
-            .filter((group): group is (typeof visiblePresetGroups)[number] => Boolean(group));
-          if (groups.length === 0) return null;
-          return (
-            <div className="preset-iconbar-group" key={section.id}>
-              {groups.map((group) => {
-                const TabIcon = presetGroupIcons[group.id];
-                const groupName = translatePresetGroupName(group.id, copy.shell.presetRail.groups[group.id].label, locale);
-                const isActive = group.id === selectedGroupId;
-                return (
-                  <button
-                    key={group.id}
-                    className="preset-icon-tile"
-                    data-preset-group={group.id}
-                    data-active={isActive}
-                    type="button"
-                    aria-pressed={isActive}
-                    aria-label={groupName}
-                    title={groupName}
-                    onClick={() => onPresetGroupClick(group.id)}
-                  >
-                    <span className="preset-icon-glyph" aria-hidden="true"><TabIcon size={16} /></span>
-                    <span className="preset-icon-label">{groupName}</span>
-                  </button>
-                );
-              })}
-            </div>
-          );
-        })}
-      </aside>
+  // Structure and Components show their groups as a containment tree: the group
+  // row is the header, and the options it owns are nested under it. The other
+  // destinations have a single group, so there is nothing to nest.
+  const nestsOptionsUnderGroups = navSection === "structure" || navSection === "components";
+  // Exactly one group is open at a time, because the option set is projected for
+  // the selected group — expanding a second would have to re-project the first,
+  // which is work the panel does not need to do to be read top to bottom.
+  // `null` means "the selected group is open", which is the default.
+  const [collapsedGroupId, setCollapsedGroupId] = useState<PresetGroupId | null>(null);
 
-      <aside
-        className="preset-panel"
-        data-preset-group={selectedPresetGroup.id}
-        data-style-preset={selectedPresetStyle}
-        data-appearance={themeTokens[project.theme.preset].appearance}
-        data-theme-preset={project.theme.preset}
-        aria-label={translatePresetGroupName(selectedPresetGroup.id, copy.shell.presetRail.groups[selectedPresetGroup.id].label, locale)}
-      >
-        <div className="preset-panel-header">
-          <span className="preset-panel-title">{translatePresetGroupName(selectedPresetGroup.id, copy.shell.presetRail.groups[selectedPresetGroup.id].label, locale)}</span>
-          <p className="preset-panel-desc">{copy.shell.presetRail.groups[selectedPresetGroup.id].description}</p>
-        </div>
+  const panelBody = (
         <div className="preset-panel-body">
           {styleSwitching ? (
             <div className="preset-panel-skeleton" aria-hidden="true">
@@ -311,13 +245,41 @@ export function PresetRail({
                   {section.items.map((option) => {
                     const active = isPresetOptionActive(project, option.id);
                     const showParams = active && hasWritingParams(option.id);
+                    const optionLabel = translatePresetOptionLabel(option.id, option.label, locale);
+                    // Named but unbuilt: inert and dimmed, with the description
+                    // in the tooltip so the card still says what it will do.
+                    if (option.pending) {
+                      return (
+                        <div className="preset-option-cell" key={option.id} data-option-id={option.id} data-pending="true">
+                          <span
+                            className="preset-option"
+                            data-pending="true"
+                            aria-disabled="true"
+                            title={translatePresetOptionDescription(option.id, option.description, locale)}
+                          >
+                            <PresetOptionPreview optionId={option.id} />
+                          </span>
+                          <span className="preset-option-name">
+                            <span>{optionLabel}</span>
+                            <em className="preset-option-badge" data-pending="true">
+                              {copy.shell.presetRail.pendingBadge}
+                            </em>
+                          </span>
+                        </div>
+                      );
+                    }
                     return (
-                      <div className="preset-option-cell" key={option.id} data-option-id={option.id}>
+                      <div
+                        className="preset-option-cell"
+                        key={option.id}
+                        data-option-id={option.id}
+                        data-theme-style={option.themeStyle}
+                      >
                         <button
                           className="preset-option"
                           data-active={active}
                           aria-pressed={active}
-                          aria-label={translatePresetOptionLabel(option.id, option.label, locale)}
+                          aria-label={optionLabel}
                           type="button"
                           onClick={() => onSelectPreset(option.id)}
                         >
@@ -331,7 +293,7 @@ export function PresetRail({
                           />
                         ) : null}
                         <span className="preset-option-name">
-                          <span>{translatePresetOptionLabel(option.id, option.label, locale)}</span>
+                          <span>{optionLabel}</span>
                           {active && showDebugBadges ? (
                             <em className="preset-option-badge">{copy.shell.presetRail.activeBadge}</em>
                           ) : null}
@@ -402,7 +364,200 @@ export function PresetRail({
             </>
           )}
         </div>
+  );
+
+  return (
+    <div className="preset-nav" data-open={presetDrawerOpen} data-nav-section={navSection}>
+      <Dialog
+        open={pendingStyle !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            onPendingStyleChange(null);
+          }
+        }}
+      >
+        {pendingStyle === "studio" ? (
+          <DialogContent
+            title={copy.shell.editor.styleSwitch.unbuiltTitle.replace("{style}", pendingStyleLabel)}
+            description={copy.shell.editor.styleSwitch.unbuiltDescription}
+            width={380}
+          >
+            <div className="style-switch-actions">
+              <DialogClose className="primary-button">
+                {copy.shell.editor.styleSwitch.gotIt}
+              </DialogClose>
+            </div>
+          </DialogContent>
+        ) : pendingStyle ? (
+          <DialogContent
+            title={copy.shell.editor.styleSwitch.confirmTitle.replace("{style}", pendingStyleLabel)}
+            description={copy.shell.editor.styleSwitch.confirmDescription.replaceAll("{style}", pendingStyleLabel)}
+            width={380}
+          >
+            <div className="style-switch-actions">
+              <DialogClose className="secondary-button">
+                {copy.shell.editor.styleSwitch.cancel}
+              </DialogClose>
+              <button type="button" className="primary-button" onClick={onStyleSwitchConfirm}>
+                {copy.shell.editor.styleSwitch.confirm}
+              </button>
+            </div>
+          </DialogContent>
+        ) : null}
+      </Dialog>
+      <div className="preset-columns">
+      {/* Four destinations, not thirteen groups. The groups still exist — they
+          moved one level down, into the Components destination — so nothing is
+          unreachable, but the first decision is now four-wide instead of
+          thirteen-wide. */}
+      <aside className="preset-iconbar" aria-label={copy.shell.presetRail.title}>
+        {navSections.map((section) => {
+          const NavIcon = section.icon;
+          const isActive = section.id === navSection;
+          const label = section.label[locale];
+          return (
+            <button
+              key={section.id}
+              className="nav-section-tile"
+              data-nav-section={section.id}
+              data-active={isActive}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => onNavSectionChange(section.id)}
+            >
+              <span className="nav-section-glyph" aria-hidden="true"><NavIcon size={20} /></span>
+              <span className="nav-section-label">{label}</span>
+            </button>
+          );
+        })}
       </aside>
+
+      {/* File shows the canvas structure as layers; the other three keep the
+          group panel, with App.tsx pointing `selectedGroup` at the group each
+          destination owns. Reusing the panel rather than rebuilding it per
+          destination is why theme cards and provider settings still work. */}
+      {navSection === "file" ? (
+        <aside className="preset-panel" data-nav-section="file" aria-label={copy.shell.presetRail.layers.title}>
+          <LayersPanel
+            project={project}
+            locale={locale}
+            selectedLayerId={selectedLayerId}
+            onSelectLayer={onSelectLayer}
+            selectedSlotId={selectedSlotId}
+            onSelectSlot={onSelectSlot}
+            onRenameProject={onRenameProject}
+            selectedComponentItems={selectedComponentItems}
+            title={copy.shell.presetRail.layers.title}
+            layersLabel={copy.shell.presetRail.layers.sectionTitle}
+          />
+        </aside>
+      ) : (
+      <aside
+        className="preset-panel"
+        data-preset-group={selectedPresetGroup.id}
+        data-nav-section={navSection}
+        data-style-preset={selectedPresetStyle}
+        data-appearance={themeTokens[project.theme.preset].appearance}
+        data-theme-preset={project.theme.preset}
+        aria-label={translatePresetGroupName(selectedPresetGroup.id, copy.shell.presetRail.groups[selectedPresetGroup.id].label, locale)}
+      >
+        {/* The group selector used to be column 1. With four destinations there,
+            it moves in here — without it only whichever group happened to be
+            selected was reachable and the other twelve were not. Grouped by the
+            same `presetRailSections` as before, as a list because there is one
+            column now rather than two. */}
+      {/* Moved inside the Theme destination. Above the columns it had 304px to
+            show 550px of cards, so the fourth style was off-screen entirely and
+            the third was cut in half — measured, and already true at three
+            cards. In one column it wraps instead of clipping. */}
+          {navSection === "theme" ? (
+        <div className="preset-style-cards" role="tablist" aria-label={copy.shell.editor.chooseStyle}>
+          {presetStyleOptions.map((style) => (
+            <button
+              key={style.id}
+              className="preset-style-card"
+              type="button"
+              role="tab"
+              data-style={style.id}
+              data-active={style.id === selectedPresetStyle}
+              aria-selected={style.id === selectedPresetStyle}
+              onClick={(event) => onStyleSwitchRequest(style.id, event.currentTarget)}
+            >
+              <span className="preset-style-card-swatch" aria-hidden="true" />
+              <span className="preset-style-card-name">{style.label[locale]}</span>
+            </button>
+          ))}
+        </div>
+        ) : null}
+        {/* The group list, scoped to the destination. Structure and Components
+            used to be two sections of one list; each is a destination now, so
+            the list shows one section and the section label would only repeat
+            the destination name. */}
+        {navSection === "structure" || navSection === "components" ? (
+          <div className="group-list">
+            {[groupsForNavSection(navSection)].map((groupIds, index) => {
+              const groups = groupIds
+                .map((id) => visiblePresetGroups.find((group) => group.id === id))
+                .filter((group): group is (typeof visiblePresetGroups)[number] => Boolean(group));
+              if (groups.length === 0) return null;
+              return (
+                <div className="group-list-section" key={index}>
+                  <ul className="layers-list">
+                    {groups.map((group) => {
+                      const groupName = translatePresetGroupName(group.id, copy.shell.presetRail.groups[group.id].label, locale);
+                      const isActive = group.id === selectedGroupId;
+                      const expanded = isActive && collapsedGroupId !== group.id;
+                      return (
+                        <li key={group.id} data-expanded={expanded}>
+                          <button
+                            type="button"
+                            className="layers-row group-row"
+                            data-active={isActive}
+                            aria-expanded={expanded}
+                            title={copy.shell.presetRail.groups[group.id].description}
+                            onClick={() => {
+                              // Clicking the open group closes it; clicking any
+                              // other opens it. Selecting and expanding are the
+                              // same gesture — a selected-but-closed group would
+                              // be a state with nothing to show for it.
+                              if (isActive) {
+                                setCollapsedGroupId(expanded ? group.id : null);
+                                return;
+                              }
+                              setCollapsedGroupId(null);
+                              onPresetGroupClick(group.id);
+                            }}
+                          >
+                            <span className="group-row-chevron" aria-hidden="true">
+                              <ChevronDown size={14} />
+                            </span>
+                            <span className="layers-row-name">{groupName}</span>
+                          </button>
+                          {expanded ? <div className="group-row-body">{panelBody}</div> : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+        {/* Structure and Components nest the options under the group they
+            belong to, so the panel is not a list up here and its detail down
+            there. The other destinations have no group list, so the group name
+            is the panel title. */}
+        {nestsOptionsUnderGroups ? null : (
+          <>
+            <div className="preset-panel-header">
+              <span className="preset-panel-title">{translatePresetGroupName(selectedPresetGroup.id, copy.shell.presetRail.groups[selectedPresetGroup.id].label, locale)}</span>
+              <p className="preset-panel-desc">{copy.shell.presetRail.groups[selectedPresetGroup.id].description}</p>
+            </div>
+            {panelBody}
+          </>
+        )}
+      </aside>
+      )}
       </div>
     </div>
   );

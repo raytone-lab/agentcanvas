@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "motion/react";
-import { FileCode2, PanelRight, TerminalSquare } from "lucide-react";
+import { FileCode2, PanelRight, TerminalSquare } from "../../../agentmatrix/uiIcons";
 
 import type { OutputSource } from "../../../schema/agentuxConfig";
 import type { OutputFrameCopy } from "./types";

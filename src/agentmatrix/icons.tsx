@@ -110,7 +110,16 @@ import {
 } from "@phosphor-icons/react";
 
 /** Icon rendering weight: line (lucide, the default) or bold (Phosphor, native style). */
-export type IconStyle = "line" | "bold";
+/**
+ * How the current surface draws its icons.
+ *
+ * "line" / "bold" are two weights of the same lucide outline set. "codicon" is
+ * a different set entirely — 16x16 filled glyphs — used only by the WorkBuddy
+ * style, because that is how its client draws icons. `resolveIcon` still
+ * answers with a lucide component for it, which is what `StateIcon` falls back
+ * to if a slot has no codicon mapping.
+ */
+export type IconStyle = "line" | "bold" | "codicon";
 
 /** Wrap a Phosphor icon so it renders at bold weight with the usual size/className. */
 function boldIcon(Ph: PhosphorIconType): LucideIcon {

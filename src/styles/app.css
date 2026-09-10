@@ -1,3 +1,13 @@
+/* codicon — the icon font the WorkBuddy style renders (see
+   agentmatrix/codiconSlots.ts). Declared here rather than per style because
+   @import must lead the file; it costs nothing for the other styles, since a
+   browser only fetches a @font-face file once a glyph using it is painted, and
+   nothing paints `.codicon` unless that style is active.
+
+   CC-BY-4.0, unlike the rest of this repo — attributed in
+   THIRD_PARTY_NOTICES.md. */
+@import "@vscode/codicons/dist/codicon.css";
+
 :root {
   color-scheme: light;
   --font-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -168,9 +178,11 @@ p {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  min-height: 72px;
-  /* 16px above/below the controls. */
-  padding: 16px 14px;
+  /* 52px: 8px above/below a 36px control row. Was 72px with 16px padding, which
+     was sized for a control group and a component-count menu that no longer
+     live here. */
+  min-height: 52px;
+  padding: 8px 14px;
   /* Functional layer chrome — separated from the canvas by a straight full-width
      hairline (no rounded corners). */
   background: var(--fn-bg);
@@ -207,6 +219,9 @@ p {
 }
 
 .brand-logo {
+  display: flex;
+  align-items: center;
+  margin: 0;
   color: var(--text-primary);
   font-size: 20px;
   line-height: 1.1;
@@ -214,8 +229,12 @@ p {
   letter-spacing: 0;
 }
 
-.brand-logo span {
-  font-weight: 800;
+/* Height-driven: the source is 812x149, so a fixed height keeps the aspect
+   ratio without hardcoding a width that would have to change with the art. */
+.brand-logo img {
+  display: block;
+  height: 26px;
+  width: auto;
 }
 
 .frame-header p,
@@ -563,7 +582,8 @@ p {
 
 .primary-button.topbar-deploy-button {
   min-width: 64px;
-  height: 40px;
+  /* Shorter to sit inside the 52px bar. */
+  height: 32px;
   border-radius: var(--fn-r-sm);
   padding: 0 18px;
 }
@@ -844,10 +864,15 @@ textarea:focus-visible {
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* Left nav (tool chrome, #F5F5F7): style cards on top + two columns below. */
+/* Left nav (tool chrome, #F5F5F7): the two columns, filling the rail.
+   One row, not two: the second row dated from when the style cards sat above
+   the columns. With the cards moved into Theme it was an empty 1fr track, and
+   it left `.preset-columns` on the `auto` row — content-sized instead of
+   viewport-sized, so a long group list grew past the bottom of the window with
+   nothing to scroll it. Measured: rail 848px, columns 467px, 381px empty. */
 .preset-nav {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   background: var(--fn-bg);
@@ -985,41 +1010,95 @@ textarea:focus-visible {
   padding: 10px 6px;
   background: transparent;
   border-right: 1px solid #e6e6ea;
-  scrollbar-width: none;
+  /* Thirteen groups do not fit a 900px-tall viewport, so the rail scrolls — and
+     a scrollbar that is hidden turns "there is more below" into "that is all
+     there is". Kept thin and self-colored so it reads as an edge, not chrome. */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, #94a3b8 38%, transparent) transparent;
+  overscroll-behavior: contain;
 }
 
-.preset-iconbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.preset-iconbar::-webkit-scrollbar { width: 6px; }
+.preset-iconbar::-webkit-scrollbar-track { background: transparent; }
 
-.preset-iconbar-group {
+.preset-iconbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, #94a3b8 34%, transparent);
+}
+
+.preset-iconbar:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, #94a3b8 52%, transparent);
+}
+
+/* Left as a plain block: giving <details> a grid display makes some browsers
+   paint the closed content anyway, so the grid lives on the inner wrapper. */
+.preset-iconbar-group + .preset-iconbar-group {
+  margin-top: 6px;
+}
+
+.preset-iconbar-tiles {
   display: grid;
   gap: 4px;
 }
 
-.preset-iconbar-group + .preset-iconbar-group {
-  position: relative;
-  margin-top: 8px;
-  padding-top: 8px;
+/* Section name. At 68px/9px the rail has no room to build hierarchy out of
+   size, so the contrast is carried by color and letter-spacing instead: the
+   section is the quietest thing in the column, the group labels below it are
+   full-strength. */
+.preset-iconbar-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 2px 0 4px;
+  /* Quiet, but not below 4.5:1 against the rail — at 9px this is body text as
+     far as contrast rules are concerned, so the hierarchy has to come from
+     weight and letter-spacing rather than from fading the color out. */
+  color: #6b7280;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
 }
 
-/* Short centered divider (~3-char width) instead of a full-width line. */
-.preset-iconbar-group + .preset-iconbar-group::before {
+.preset-iconbar-section::-webkit-details-marker { display: none; }
+
+.preset-iconbar-section::after {
   content: "";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 32px;
-  height: 1px;
-  background: color-mix(in srgb, #94a3b8 26%, transparent);
+  width: 4px;
+  height: 4px;
+  margin-left: 1px;
+  border-right: 1px solid currentcolor;
+  border-bottom: 1px solid currentcolor;
+  transform: translateY(-1px) rotate(45deg);
+  opacity: 0;
+  transition: opacity var(--motion-fast) var(--ease-out), transform var(--motion-fast) var(--ease-out);
+}
+
+.preset-iconbar-group:not([open]) > .preset-iconbar-section::after,
+.preset-iconbar-section:hover::after {
+  opacity: 0.75;
+}
+
+.preset-iconbar-group:not([open]) > .preset-iconbar-section::after {
+  transform: translateY(-2px) rotate(-45deg);
+}
+
+.preset-iconbar-section:hover {
+  color: var(--text-primary, #1a1a1a);
 }
 
 .preset-icon-tile {
   display: grid;
   justify-items: center;
   align-content: center;
-  gap: 7px;
-  min-height: 52px;
-  padding: 7px 2px;
+  /* Trimmed from 7px/52px/7px: the rail went from 11 tiles to 13, and the glyph
+     is a 16px icon in a 32px box, so the slack was in the padding. */
+  gap: 5px;
+  min-height: 46px;
+  padding: 5px 2px;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -1030,8 +1109,8 @@ textarea:focus-visible {
 .preset-icon-glyph {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--fn-r-xs);
   color: #1a1a1a;
   transition: background var(--motion-fast) var(--ease-out);
@@ -1688,6 +1767,24 @@ textarea:focus-visible {
   text-transform: uppercase;
 }
 
+/* Named but unbuilt. Reads as unavailable rather than as a plain choice, so the
+   reader learns the component is planned without trying to turn it on. The
+   badge drops the accent color so it cannot be mistaken for "active". */
+.preset-option-badge[data-pending="true"] {
+  background: color-mix(in srgb, var(--text-muted) 14%, transparent);
+  color: var(--text-muted);
+}
+
+.preset-option[data-pending="true"] {
+  cursor: default;
+  opacity: 0.45;
+  filter: saturate(0.4);
+}
+
+.preset-option-cell[data-pending="true"] .preset-option-name > span:first-child {
+  color: var(--text-muted);
+}
+
 /* Confirm dialog footer for the style switch. */
 .style-switch-actions {
   display: flex;
@@ -1738,21 +1835,19 @@ textarea:focus-visible {
 /* Theme palette curated per style (show/hide-by-style). Native offers its 6
    warm/saturated schemes; Minimal (illustrated) offers its 6 cool/austere
    schemes. Each style hides the other style's schemes so the two never overlap. */
-.preset-panel[data-style-preset="native"] .preset-option-cell[data-option-id="cold-mono"],
-.preset-panel[data-style-preset="native"] .preset-option-cell[data-option-id="slate-blue"],
-.preset-panel[data-style-preset="native"] .preset-option-cell[data-option-id="cyan-grid"],
-.preset-panel[data-style-preset="native"] .preset-option-cell[data-option-id="ice-white"],
-.preset-panel[data-style-preset="native"] .preset-option-cell[data-option-id="mist-blue"],
-.preset-panel[data-style-preset="native"] .preset-option-cell[data-option-id="polar-mono"] {
+/* A theme card belongs to exactly one style, so it shows only under that one.
+   One rule for every style, present and future: the previous version listed
+   each foreign theme id by hand per style, which meant a fourth style could
+   not be added without editing CSS. */
+.preset-panel[data-style-preset] .preset-option-cell[data-theme-style] {
   display: none;
 }
-.preset-panel[data-style-preset="illustrated"] .preset-option-cell[data-option-id="warm-graphite"],
-.preset-panel[data-style-preset="illustrated"] .preset-option-cell[data-option-id="cocoa-system"],
-.preset-panel[data-style-preset="illustrated"] .preset-option-cell[data-option-id="forest-ember"],
-.preset-panel[data-style-preset="illustrated"] .preset-option-cell[data-option-id="soft-glass"],
-.preset-panel[data-style-preset="illustrated"] .preset-option-cell[data-option-id="sand-workspace"],
-.preset-panel[data-style-preset="illustrated"] .preset-option-cell[data-option-id="apricot-agent"] {
-  display: none;
+
+.preset-panel[data-style-preset="native"] .preset-option-cell[data-theme-style="native"],
+.preset-panel[data-style-preset="illustrated"] .preset-option-cell[data-theme-style="illustrated"],
+.preset-panel[data-style-preset="studio"] .preset-option-cell[data-theme-style="illustrated"],
+.preset-panel[data-style-preset="workbuddy"] .preset-option-cell[data-theme-style="workbuddy"] {
+  display: grid;
 }
 
 /* Parameter sliders revealed under the active writing option. */
@@ -11981,4 +12076,1184 @@ pre {
     transition: none;
     filter: none;
   }
+}
+
+/* ================================================================== *
+ * WorkBuddy style
+ *
+ * Values transcribed from the shipped client, /Applications/WorkBuddy
+ * AI.app v5.2.7 — Contents/Resources/app.asar, renderer/assets/
+ * src-kZTgkaJN.css. Its own token layer is `--cb-*`; the light values
+ * are the ones cited here because that is what the client renders by
+ * default. Where the exact declaration is known it is quoted in a
+ * comment so a later reader can re-check it against the app instead of
+ * trusting this file.
+ * ================================================================== */
+
+/* `font-family` is inherited, so `body` resolves --font-ui against :root
+   and the *computed* stack inherits into the frame — the theme's own font
+   never applied, for any style. Declaring it here re-resolves against the
+   themed subtree. Native/Minimal are unaffected in practice: neither IBM
+   Plex nor Inter is bundled or linked, so both already fell through to the
+   system font. WorkBuddy's -apple-system does resolve, which is the point. */
+.preview-frame {
+  font-family: var(--font-ui);
+}
+
+/* ---- Turn layout: no avatars, no speaker labels ------------------- *
+ * The client shows neither. A turn is a gray pill on the right or bare
+ * text on the left, and nothing else. */
+.preview-frame[data-style-preset="workbuddy"] :is(.msg-avatar, .assistant-turn-label, .message-role) {
+  display: none;
+}
+
+/* ---- User turn: `._userMessageBubble_cko0t_8` --------------------- *
+ * padding: 8px 12px; border-radius: 16px 16px 0 16px;
+ * font-size: 13px; line-height: 19px; max-height: 310px; overflow-y: auto
+ * background: var(--cb-colleagues-remote-chip-border, #EBEBEB) */
+.preview-frame[data-style-preset="workbuddy"] .message-item[data-role="user"] .msg-surface {
+  padding: 8px 12px;
+  border-radius: 16px 16px 0 16px;
+  background: var(--surface-hover);
+  border: 0;
+  box-shadow: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 19px;
+  max-height: 310px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.preview-frame[data-style-preset="workbuddy"] .message-item[data-role="user"] .msg-surface p {
+  font-size: 13px;
+  line-height: 19px;
+}
+
+/* ---- Agent turn: no bubble, full measure ------------------------- */
+.preview-frame[data-style-preset="workbuddy"] :is(.assistant-turn, .assistant-lane) {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding-inline: 0;
+}
+
+.preview-frame[data-style-preset="workbuddy"] .message-bubble.lane-message .msg-surface {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding-inline: 0;
+  border-radius: 0;
+}
+
+/* ---- Tool calls: single-line rows -------------------------------- *
+ * `.single-line-tool-header .tool-icon { width: 14px; height: 14px;
+ *  color: var(--cb-text-tertiary) }` — the row is the whole affordance,
+ * so the card loses its own surface entirely. */
+.preview-frame[data-style-preset="workbuddy"] .tool-card {
+  background: transparent;
+  border: 0;
+  border-radius: var(--fn-r-sm, 4px);
+  box-shadow: none;
+}
+
+.preview-frame[data-style-preset="workbuddy"] .tool-card-header {
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 13px;
+  min-height: 22px;
+}
+
+.preview-frame[data-style-preset="workbuddy"] .tool-status-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+}
+
+.preview-frame[data-style-preset="workbuddy"] .tool-status-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* The base style paints a running title with a gradient clipped to the
+   glyphs (`background-clip: text; color: transparent`), so the text is
+   only visible where the sweep happens to be. The client's running row is
+   plain solid text.
+   The `[data-action]` and `.tool-card` parts are load-bearing, not
+   decoration: the shimmer selectors are
+   `.preview-frame .tool-card[data-running-title="true"][data-action]
+   .tool-title` at (0,5,0), so a shorter override silently loses. */
+.preview-frame[data-style-preset="workbuddy"] .tool-title,
+.preview-frame[data-style-preset="workbuddy"] .tool-card[data-action] .tool-title {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  -webkit-text-fill-color: currentcolor;
+  animation: none;
+}
+
+.preview-frame[data-style-preset="workbuddy"] .tool-card[data-action] .tool-file-row-status[data-active="true"] {
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+  color: var(--success);
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  -webkit-text-fill-color: currentcolor;
+  animation: none;
+}
+
+.preview-frame[data-style-preset="workbuddy"] .tool-card-header:hover .tool-title,
+.preview-frame[data-style-preset="workbuddy"] .tool-card-header:hover .tool-status-icon {
+  color: var(--text-primary);
+}
+
+/* File links inside a tool row: `--cb-text-link: #006ab1`. */
+.preview-frame[data-style-preset="workbuddy"] :is(.tool-title-file, .tool-file-row-name) {
+  color: var(--info);
+  font-size: 13px;
+}
+
+/* Status pill: `font-size: 12px; padding: 2px 8px; border-radius: 3px;
+   background-color: var(--cb-success-bg, rgba(16,185,129,0.1));
+   color: var(--cb-success-color, #10b981)` and the error variant
+   `color: var(--cb-text-error-active, #B42C3F)`. */
+.preview-frame[data-style-preset="workbuddy"] .tool-file-row-status {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+  color: var(--success);
+}
+
+.preview-frame[data-style-preset="workbuddy"] .tool-card[data-status="failed"] .tool-file-row-status {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: #b42c3f;
+}
+
+/* Awaiting approval: `outline: 2px solid var(--cb-vscode-textLink-foreground,
+   #3794ff); animation: border-ping 2s cubic-bezier(0,0,0.2,1) infinite`. */
+@keyframes wb-border-ping {
+  0% { outline-color: color-mix(in srgb, #3794ff 90%, transparent); outline-offset: 0; }
+  70% { outline-color: color-mix(in srgb, #3794ff 0%, transparent); outline-offset: 4px; }
+  100% { outline-color: color-mix(in srgb, #3794ff 0%, transparent); outline-offset: 4px; }
+}
+
+.preview-frame[data-style-preset="workbuddy"] .tool-card[data-status="awaiting_approval"] {
+  outline: 2px solid #3794ff;
+  outline-offset: 0;
+  border-radius: var(--fn-r-sm, 4px);
+  animation: wb-border-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* ---- Composer ---------------------------------------------------- *
+ * `--cb-input-border-color: rgba(0,0,0,0.15)`, focus
+ * `rgba(0,0,0,0.5)`; the send button is
+ * `--cb-send-button-loading-bg: rgba(0,0,0,0.9)` with
+ * `--cb-send-button-loading-color: rgba(255,255,255,0.9)`, round, icon
+ * only — no label. */
+.preview-frame[data-style-preset="workbuddy"] .composer-shell {
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: var(--surface-panel);
+}
+
+.preview-frame[data-style-preset="workbuddy"] .composer-shell:focus-within {
+  border-color: rgba(0, 0, 0, 0.5);
+  box-shadow: none;
+}
+
+/* Icon-only and round. The label ("发送") is a bare text node beside the
+   icon rather than an element, so there is nothing to `display: none` —
+   `font-size: 0` collapses it, and the icon is sized by its own width and
+   height attributes so it is unaffected. */
+.preview-frame[data-style-preset="workbuddy"] .ui-button.send-button[data-size] {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  gap: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--text-inverse);
+  font-size: 0;
+}
+
+/* The client keeps this button solid with an empty composer — the base
+   style fades it to 18% of the accent, which on a white canvas reads as a
+   disabled gray chip. */
+.preview-frame[data-style-preset="workbuddy"] .ui-button.send-button[data-size]:disabled {
+  background: var(--accent);
+  color: var(--text-inverse);
+  opacity: 1;
+}
+
+.preview-frame[data-style-preset="workbuddy"] .ui-button.send-button[data-size]:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preview-frame[data-style-preset="workbuddy"] .tool-card[data-status="awaiting_approval"] {
+    animation: none;
+  }
+}
+
+/* ---- Interaction: actions stay out of the way until asked for ---- *
+ * The client's conversation is bare until the pointer is on a turn.
+ * Both toolbars are `opacity: 0` and fade in over 0.2s:
+ *
+ *   ._userMessageToolbar_jakxt_5 {
+ *     position: absolute; right: 0; top: 100%;
+ *     gap: 8px; padding-top: 4px;
+ *     opacity: 0; transition: opacity 0.2s ease-in-out;
+ *   }
+ *   ._userMessageWrapper_jakxt_69:hover ._userMessageToolbar_ { opacity: 1 }
+ *
+ * Base AgentCanvas keeps `.message-actions` in flow and always visible, so
+ * the row of pills is what made this style read as "not WorkBuddy" even once
+ * the colors matched. */
+.preview-frame[data-style-preset="workbuddy"] .msg-stack,
+.preview-frame[data-style-preset="workbuddy"] .message-bubble.lane-message {
+  position: relative;
+  padding-bottom: 4px;
+}
+
+.preview-frame[data-style-preset="workbuddy"] .message-actions {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  gap: 8px;
+  padding-top: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.preview-frame[data-style-preset="workbuddy"] .msg-stack:hover .message-actions {
+  opacity: 1;
+}
+
+/* The agent side reveals at the group level, not per message:
+ *   .group-messages:has(.cb-assistant-message:hover) .cb-message-time-tip
+ * Scoped with :has() rather than `.assistant-turn:hover` so hovering the
+ * turn's padding does not count — only a message inside it does, which is
+ * what the client's selector says. */
+.preview-frame[data-style-preset="workbuddy"] .assistant-turn:has(.lane-message:hover) .message-actions {
+  opacity: 1;
+}
+
+/* Keyboard parity: hover-only reveals are unreachable without a pointer. */
+.preview-frame[data-style-preset="workbuddy"] .msg-stack:focus-within .message-actions,
+.preview-frame[data-style-preset="workbuddy"] .assistant-turn:focus-within .message-actions {
+  opacity: 1;
+}
+
+/* ---- Interaction: the disclosure arrow is hover-only ------------- *
+ *   .single-line-tool-header.collapsible:hover .tool-arrow { opacity: 1 }
+ *   .single-line-tool-header.collapsible.expanded .tool-arrow {
+ *     transform: rotate(0deg); opacity: 1 }
+ * The rotation already matches — `.preview-frame .chevron` is rotate(-90deg)
+ * collapsed and rotate(0deg) when `[data-open="true"]`. Only the reveal was
+ * missing, including the part where an expanded row keeps its arrow. */
+.preview-frame[data-style-preset="workbuddy"] .tool-disclosure-button {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out, color var(--motion-fast) var(--ease-out);
+}
+
+.preview-frame[data-style-preset="workbuddy"] .tool-card:hover .tool-disclosure-button,
+.preview-frame[data-style-preset="workbuddy"] .tool-card-header:focus-visible .tool-disclosure-button,
+.preview-frame[data-style-preset="workbuddy"] .tool-disclosure-button:focus-visible,
+.preview-frame[data-style-preset="workbuddy"] .tool-disclosure-button:has(.chevron[data-open="true"]) {
+  opacity: 1;
+}
+
+/* Hovering the row lightens the whole row at once, arrow included:
+ *   .collapsible:hover :is(.tool-icon, .status-text, .primary-content,
+ *   .secondary-info, .tool-arrow) { color: var(--cb-text-primary) } */
+.preview-frame[data-style-preset="workbuddy"] .tool-card-header:hover .tool-disclosure-button {
+  color: var(--text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preview-frame[data-style-preset="workbuddy"] .message-actions,
+  .preview-frame[data-style-preset="workbuddy"] .tool-disclosure-button {
+    transition: none;
+  }
+}
+
+/* ---- The 新建任务 / welcome screen ------------------------------- *
+ * Sourced from the client's home screen, which uses a second token
+ * layer (`--wb-*`) on top of `--cb-*`:
+ * renderer/assets/connector-C7gGcGMD.css.
+ *
+ * Note the illustration is NOT reproduced. The client's art (the cat
+ * mascot, `mascot-new-*.png` / `claw-welcome-light-*.svg`) is
+ * copyright Tencent Technology (Shenzhen) Company Limited; this repo is
+ * MIT and its export ships to third parties, so the layout leaves the
+ * 200px slot the client uses and nothing is bundled. Drop your own art
+ * into `.composer-greeting-illustration` to fill it. */
+
+/* .wb-home-header__title / __subtitle {
+ *   font-family: "PingFang SC", -apple-system, BlinkMacSystemFont,
+ *     "Helvetica Neue", sans-serif;
+ *   font-size: 36px; font-weight: 600; line-height: 48px;
+ *   letter-spacing: 0; margin: 0 } */
+.preview-frame[data-style-preset="workbuddy"] .composer-greeting-text {
+  margin: 0;
+  font-family: "PingFang SC", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 48px;
+  letter-spacing: 0;
+  color: var(--text-primary);
+}
+
+/* The client's title is text alone — the illustration is a separate
+   200px element by the composer, not an inline glyph. */
+.preview-frame[data-style-preset="workbuddy"] .composer-greeting-avatar {
+  display: none;
+}
+
+.preview-frame[data-style-preset="workbuddy"] .composer-greeting {
+  display: block;
+  gap: 0;
+}
+
+/* .wb-home-composer__chips { display: flex; flex-wrap: wrap; gap: 8px;
+ *   align-items: center; min-height: 32px } */
+.preview-frame[data-style-preset="workbuddy"] .prompt-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-height: 32px;
+}
+
+/* The visible category chips are `.quick-actions__item`, not
+ * `.wb-home-composer__chip` (which is the gray segmented variant):
+ *   height: 32px; padding: 0 12px; border-radius: 8px;
+ *   border: 1px solid var(--wb-border-default);
+ *   background: var(--wb-bg-primary); color: var(--wb-text-secondary);
+ *   font-size: 13px; font-weight: 500; gap: 4px
+ * --wb-border-default resolves to color-mix(black 8%, transparent). */
+.preview-frame[data-style-preset="workbuddy"] .prompt-shortcuts button {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 12px;
+  gap: 4px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--text-solid, #000) 8%, transparent);
+  background: var(--surface-panel);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.preview-frame[data-style-preset="workbuddy"] .prompt-shortcuts button:hover {
+  background: color-mix(in srgb, var(--text-solid, #000) 5%, transparent);
+  color: var(--text-primary);
+}
+
+.preview-frame[data-style-preset="workbuddy"] .prompt-shortcuts button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* .wb-home-composer__input-slot {
+ *   background: linear-gradient(180deg, #f0f0f0 0%, #f5f5f5 100%);
+ *   border-radius: 18px; min-height: 50px; padding: 2px 2px 4px 2px;
+ *   --cb-main-area-background: #ffffff }
+ *   > * { border-radius: 16px }
+ *
+ * A gradient frame holding a white panel — the faint double edge around
+ * the client's home composer. Drawn as a pseudo-element because
+ * `.composer-shell` is a grid with a gap, so painting the children white
+ * would show the gradient through as seams.
+ *
+ * Welcome-only: the in-conversation composer is a plain bordered box. */
+.preview-frame[data-style-preset="workbuddy"] .composer-frame[data-welcome="true"] .composer-shell {
+  position: relative;
+  border: 0;
+  border-radius: 16px;
+  background: var(--surface-panel);
+  box-shadow: none;
+}
+
+.preview-frame[data-style-preset="workbuddy"] .composer-frame[data-welcome="true"] .composer-shell::before {
+  content: "";
+  position: absolute;
+  inset: -2px -2px -4px;
+  z-index: -1;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #f0f0f0 0%, #f5f5f5 100%);
+}
+
+/* .vscode-dark .wb-home-composer__input-slot { background: #292929;
+ *   --cb-main-area-background: #1e1e1e } */
+.preview-frame[data-style-preset="workbuddy"][data-appearance="dark"]
+  .composer-frame[data-welcome="true"] .composer-shell::before {
+  background: #292929;
+}
+
+.preview-frame[data-style-preset="workbuddy"][data-appearance="dark"]
+  .composer-frame[data-welcome="true"] .composer-shell {
+  background: #1e1e1e;
+}
+
+/* Round icon buttons inside the home composer:
+ *   .wb-home-composer__input-slot [class*=icon]:not([class*=Labeled]) {
+ *     border-radius: 50% } */
+.preview-frame[data-style-preset="workbuddy"] .composer-frame[data-welcome="true"] .icon-button {
+  border-radius: 50%;
+}
+
+/* The 200px illustration slot, left empty on purpose — see the note at
+   the top of this section. */
+.preview-frame[data-style-preset="workbuddy"] .composer-greeting-illustration {
+  width: 200px;
+  height: auto;
+  display: block;
+}
+
+/* The welcome canvas carries a blue radial glow —
+   `.preview-stack[data-welcome="true"]::before`, rgba(166,202,255,.6) at
+   104% -48%. `.preview-stack` sits INSIDE `.preview-frame`, so this is
+   part of the previewed product and ships with the export, not builder
+   chrome. The client's home canvas is flat, so it goes. */
+.preview-frame[data-style-preset="workbuddy"] .preview-stack[data-welcome="true"]::before {
+  display: none;
+}
+
+/* ================================================================== *
+ * Rail top level — four destinations (File / Theme / Components /
+ * Model), modelled on Figma's left rail.
+ *
+ * Replaces the previous top level: four quiet section labels over
+ * thirteen preset groups, which put all thirteen at the same depth. The
+ * groups are still there, one level down under Components.
+ * ================================================================== */
+
+.nav-section-tile {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 5px;
+  padding: 9px 2px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-out);
+}
+
+.nav-section-glyph {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 30px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  transition: background var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
+}
+
+.nav-section-label {
+  font-size: 10px;
+  line-height: 1.15;
+  text-align: center;
+  letter-spacing: -0.01em;
+  color: var(--text-secondary);
+}
+
+.nav-section-tile:hover .nav-section-glyph {
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  color: var(--text-primary);
+}
+
+/* Figma's active destination is a tinted block behind a tinted icon, not a
+   gray one — the selection reads as "you are here" instead of "hovered". */
+.nav-section-tile[data-active="true"] .nav-section-glyph {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.nav-section-tile[data-active="true"] .nav-section-label {
+  color: var(--text-primary);
+}
+
+/* ---- File destination: the layer list ---------------------------- */
+
+.layers-panel {
+  display: grid;
+  align-content: start;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.layers-panel-head {
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Label that becomes a field. Sized and padded identically to the input below
+   so the row does not shift when it turns into one. */
+.layers-panel-title {
+  display: block;
+  width: 100%;
+  padding: 3px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 620;
+  /* Pinned, not `normal`: a button resolves `normal` against its text line box
+     and an input against its own intrinsic height, which made the label 28px
+     and the field 25px — the row jumped 3px on every click. Both are now
+     20 + 3 + 3 + 1 + 1 = 28px. */
+  line-height: 20px;
+  text-align: left;
+  cursor: text;
+  transition: background var(--motion-fast) var(--ease-out);
+}
+
+/* Same hover fill as the icon rail's tiles, so a hoverable thing looks the same
+   wherever it is in the rail. */
+.layers-panel-title:hover {
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+}
+
+.layers-panel-title-input {
+  display: block;
+  width: 100%;
+  padding: 3px 6px;
+  /* Must match .layers-panel-title exactly — see the note there. */
+  line-height: 20px;
+  /* The selection orange, matching the canvas highlight — being edited and
+     being selected are the same state as far as the reader is concerned. */
+  border: 1px solid #ff6a00;
+  border-radius: 6px;
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 620;
+  outline: 0;
+}
+
+.layers-panel-title-input::selection {
+  background: rgb(255 106 0 / 0.2);
+}
+
+.layers-panel-section {
+  display: grid;
+  gap: 2px;
+  padding: 12px 8px;
+}
+
+.layers-panel-section-title {
+  padding: 0 6px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.layers-list {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A disclosure header. The chevron replaces the group's icon: with the options
+   nested underneath, what the row needs to say is whether it is open, not what
+   kind of group it is — the name already says that. */
+.group-row {
+  padding-left: 8px;
+  font-size: 13px;
+}
+
+.group-row[aria-expanded="true"] {
+  color: var(--text-primary);
+  font-weight: 560;
+}
+
+.group-row-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  /* Pointing right when closed, down when open. */
+  transform: rotate(-90deg);
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+
+.group-row[aria-expanded="true"] .group-row-chevron {
+  transform: rotate(0deg);
+  color: var(--text-secondary);
+}
+
+/* The nested options. Indented to the chevron's text so the containment is
+   legible, and no longer its own scroll container — the group list scrolls. */
+.group-row-body > .preset-panel-body {
+  padding: 6px 8px 10px 22px;
+  overflow: visible;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+/* Row, not card: a layer list is scanned top to bottom, so the rows share
+   edges. The indent is Figma's — it leaves room for the disclosure arrow a
+   nested layer will need. */
+.layers-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px 6px 22px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
+}
+
+.layers-row:hover {
+  background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+  color: var(--text-primary);
+}
+
+.layers-row[data-active="true"] {
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  color: var(--text-primary);
+}
+
+.layers-row-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+}
+
+.layers-row[data-active="true"] .layers-row-icon {
+  color: var(--text-secondary);
+}
+
+.layers-row-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Theme destination: the style cards now live in one column --- *
+ * They used to sit above BOTH columns with 304px to show 550px of cards, so
+ * the fourth was off-screen. Inside the panel they wrap into a grid, and the
+ * icon rail no longer shifts down ~300px when Theme opens. */
+.preset-panel .preset-style-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  overflow: visible;
+}
+
+/* The card is ~106px wide in this column, so a long product name has to be
+   allowed to shrink rather than run past the edge — "WorkBuddy" was clipped. */
+.preset-panel .preset-style-card {
+  min-width: 0;
+}
+
+.preset-panel .preset-style-card-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+/* ---- Region labels over the canvas ------------------------------- *
+ * One label per column, in the reference's treatment: gray, left-aligned to
+ * the column's left edge, sitting above the frame. */
+/* Positioned against the zoom wrapper, in the gap the frame's margin opens up
+   above it. It used to be a child of the frame at `top: -26px`, which the
+   frame's `overflow: hidden` clipped away entirely. */
+.region-labels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 1px;
+  pointer-events: none;
+}
+
+.region-label {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding-left: 2px;
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.region-label[data-active="true"] {
+  color: var(--text-secondary);
+}
+
+.region-label-count {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The labels are absolutely positioned against the frame, and they sit above
+   it, so the frame needs room for them and a positioning context.
+
+   The room is taken symmetrically: `margin-top` alone (with the frame's
+   `height: 100%`) pushed the frame 26px past the bottom of the canvas, which
+   read as "sitting too low" because it was — the bottom edge was clipped.
+   `height: auto` lets the stretch alignment account for the margins, so the
+   frame is centred with the labels living in the gap above it. */
+.builder-surface .preview-frame {
+  position: relative;
+  height: auto;
+  margin-top: 26px;
+  margin-bottom: 26px;
+}
+
+/* Canvas magnification.
+   `zoom` rather than `transform: scale()` on purpose: it scales the rendered
+   box in the parent's layout, so a magnified canvas produces real scrollable
+   overflow and a shrunk one really is smaller (auto margins can centre it).
+   A transform would leave a 100%-sized hole in the layout either way.
+   Percentages inside still resolve against the frame's own unscaled box, so
+   the design does not reflow — which is the whole point of zoom. */
+.canvas-zoom {
+  display: grid;
+  /* Containing block for the region labels. */
+  position: relative;
+  zoom: var(--canvas-zoom, 1);
+  /* The `* var(--canvas-zoom)` is not redundant. Under `zoom`, a percentage
+     resolves against the containing block *divided by* the zoom factor, so a
+     plain `width: 100%` renders at exactly the container's size no matter the
+     zoom — the element just re-lays-out its contents into a smaller coordinate
+     space, which is a reflow, the one thing zoom must not do. Multiplying the
+     percentage back out gives a layout box that is always the unzoomed
+     container size, and a rendered box that scales. Measured: at 200% the frame
+     lays out at 1248px and renders at 2496px. */
+  width: calc(100% * var(--canvas-zoom, 1));
+  height: calc(100% * var(--canvas-zoom, 1));
+  min-width: 0;
+  min-height: 0;
+  /* Centres the canvas when it is smaller than the surface; collapses to 0 and
+     lets it overflow (scrollably) when it is bigger. */
+  margin: auto;
+}
+
+.builder-surface[data-canvas-zoomed="true"] {
+  overflow: auto;
+}
+
+/* An empty column still reads as a column. Without this a region with no
+   enabled slot collapses to nothing and the canvas looks broken rather than
+   unconfigured.
+
+   No `background`: the column shows the surface its style gives it, which for
+   the centre and right columns is the frame's panel white. Two wrong answers
+   came before this one — painting them `--surface-panel` explicitly (which also
+   overrode the sidebar's tint, making all three white) and then painting them
+   `--surface-inset` (which made all three the tint). The theme already says
+   what each column is: in 柔光玻璃 the sidebar is #F4F6FA and the rest is
+   #FFFFFF. */
+.preview-frame .preview-stack:empty,
+.preview-frame .right-panel:empty {
+  min-height: 100%;
+}
+
+/* The welcome state paints two tinted radial washes over the centre column.
+   With nothing configured there is no welcome content for them to sit behind,
+   so an unconfigured canvas is three plain panels — the tint made the middle
+   column look like a different kind of surface from its neighbours. */
+.preview-frame .preview-stack[data-welcome="true"]:empty::before,
+.preview-frame .preview-stack[data-welcome="true"]:empty::after {
+  display: none;
+}
+
+/* Layer children: what is placed in a column. */
+.layers-children {
+  display: grid;
+  gap: 1px;
+  margin: 1px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.layers-row--child {
+  padding-left: 40px;
+  cursor: default;
+  color: var(--text-muted);
+}
+
+.layers-row--child:hover {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.layers-row-count,
+.structure-column-count {
+  margin-left: auto;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.structure-column-count {
+  margin-left: 6px;
+}
+
+.structure-column-label {
+  display: flex;
+  align-items: center;
+}
+
+/* A region with no component in it. Rendered as an element rather than skipped
+   so the column keeps its width — otherwise enabling one component made the
+   other two columns disappear, and you could not see where the next one lands. */
+.preview-frame .region-empty,
+.preview-frame .right-panel[data-empty="true"] {
+  box-shadow: none;
+}
+
+/* No `border: 0` above. The native style hides the resize handle's line and
+   draws the centre/right divider as `.right-panel`'s own `border-left`, so
+   zeroing the border on an empty right panel deleted the only thing separating
+   the two columns — verified by clipping in at 8x: pure white where the line
+   should be. Column dividers are structure, not decoration on a component. */
+
+/* ================================================================== *
+ * Canvas selection — regions and components
+ *
+ * One appearance for both hover and selection, because they answer the
+ * same question: which thing am I about to act on. Drawn as an overlay
+ * (`::after`, inset 0) rather than a real border so nothing reflows when
+ * it appears — a 1px border on a column would shift every component
+ * inside it.
+ * ================================================================== */
+
+.preview-frame {
+  --select-line: #ff6a00;
+  --select-fill: rgb(255 106 0 / 0.2);
+}
+
+.preview-frame :is(.session-sidebar, .preview-stack, .right-panel, .chat-frame, .composer-frame, .artifact-frame, .git-panel) {
+  position: relative;
+}
+
+/* The modules a layer row can name, which are finer than a component: the
+   conversation list inside the sidebar, the new-chat button, the search
+   control, the date headings, the version footer. They need the same overlay
+   box as the components so a row can highlight the thing it actually names. */
+.preview-frame :is(.artifact-frame, .chat-frame, .composer-frame, .git-panel, .session-footer, .session-group > h4, .session-list, .session-new, .session-search-menu) {
+  position: relative;
+}
+
+.preview-frame :is(.artifact-frame, .chat-frame, .composer-frame, .git-panel, .session-footer, .session-group > h4, .session-list, .session-new, .session-search-menu)::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: 6;
+  border: 1px solid var(--select-line);
+  border-radius: 4px;
+  background: var(--select-fill);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--ease-out);
+}
+
+.preview-frame :is(.session-sidebar, .preview-stack, .right-panel, .chat-frame, .composer-frame, .artifact-frame, .git-panel)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  border: 1px solid var(--select-line);
+  background: var(--select-fill);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--ease-out);
+}
+
+/* ---- Hover ------------------------------------------------------- *
+ * Innermost wins, at any depth. One rule for every highlightable thing:
+ * it lights on hover unless something highlightable inside it is hovered.
+ * `:has()` only looks at descendants, so the innermost hovered target has
+ * nothing to disqualify it and lights; each ancestor is disqualified by the
+ * child under the pointer.
+ *
+ * Written as one list rather than a rule per level because the levels are
+ * not fixed — a column contains components, a component contains modules,
+ * and a module can contain the next thing added. The three hand-written
+ * rules this replaces guarded each level against a hardcoded list of its
+ * children, so the sidebar (which had no guard at all) lit up together with
+ * the conversation list inside it. */
+.preview-frame :is(.session-sidebar, .preview-stack, .right-panel, .chat-frame, .composer-frame, .artifact-frame, .git-panel, .session-list, .session-new, .session-search-menu, .session-group > h4, .session-footer):hover:not(:has(:is(.session-sidebar, .preview-stack, .right-panel, .chat-frame, .composer-frame, .artifact-frame, .git-panel, .session-list, .session-new, .session-search-menu, .session-group > h4, .session-footer):hover))::after {
+  /* `display` as well as `opacity`: the native style carries an older
+     `> .session-sidebar::after { display: none }`, and a hidden box cannot be
+     faded in. */
+  display: block;
+  opacity: 1;
+}
+
+/* ---- Selected from the Layers list ------------------------------- *
+ * `data-selected-layer` names a column, `data-selected-slot` names a
+ * component; both are set on the frame so the highlight can be found from
+ * outside the components. */
+.preview-frame[data-selected-layer="left"] > .session-sidebar::after,
+.preview-frame[data-selected-layer="center"] .preview-stack::after,
+.preview-frame[data-selected-layer="right"] .right-panel::after {
+  display: block;
+  opacity: 1;
+}
+
+/* One rule per layer row, keyed by the row's own id — slot ids and preset
+   option ids alike. Keep in step with `LAYER_HIGHLIGHT_SELECTORS`;
+   `layerHighlightCoverage.test.ts` fails if they drift.
+
+   `sessions` points at `.session-list`, not `.session-sidebar`: a row that says
+   "会话列表" should light the conversation list, not the whole left column. */
+.preview-frame[data-selected-module="sessions"] .session-list::after,
+.preview-frame[data-selected-module="chat"] .chat-frame::after,
+.preview-frame[data-selected-module="composer"] .composer-frame::after,
+.preview-frame[data-selected-module="output"] .artifact-frame::after,
+.preview-frame[data-selected-module="git"] .git-panel::after,
+.preview-frame[data-selected-module="sidebar-new-button"] .session-new::after,
+.preview-frame[data-selected-module="sidebar-search"] .session-search-menu::after,
+.preview-frame[data-selected-module="sidebar-grouping"] .session-group > h4::after,
+.preview-frame[data-selected-module="sidebar-footer"] .session-footer::after {
+  display: block;
+  opacity: 1;
+}
+
+/* The Layers row for the selected thing uses the same colour, so the list
+   and the canvas read as one selection rather than two. */
+.layers-row[data-active="true"] {
+  background: var(--select-fill);
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px var(--select-line, #ff6a00);
+}
+
+.region-label[data-active="true"] {
+  color: #ff6a00;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preview-frame :is(.session-sidebar, .preview-stack, .right-panel, .chat-frame, .composer-frame, .artifact-frame, .git-panel)::after {
+    transition: none;
+  }
+}
+
+/* The left column keeps the style's own sidebar tint even when empty
+   (`--native-sidebar-bg`), so an unconfigured canvas already shows the theme it
+   is set to rather than three identical white panels. This rule used to force
+   `--surface-panel` here to make the three columns match; matching them meant
+   overriding the theme, which is the wrong trade. */
+
+/* Icon-only topbar controls (preview). Square so the icon is optically centred
+   rather than sitting in a text button's asymmetric padding. */
+/* Canvas zoom readout. Sits with the topbar's controls but reads as a field
+   rather than a button — it is the current value, and it is editable. */
+.zoom-control {
+  position: relative;
+  display: flex;
+}
+
+.zoom-trigger {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  height: 32px;
+  padding: 0 8px 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--surface-inset);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-out);
+}
+
+.zoom-trigger:hover {
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+
+.zoom-trigger-value {
+  /* Tabular so the control does not resize as the number changes width. */
+  font-variant-numeric: tabular-nums;
+  min-width: 34px;
+  text-align: left;
+}
+
+.zoom-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 208px;
+  padding: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-panel);
+  box-shadow: 0 12px 32px rgba(13, 18, 28, 0.14), 0 2px 6px rgba(13, 18, 28, 0.06);
+}
+
+.zoom-menu-field {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #ff6a00;
+  border-radius: 6px;
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  line-height: 20px;
+  outline: 0;
+}
+
+.zoom-menu-field::selection {
+  background: rgb(255 106 0 / 0.2);
+}
+
+.zoom-menu-items {
+  display: flex;
+  flex-direction: column;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.zoom-menu-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.zoom-menu-item:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+}
+
+.zoom-menu-item:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.zoom-menu-item-hint {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--surface-inset);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.topbar-icon-button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--fn-r-sm);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-out);
+}
+
+.topbar-icon-button:hover {
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+}
+
+/* The panel stacks a variable number of blocks: some destinations lead with a
+   group list or with the style cards, then the header, then the body.
+   `.preset-panel` declares two explicit grid rows, so a third child lands on an
+   implicit one — which put the header on the `minmax(0, 1fr)` track and the
+   body on an `auto` track. With a tall body the 1fr resolved to 0px and the
+   header's 20px title overflowed onto the content below it. Theme and Structure
+   only escaped it because their bodies happened to be shorter.
+   Flex column sizes each block from its own content and lets only the body
+   flex, so the number of leading blocks stops mattering. */
+.preset-panel:is([data-nav-section="structure"], [data-nav-section="components"], [data-nav-section="theme"]) {
+  display: flex;
+  flex-direction: column;
+}
+
+.preset-panel:is([data-nav-section="structure"], [data-nav-section="components"], [data-nav-section="theme"])
+  > :is(.preset-style-cards, .preset-panel-header) {
+  flex: none;
+}
+
+/* Structure and Components nest their options inside the group list, so the
+   list *is* the body — it takes the leftover height and scrolls. It used to be
+   `flex: none` alongside the style cards, which was right when the options
+   lived in a separate `.preset-panel-body` below it. Left that way, a group
+   with many options grew the list past the bottom of the window and the groups
+   below it became unreachable: measured 1803px of list in an 848px rail. */
+.preset-panel:is([data-nav-section="structure"], [data-nav-section="components"]) > .group-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: 8px;
+  scrollbar-width: none;
+}
+
+.preset-panel:is([data-nav-section="structure"], [data-nav-section="components"])
+  > .group-list::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+
+.preset-panel:is([data-nav-section="structure"], [data-nav-section="components"], [data-nav-section="theme"])
+  > .preset-panel-body {
+  flex: 1;
+  min-height: 0;
 }

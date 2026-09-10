@@ -1,4 +1,4 @@
-import { Braces, Copy, FileCode2, FileText, PanelsTopLeft, TerminalSquare } from "lucide-react";
+import { Braces, Copy, FileCode2, FileText, PanelsTopLeft, TerminalSquare } from "../../../agentmatrix/uiIcons";
 import type { AgentUXArtifactTimelineItem } from "@agent-ux/render-core";
 
 import type { AgentFrontendProject, OutputSource } from "../../../schema/agentuxConfig";

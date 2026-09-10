@@ -129,11 +129,29 @@ export async function clickRail(page, label) {
  * locale-dependent — the same tile reads "对话" or "Chat" — so a label-keyed tour only
  * records in one language. The group id is the one identifier that is neither.
  */
+/**
+ * Make a rail tile actually measurable before reading its box.
+ *
+ * Two ways it can be unmeasurable. A tile inside a collapsed section is still in the DOM,
+ * so a query finds it but measures a 0x0 box at the origin — the pointer would fly to the
+ * top-left corner and the click would land on something invisible. And the rail scrolls
+ * once there are more groups than fit, so a tile can be real but below the fold.
+ *
+ * Opening the section and scrolling the tile into view is what a viewer would do anyway,
+ * and it keeps these helpers correct however long the rail gets — the alternative is a
+ * caller-side viewport-height guess that silently rots the next time a group is added.
+ */
+const REVEAL_TILE = (groupId) =>
+  `const el = document.querySelector('button.preset-icon-tile[data-preset-group="${groupId}"]');
+   if (!el) return "MISS";
+   const section = el.closest("details.preset-iconbar-group");
+   if (section && !section.open) section.open = true;
+   el.scrollIntoView({ block: "center", inline: "nearest" });`;
+
 export async function clickRailTile(page, groupId) {
   const result = await evaluate(
     page,
-    `const el = document.querySelector('button.preset-icon-tile[data-preset-group="${groupId}"]');
-     if (!el) return "MISS";
+    `${REVEAL_TILE(groupId)}
      const r = el.getBoundingClientRect();
      el.click();
      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };`,
@@ -146,13 +164,13 @@ export async function clickRailTile(page, groupId) {
 
 /** Rect of a rail tile without clicking it, for moving a pointer there first. */
 export async function railTileCenter(page, groupId) {
-  return evaluate(
+  const result = await evaluate(
     page,
-    `const el = document.querySelector('button.preset-icon-tile[data-preset-group="${groupId}"]');
-     if (!el) return null;
+    `${REVEAL_TILE(groupId)}
      const r = el.getBoundingClientRect();
      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };`,
   );
+  return result === "MISS" ? null : result;
 }
 
 /**

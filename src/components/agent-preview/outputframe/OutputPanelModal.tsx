@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { X } from "../../../agentmatrix/uiIcons";
 import { useEffect } from "react";
 
 import { useCopy } from "../../../i18n/LocaleContext";

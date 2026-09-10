@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "../../agentmatrix/uiIcons";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { AgentUXToolTimelineItem } from "@agent-ux/render-core";
 

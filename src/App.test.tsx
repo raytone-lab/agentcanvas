@@ -4,10 +4,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { App, STYLE_AVATAR_DEFAULTS, selectedComponentItemsForProject } from "./App";
 import { ICON_OPTIONS, IconSetProvider } from "./agentmatrix";
-import { defaultCodingAgentProject } from "./schema/agentuxConfig";
+import { defaultCodingAgentProject, emptyStructureProject } from "./schema/agentuxConfig";
 import { applyPresetOption, togglePresetOption } from "./schema/presetActions";
+import { presetRailSections } from "./app/projection/presetRailData";
+import { createInitialWorkspaceState } from "./app/state/workspaceState";
 import { presetGroupsForProject } from "./schema/presets";
-import { themeTokens } from "./theme/themeTokens";
+import { nativeThemePresetIds, themeTokens } from "./theme/themeTokens";
 
 vi.mock("./agentux", () => ({
   useAgentUXRuntime: () => ({ replay: vi.fn() }),
@@ -34,20 +36,32 @@ function cssRule(styles: string, selector: string): string {
 }
 
 function visiblePresetGroupsForTest(project: typeof defaultCodingAgentProject) {
-  return presetGroupsForProject(project).filter((group) => group.id !== "render");
+  return presetGroupsForProject(project);
 }
 
 describe("App shell controls", () => {
-  it("keeps save and selected components in the topbar without preview controls", () => {
+  it("keeps preview and export in the topbar, and nothing else", () => {
     const controls = topbarControls(renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>));
 
-    expect(controls).toContain('aria-label="保存"');
-    expect(controls).toContain("已选组件");
-    expect(controls).toContain("下载 Agent");
-    expect(controls).not.toContain('aria-label="预览"');
-    expect(controls).not.toContain('topbar-preview-button');
+    // Two controls: enter the preview surface, and export a project.
+    expect(controls).toContain("topbar-preview-button");
+    expect(controls).toContain("Export");
+    // The component count moved to File → Layers, which lists the same
+    // components by the column they sit in.
+    expect(controls).not.toContain("已选组件");
+    // "保存" is gone because it never saved: it snapshotted the project and
+    // entered the preview surface, which is what the preview control does now
+    // under an honest label. Nothing is written to disk, and the canvas already
+    // renders the configuration as it is edited.
+    expect(controls).not.toContain('aria-label="保存"');
+    // The debug-view toggle is hidden for now.
+    expect(controls).not.toContain("mode-toggle-button");
+    // Still no preview *run* controls up here — run status, scenario picker and
+    // replay belong to the preview surface, not the editor chrome. (The two
+    // assertions that used to sit here, against `aria-label="预览"` and
+    // `topbar-preview-button`, were written when there was no preview control
+    // at all; they now contradict the one above.)
     expect(controls).not.toContain('run-status-line');
-    expect(controls).not.toContain(">保存</button>");
     expect(controls).not.toContain("<select");
     expect(controls).not.toContain("Run replay");
   });
@@ -101,9 +115,9 @@ describe("App shell controls", () => {
     expect(defaultItems.some((item) => item.id === "reasoning-public-summary")).toBe(false);
     expect(sidebarItems.some((item) => item.id === "sidebar-search")).toBe(false);
     expect(sidebarItems.some((item) => item.id === "sidebar-new-button")).toBe(false);
-    expect(sidebarItems.some((item) => item.group === "左侧栏")).toBe(false);
+    expect(sidebarItems.some((item) => item.group === "左导航")).toBe(false);
     expect(outputItems.some((item) => item.id === "output-source-artifact")).toBe(false);
-    expect(outputItems.some((item) => item.group === "输出")).toBe(false);
+    expect(outputItems.some((item) => item.group === "右面板")).toBe(false);
     expect(gitItems.some((item) => item.id === "branch-status")).toBe(false);
     expect(gitItems.some((item) => item.group === "Git")).toBe(false);
     expect(hiddenOptionItems.some((item) => item.id === "error-collapse")).toBe(false);
@@ -119,8 +133,10 @@ describe("App shell controls", () => {
     const indexOf = (id: string) => items.findIndex((item) => item.id === id);
 
     expect(indexOf("state:author.user")).toBeLessThan(indexOf("writing-smooth"));
-    expect(indexOf("thinking-wave")).toBeLessThan(indexOf("sidebar-visible"));
-    expect(indexOf("sidebar-visible")).toBeLessThan(indexOf("output-visible"));
+    // Structure precedes event flow, and within Structure the order is spatial
+    // (left nav → chat area → composer → right panel).
+    expect(indexOf("sidebar-visible")).toBeLessThan(indexOf("state:author.user"));
+    expect(indexOf("output-visible")).toBeLessThan(indexOf("thinking-wave"));
     expect(indexOf("message-actions")).toBe(-1);
     expect(indexOf("message-action:userCopy")).toBeGreaterThan(indexOf("speaker-labels"));
   });
@@ -137,13 +153,221 @@ describe("App shell controls", () => {
     expect(thumbRule).toContain("background: color-mix(in srgb, var(--text-muted) 34%, transparent);");
   });
 
-  it("keeps generated preview as the primary workspace surface", () => {
+  it("opens on three labelled columns with nothing in them", () => {
+    // The editor used to open on a populated agent (welcome greeting +
+    // composer). It now opens on the declared regions: the canvas always shows
+    // the current configuration, and the starting configuration has nothing
+    // enabled. The surface itself is unchanged — still the generated scaffold,
+    // not a separate mock.
     const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
 
     expect(markup).toContain('class="builder-surface" data-output-zone="generated-scaffold"');
-    expect(markup).toContain('data-welcome="true"');
-    expect(markup).toContain("Meet My Agent ~");
-    expect(markup).toContain("选择风格");
+    // Columns come from `layout.regions`, so all three are present even though
+    // every slot is disabled. This is the linkage the canvas exists for: an
+    // empty column is where the next component will land, and it has to be
+    // visible for that to mean anything.
+    expect(markup.match(/class="region-label"/g)?.length).toBe(3);
+    for (const layer of ["左栏", "中栏", "右栏"]) {
+      expect(markup).toContain(layer);
+    }
+    // An empty region renders a placeholder element rather than nothing, or the
+    // column would collapse to zero width.
+    expect(markup).toContain("region-empty");
+    // No populated agent on first paint.
+    expect(markup).not.toContain("Meet My Agent ~");
+  });
+
+  it("opens the rail on File, with the layer list showing", () => {
+    const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
+
+    expect(markup).toContain('data-nav-section="file" data-active="true"');
+    expect(markup).toContain('class="layers-panel"');
+    // Six destinations, not the thirteen preset groups that used to be here:
+    // File, Structure, Theme, Components, Model, Git. Structure and Components
+    // were two sections of one list; each is a destination now.
+    expect(markup.match(/class="nav-section-tile"/g)?.length).toBe(6);
+    for (const section of ["structure", "git"]) {
+      expect(markup).toContain(`data-nav-section="${section}"`);
+    }
+    // The style picker moved into Theme; it is no longer always on screen (it
+    // was clipped there — 550px of cards in a 304px column).
+    expect(markup).not.toContain("选择风格");
+  });
+
+  it("opens with the project unnamed and the name editable", () => {
+    const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
+
+    // The panel title is `project.name`, not a fixed label — the same field the
+    // export turns into the package name. It starts blank, so what shows is the
+    // localised placeholder.
+    expect(markup).toContain('class="layers-panel-title"');
+    expect(markup).toContain(">未命名<");
+    // A button, so it is reachable by keyboard and reads as editable. It used to
+    // be a <span>.
+    expect(markup).toMatch(/<button[^>]*class="layers-panel-title"/);
+  });
+
+  it("styles the name field with the selection orange and the rail's hover fill", () => {
+    // Two borrowed tokens, on purpose: hovering the name should look like
+    // hovering an icon tile, and editing it should look like a selection on the
+    // canvas. Hardcoded here because a drift in either would make the name look
+    // like a different kind of control than it is.
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+    const ruleFor = (selector: string) => cssRule(styles, selector);
+    const hoverRule = ruleFor(".layers-panel-title:hover");
+    expect(hoverRule).toContain("color-mix(in srgb, var(--text-primary) 6%, transparent)");
+    expect(ruleFor(".nav-section-tile:hover .nav-section-glyph")).toContain(
+      "color-mix(in srgb, var(--text-primary) 6%, transparent)",
+    );
+
+    const inputRule = ruleFor(".layers-panel-title-input");
+    expect(inputRule).toContain("border: 1px solid #ff6a00;");
+    expect(ruleFor(".layers-panel-title-input::selection")).toContain("rgb(255 106 0 / 0.2)");
+
+    // Label and field share padding and type so the row does not jump when it
+    // swaps.
+    // line-height included deliberately: `normal` resolves differently for a
+    // button than for an input, which made the row jump 3px on click.
+    for (const declaration of [
+      "padding: 3px 6px;",
+      "font-size: 14px;",
+      "font-weight: 620;",
+      "line-height: 20px;",
+    ]) {
+      expect(ruleFor(".layers-panel-title")).toContain(declaration);
+      expect(inputRule).toContain(declaration);
+    }
+  });
+
+  it("puts a zoom readout left of Export", () => {
+    const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
+    const controls = topbarControls(markup);
+
+    expect(controls).toContain('class="zoom-trigger"');
+    expect(controls).toContain("100%");
+    // Order matters: Export is the last thing in the bar.
+    expect(controls.indexOf("zoom-trigger")).toBeLessThan(controls.indexOf("topbar-deploy-button"));
+    // The menu is closed until asked for.
+    expect(controls).not.toContain('class="zoom-menu"');
+  });
+
+  it("magnifies the canvas without reflowing it", () => {
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+    const zoomRule = cssRule(styles, ".canvas-zoom");
+
+    expect(zoomRule).toContain("zoom: var(--canvas-zoom, 1);");
+    // The `* var(--canvas-zoom)` is the whole trick. Under `zoom`, percentages
+    // resolve against the containing block divided by the zoom factor, so a
+    // plain `width: 100%` keeps the rendered size fixed and re-lays-out the
+    // contents smaller — a reflow, which is the one thing zoom must not do.
+    // Measured in Chrome: with the multiplier, a 200% canvas lays out at 1248px
+    // and renders at 2496px; without it, it lays out at 624px and renders at
+    // 1248px.
+    expect(zoomRule).toContain("width: calc(100% * var(--canvas-zoom, 1));");
+    expect(zoomRule).toContain("height: calc(100% * var(--canvas-zoom, 1));");
+    // Only a magnified canvas scrolls; at 100% sub-pixel rounding would put a
+    // scrollbar on an unzoomed canvas.
+    expect(cssRule(styles, '.builder-surface[data-canvas-zoomed="true"]')).toContain("overflow: auto;");
+  });
+
+  it("centres the canvas frame and keeps the region labels outside its clip", () => {
+    const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+
+    // Equal margins top and bottom. `margin-top` alone, against the frame's
+    // `height: 100%`, pushed the frame past the bottom edge of the canvas — it
+    // read as sitting too low because it was clipped there.
+    const frameRule = cssRule(styles, ".builder-surface .preview-frame");
+    expect(frameRule).toContain("height: auto;");
+    expect(frameRule).toContain("margin-top: 26px;");
+    expect(frameRule).toContain("margin-bottom: 26px;");
+
+    // The labels sit in that gap, as a sibling of the frame. They used to be a
+    // child at `top: -26px`, which the frame's `overflow: hidden` clipped away
+    // entirely — they were in the markup and never on screen.
+    expect(cssRule(styles, ".region-labels")).toContain("top: 0;");
+    expect(markup.indexOf('class="region-labels"')).toBeLessThan(markup.indexOf('class="preview-frame"'));
+  });
+
+  it("nests each group's options under the group, with the first one open", () => {
+    const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
+    // The rail opens on File, so drive it to Structure the way the app does.
+    expect(markup).toContain('data-nav-section="structure"');
+
+    // The default selected group is the first Structure group, so 架构 opens
+    // with 左栏 expanded rather than a group from the middle of the list.
+    expect(createInitialWorkspaceState("zh").selectedGroup).toBe("sidebar");
+    expect(presetRailSections.find((section) => section.id === "structure")?.groupIds[0]).toBe("sidebar");
+  });
+
+  it("gives the group list the leftover height so long groups scroll", () => {
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+
+    // One row, not two. The second row dated from when the style cards sat
+    // above the columns; empty, it left the columns content-sized, so the rail
+    // could not bound its own children.
+    expect(cssRule(styles, ".preset-nav")).toContain("grid-template-rows: minmax(0, 1fr);");
+
+    // With the options nested inside it, the list is the panel body — it takes
+    // the leftover height and scrolls. Measured before the fix: 1803px of list
+    // in an 848px rail, with the groups below the open one unreachable.
+    const listRule = cssRule(
+      styles,
+      '.preset-panel:is([data-nav-section="structure"], [data-nav-section="components"]) > .group-list',
+    );
+    expect(listRule).toContain("flex: 1;");
+    expect(listRule).toContain("min-height: 0;");
+    expect(listRule).toContain("overflow-y: auto;");
+
+    // The nested body must not be a second scroll container, or the fade mask
+    // and its own scrollbar would sit inside the one that already scrolls.
+    const nestedRule = cssRule(styles, ".group-row-body > .preset-panel-body");
+    expect(nestedRule).toContain("overflow: visible;");
+    expect(nestedRule).toContain("mask-image: none;");
+
+    // The chevron carries the open/closed state; the row no longer has an icon.
+    expect(cssRule(styles, '.group-row[aria-expanded="true"] .group-row-chevron')).toContain("rotate(0deg)");
+    expect(cssRule(styles, ".group-row-chevron")).toContain("rotate(-90deg)");
+  });
+
+  it("opens on the native style's first theme and shows it on the canvas", () => {
+    const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+
+    // 原生风 / 柔光玻璃 — the first theme of the first style.
+    expect(emptyStructureProject.theme.stylePreset).toBe("native");
+    expect(emptyStructureProject.theme.preset).toBe("soft-glass");
+    expect(nativeThemePresetIds[0]).toBe("soft-glass");
+    expect(markup).toContain('data-style-preset="native"');
+    expect(markup).toContain('data-theme-preset="soft-glass"');
+
+    // Each empty column shows the surface its style gives it — in 柔光玻璃 that
+    // is #F4F6FA for the sidebar and #FFFFFF for the centre and right. It must
+    // not paint its own: `--surface-panel` here made all three white (hiding
+    // the theme) and `--surface-inset` made all three the tint.
+    const emptyRule = cssRule(
+      styles,
+      ".preview-frame .preview-stack:empty,\n.preview-frame .right-panel:empty",
+    );
+    expect(emptyRule).not.toContain("background:");
+
+    // The left column keeps the style's own sidebar tint when empty; there used
+    // to be a rule forcing `--surface-panel` over it.
+    expect(styles).not.toContain(".preview-frame[data-style-preset] > .session-sidebar.region-empty");
+
+    // The centre/right divider survives an empty right panel. The native style
+    // hides the resize handle's line and draws it as `.right-panel`'s own
+    // `border-left`, so `border: 0` on the empty panel erased it — verified by
+    // clipping in at 8x, which showed pure white where the line belongs.
+    const placeholderRule = cssRule(
+      styles,
+      '.preview-frame .region-empty,\n.preview-frame .right-panel[data-empty="true"]',
+    );
+    expect(placeholderRule).toContain("box-shadow: none;");
+    expect(placeholderRule).not.toContain("border: 0;");
+    expect(cssRule(styles, '.preview-frame[data-style-preset="native"] .right-panel')).toContain(
+      "border-left: 1px solid var(--preview-soft-line);",
+    );
   });
 
   it("asks for approval above the composer instead of under or over it", () => {

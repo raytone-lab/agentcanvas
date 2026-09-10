@@ -1,4 +1,4 @@
-import { Maximize2, Minimize2, PanelRight } from "lucide-react";
+import { Maximize2, Minimize2, PanelRight } from "../../agentmatrix/uiIcons";
 import { useState } from "react";
 import type { AgentUXArtifactTimelineItem, AgentUXViewModel } from "@agent-ux/render-core";
 

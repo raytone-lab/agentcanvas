@@ -7,6 +7,7 @@ import { previewScenarios, type PreviewScenarioId } from "../../preview-runner/P
 import type { RunMode } from "../appTypes";
 import { previewScenarioLabel } from "../projection/previewDefaults";
 import type { SelectedComponentItem } from "../projection/selectedComponents";
+import { ZoomControl } from "./ZoomControl";
 
 /**
  * App top bar (pure view). Owns only its local chrome state — the language
@@ -26,9 +27,11 @@ export function Topbar({
   showDebugViewToggle,
   workspaceView,
   onWorkspaceViewToggle,
-  onSavePreview,
+  onEnterPreview,
   selectedComponentSummary,
   selectedComponentItems,
+  canvasZoom,
+  onCanvasZoomChange,
   onExport,
 }: {
   copy: UiCopy;
@@ -43,9 +46,11 @@ export function Topbar({
   showDebugViewToggle: boolean;
   workspaceView: "preview" | "debug";
   onWorkspaceViewToggle: () => void;
-  onSavePreview: () => void;
+  onEnterPreview: () => void;
   selectedComponentSummary: string;
   selectedComponentItems: SelectedComponentItem[];
+  canvasZoom: number;
+  onCanvasZoomChange: (zoom: number) => void;
   onExport: () => void;
 }) {
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
@@ -82,7 +87,11 @@ export function Topbar({
     <header className="topbar">
       <div className="topbar-leading">
         <div className="brand-block">
-          <h1 className="brand-logo" aria-label="AgentCanvas">AgentCanvas<span>．</span></h1>
+          {/* The wordmark is in the image, so the h1 carries the name for
+              assistive tech and the img is decorative. */}
+          <h1 className="brand-logo">
+            <img src="/brand-logo.png" alt="AgentCanvas" />
+          </h1>
         </div>
         <div
           className="language-picker"
@@ -155,75 +164,61 @@ export function Topbar({
             />
           </label>
         ) : null}
-        {showDebugViewToggle ? (
-          <button
-            className="mode-toggle-button"
-            type="button"
-            data-mode={workspaceView}
-            aria-label={workspaceView === "preview" ? copy.shell.topbar.viewDebug : copy.shell.topbar.viewPreview}
-            title={workspaceView === "preview" ? copy.shell.topbar.viewDebug : copy.shell.topbar.viewPreview}
-            onClick={onWorkspaceViewToggle}
-          >
-            {workspaceView === "preview" ? <Eye size={21} /> : <Activity size={22} />}
-          </button>
-        ) : surfaceMode === "saved-preview" ? (
+        {/* The debug-view toggle is hidden for now. `showDebugViewToggle` and
+            `onWorkspaceViewToggle` are still threaded through, so bringing it
+            back is re-rendering the button rather than rebuilding the wiring. */}
+        {surfaceMode === "saved-preview" ? (
           <button className="secondary-button" type="button" onClick={onReturnToBuilder}>
             <Settings2 size={16} />
             {copy.shell.topbar.editUiUx}
           </button>
         ) : null}
+        {/* Two things left the topbar here.
+
+            "已选组件 N 套": File → Layers lists the same components, arranged by
+            the column they sit in rather than by preset group.
+
+            "保存": it never saved anything. `saveScaffoldPreview` snapshots the
+            project and enters the preview surface — nothing is written to disk,
+            and nothing needs to be: the canvas already renders the current
+            configuration as it is edited. So this is the same action under an
+            honest label, not a replacement for saving. */}
         {surfaceMode === "builder" ? (
-          <div className="topbar-action-group" role="group" aria-label={`${copy.shell.topbar.save} / ${selectedComponentSummary}`}>
-            <button
-              className="topbar-group-button"
-              type="button"
-              aria-label={copy.shell.topbar.save}
-              title={copy.shell.topbar.save}
-              onClick={onSavePreview}
-            >
-              <Save size={21} />
-            </button>
-            <div className="selected-components-menu" ref={selectedComponentsRef}>
-              <button
-                className="topbar-group-button selected-components-trigger"
-                type="button"
-                aria-label={selectedComponentSummary}
-                aria-haspopup="dialog"
-                aria-expanded={selectedComponentsOpen}
-                onClick={() => setSelectedComponentsOpen((open) => !open)}
-              >
-                <span>{selectedComponentSummary}</span>
-                <ChevronDown size={14} aria-hidden="true" />
-              </button>
-              {selectedComponentsOpen ? (
-                <div className="selected-components-popover" role="dialog" aria-label={selectedComponentSummary}>
-                  <div className="selected-components-popover-header">
-                    <span>{selectedComponentSummary}</span>
-                  </div>
-                  {selectedComponentItems.length > 0 ? (
-                    <div className="selected-components-list" role="list">
-                      {selectedComponentItems.map((item) => (
-                        <div className="selected-component-item" role="listitem" key={item.id}>
-                          <span className="selected-component-name">{item.group} - {item.label}</span>
-                          {item.section ? <span className="selected-component-section">{item.section}</span> : null}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="selected-components-empty">
-                      {copy.shell.editor.noSelectedComponents}
-                    </div>
-                  )}
-                </div>
-              ) : null}
-            </div>
-          </div>
+          <button
+            className="topbar-icon-button topbar-preview-button"
+            type="button"
+            aria-label={copy.shell.topbar.viewPreview}
+            title={copy.shell.topbar.viewPreview}
+            onClick={onEnterPreview}
+          >
+            <PreviewPlayIcon />
+          </button>
         ) : null}
+        <ZoomControl copy={copy} zoom={canvasZoom} onZoomChange={onCanvasZoomChange} />
         <button className="primary-button topbar-deploy-button" type="button" onClick={onExport}>
-          <Download size={16} />
           {copy.shell.topbar.exportScaffold}
         </button>
       </div>
     </header>
+  );
+}
+
+/**
+ * Preview control.
+ *
+ * Path is verbatim from the design; only the stroke is changed to
+ * `currentColor` so it inherits the topbar's text colour instead of the
+ * spec's literal #111E36 — that value is this theme's `--text-primary`, and
+ * hardcoding it would leave the icon invisible on a dark theme.
+ */
+function PreviewPlayIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 40 40" fill="none" aria-hidden="true" focusable="false">
+      <path
+        d="M33.25 17.835C34.9167 18.7972 34.9166 21.2028 33.25 22.165L12.25 34.2891C10.5833 35.2513 8.5 34.0485 8.5 32.124L8.5 7.87598C8.5 5.95147 10.5833 4.74869 12.25 5.71094L33.25 17.835Z"
+        stroke="currentColor"
+        strokeWidth="3"
+      />
+    </svg>
   );
 }

@@ -11,6 +11,7 @@ import { STYLE_AVATAR_DEFAULTS, presetStyleOptions } from "../projection/presetR
 function defaultThemeForStyle(styleId: PresetStyleId) {
   if (styleId === "native") return "soft-glass" as const;
   if (styleId === "illustrated") return "ice-white" as const;
+  if (styleId === "workbuddy") return "wb-light" as const;
   return null; // studio (under construction) keeps the current theme
 }
 

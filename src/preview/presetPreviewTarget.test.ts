@@ -5,7 +5,10 @@ import { hasPreviewAnchorForPresetOption, previewAnchorForPresetGroup, previewAn
 
 describe("preset preview target mapping", () => {
   it("covers every preset option with an explicit preview target", () => {
-    const optionIds = presetGroups.flatMap((group) => group.options.map((option) => option.id));
+    // Pending options have nothing to scroll to yet, by definition.
+    const optionIds = presetGroups.flatMap((group) =>
+      group.options.filter((option) => !option.pending).map((option) => option.id),
+    );
 
     expect(optionIds.filter((optionId) => !hasPreviewAnchorForPresetOption(optionId))).toEqual([]);
   });
@@ -52,8 +55,9 @@ describe("preset preview target mapping", () => {
     expect(previewAnchorForPresetGroup("blocks")).toBe("error-block");
     expect(previewAnchorForPresetGroup("composer")).toBe("composer");
     expect(previewAnchorForPresetGroup("provider")).toBe("composer");
+    expect(previewAnchorForPresetGroup("approval")).toBe("composer");
     expect(previewAnchorForPresetGroup("output")).toBe("output");
-    expect(previewAnchorForPresetGroup("render")).toBe("output");
+    expect(previewAnchorForPresetGroup("delivery")).toBe("output");
     expect(previewAnchorForPresetGroup("git")).toBe("git");
     expect(previewAnchorForPresetGroup("theme")).toBe("chat");
   });

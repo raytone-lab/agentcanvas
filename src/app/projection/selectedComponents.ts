@@ -15,7 +15,10 @@ import { presetRailSections, stateSectionTitle } from "./presetRailData";
 
 export type SelectedComponentItem = {
   id: string;
+  /** Translated group name, for display. */
   group: string;
+  /** The group itself, for callers that need to map it to a canvas region. */
+  groupId: PresetGroupId;
   label: string;
   section?: string;
 };
@@ -25,10 +28,12 @@ const selectedComponentGroupIds = new Set<PresetGroupId>([
   "conversation",
   "sidebar",
   "ux-effects",
+  "approval",
   "tool-calls",
   "blocks",
   "composer",
   "output",
+  "delivery",
 ]);
 
 const selectedProviderComponentIds = new Set(["provider-settings-launcher"]);
@@ -85,7 +90,20 @@ function isEffectiveSelectedComponent(project: AgentFrontendProject, groupId: Pr
   if (groupId === "sidebar" && optionId !== "sidebar-visible") {
     return isPresetOptionActive(project, "sidebar-visible");
   }
+  // Same rule for the two components that only just gained a presence toggle:
+  // styling a conversation that is not shown is not a selected component.
+  if (groupId === "conversation" && optionId !== "chat-visible") {
+    return isPresetOptionActive(project, "chat-visible");
+  }
+  if (groupId === "composer" && optionId !== "composer-visible") {
+    return isPresetOptionActive(project, "composer-visible");
+  }
   if (groupId === "output" && optionId !== "output-visible") {
+    return isPresetOptionActive(project, "output-visible");
+  }
+  // Source and renderer moved into "delivery", but they still describe the
+  // right panel's contents, so hiding the panel still un-counts them.
+  if (groupId === "delivery" && (optionId.startsWith("output-source-") || optionId.startsWith("renderer-"))) {
     return isPresetOptionActive(project, "output-visible");
   }
   return true;
@@ -138,6 +156,7 @@ export function selectedComponentItemsForProject(
     items.set(option.id, {
       id: option.id,
       group: translatePresetGroupName(group.id, group.label, locale),
+      groupId: group.id,
       label: translatePresetOptionLabel(option.id, option.label, locale),
       section: option.section ? translatePresetSection(option.section, locale) : undefined,
     });
@@ -153,6 +172,7 @@ export function selectedComponentItemsForProject(
         items.set("state:author.user", {
           id: "state:author.user",
           group: groupName,
+          groupId: group.id,
           label: c.avatarLabels.user,
           section: avatarSection,
         });
@@ -161,6 +181,7 @@ export function selectedComponentItemsForProject(
         items.set("state:author.agent", {
           id: "state:author.agent",
           group: groupName,
+          groupId: group.id,
           label: c.avatarLabels.agent,
           section: avatarSection,
         });
@@ -190,6 +211,7 @@ export function selectedComponentItemsForProject(
         items.set(id, {
           id,
           group: groupName,
+          groupId: group.id,
           label: item.label[locale],
           section: item.section[locale],
         });

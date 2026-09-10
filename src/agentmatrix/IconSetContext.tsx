@@ -7,6 +7,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import type { LucideProps } from "lucide-react";
 
+import { codiconForSlot } from "./codiconSlots";
 import {
   defaultIconSet,
   iconSetFromPreset,
@@ -72,6 +73,32 @@ export function useIconStyle(): IconStyle {
 export function StateIcon({ slot, ...props }: { slot: IconSlot } & LucideProps) {
   const { iconSet } = useIconSet();
   const style = useIconStyle();
+
+  // The codicon surface draws a font glyph, not an SVG, so it returns before
+  // the lucide path. `size` is the only prop that carries over — the rest of
+  // LucideProps (strokeWidth, fill, absoluteStrokeWidth) describe a stroked
+  // SVG and have no meaning for a filled glyph.
+  //
+  // A slot with no mapping falls through to lucide rather than rendering an
+  // empty box; codiconSlots.test.ts asserts the map is total, so that path is
+  // a safety net, not a routine one.
+  if (style === "codicon") {
+    const glyph = codiconForSlot[slot];
+    if (glyph) {
+      const size = props.size ?? 16;
+      return (
+        <span
+          className={`codicon codicon-${glyph}`}
+          // Sized in px so it tracks the `size` prop call sites already pass;
+          // the font's glyphs are drawn on a 16px grid.
+          style={{ fontSize: `${size}px`, width: `${size}px`, height: `${size}px` }}
+          aria-hidden={props["aria-hidden"] ?? true}
+          data-icon-slot={slot}
+        />
+      );
+    }
+  }
+
   const Icon = resolveIcon(iconSet, slot, style);
   const styleProps = style === "bold"
     ? { strokeWidth: props.strokeWidth ?? 2.1, fill: props.fill ?? "none" }

@@ -1,5 +1,5 @@
 import type { AgentUXViewModel } from "@agent-ux/render-core";
-import { Boxes, CircleDot } from "lucide-react";
+import { Boxes, CircleDot } from "../../agentmatrix/uiIcons";
 
 import { useCopy } from "../../i18n/LocaleContext";
 

@@ -4,7 +4,9 @@ import { presetGroups } from "./presets";
 import { applyPresetOption, isPresetOptionActive, togglePresetOption } from "./presetActions";
 
 describe("preset toggle audit", () => {
-  const ids = presetGroups.flatMap((g) => g.options.map((o) => o.id));
+  // Pending options are deliberately unwired — presets.test.ts asserts that
+  // separately, so applying one here would only re-test the identity patch.
+  const ids = presetGroups.flatMap((g) => g.options.filter((o) => !o.pending).map((o) => o.id));
 
   it("every option: applying then toggling again cancels it (unless it is the baseline-default of a single-select group)", () => {
     const notCancelable: string[] = [];

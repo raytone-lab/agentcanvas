@@ -1,7 +1,8 @@
-import { PanelLeft, Search } from "lucide-react";
+import { PanelLeft, Search } from "../../agentmatrix/uiIcons";
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useIconStyle } from "../../agentmatrix";
 import { appVersionLabel } from "../../appVersion";
 import { useCopy, useLocale } from "../../i18n/LocaleContext";
 import type { AgentFrontendProject } from "../../schema/agentuxConfig";
@@ -249,6 +250,19 @@ function SidebarToggleIcon({ size }: { size: number }) {
 }
 
 function NewChatIcon({ size }: { size: number }) {
+  // A hand-drawn icon rather than a lucide one, so repointing this file's
+  // lucide import did not reach it — it stayed an outline while everything
+  // around it became a glyph. codicon's `new-session` is the same idea.
+  const iconStyle = useIconStyle();
+  if (iconStyle === "codicon") {
+    return (
+      <span
+        className="codicon codicon-new-session"
+        style={{ fontSize: `${size}px`, width: `${size}px`, height: `${size}px`, lineHeight: `${size}px` }}
+        aria-hidden="true"
+      />
+    );
+  }
   return (
     <svg
       width={size}

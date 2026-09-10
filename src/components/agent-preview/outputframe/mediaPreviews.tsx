@@ -1,4 +1,4 @@
-import { Play, Volume2 } from "lucide-react";
+import { Play, Volume2 } from "../../../agentmatrix/uiIcons";
 
 import {
   ImageBlurFlowReveal,

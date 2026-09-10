@@ -1,4 +1,4 @@
-import { CheckCircle2, RefreshCw, Save, Settings, Star, X } from "lucide-react";
+import { CheckCircle2, RefreshCw, Save, Settings, Star, X } from "../../agentmatrix/uiIcons";
 import { useState } from "react";
 
 import {

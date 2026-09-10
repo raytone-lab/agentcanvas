@@ -53,7 +53,10 @@ export type ThemePresetId =
   | "cyan-grid"
   | "ice-white"
   | "mist-blue"
-  | "polar-mono";
+  | "polar-mono"
+  // WorkBuddy — values lifted from the shipped client, see WORKBUDDY_* below
+  | "wb-light"
+  | "wb-dark";
 
 /** Theme ids grouped by the visual style that offers them (light schemes first). */
 export const nativeThemePresetIds: readonly ThemePresetId[] = [
@@ -74,6 +77,13 @@ export const minimalThemePresetIds: readonly ThemePresetId[] = [
   "cyan-grid",
 ];
 
+/**
+ * Two, not six: the WorkBuddy client ships one palette per appearance, and
+ * inventing four more tints would put colors on screen that WorkBuddy does not
+ * have. The rail renders however many a style declares.
+ */
+export const workbuddyThemePresetIds: readonly ThemePresetId[] = ["wb-light", "wb-dark"];
+
 // Fonts are constant per style — only colors vary between the schemes within a
 // style. Native keeps the IBM Plex stack, Minimal keeps the Inter stack (i.e.
 // the fonts the previous default theme of each style already used).
@@ -88,6 +98,19 @@ const MINIMAL_FONT: ThemeTokens["font"] = {
   display: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
   mono: "\"SFMono-Regular\", Consolas, \"Liberation Mono\", monospace",
 };
+
+// Verbatim `--cb-font-family` / `--cb-font-family-mono` from the client.
+const WORKBUDDY_FONT: ThemeTokens["font"] = {
+  ui: "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"Roboto\", \"Oxygen\", \"Ubuntu\", \"Cantarell\", \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+  display: "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"Roboto\", \"Oxygen\", \"Ubuntu\", \"Cantarell\", \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+  mono: "\"Menlo\", \"Monaco\", \"Courier New\", monospace",
+};
+
+/**
+ * WorkBuddy's own status ramp, which is not `LIGHT_STATUS`/`DARK_STATUS`.
+ * `--cb-success` / `--cb-green-color` / `--cb-error` / `--cb-text-link`.
+ */
+const WORKBUDDY_STATUS = { success: "#10b981", warning: "#00b96b", danger: "#ef4444", info: "#006ab1" };
 
 // Status colors are semantic (not derivable from a single accent), so they use
 // one shared ramp per appearance.
@@ -288,6 +311,75 @@ export const themeTokens: Record<ThemeTokens["id"], ThemeTokens> = {
   "polar-mono": lightScheme("polar-mono", "Polar Navy", MINIMAL_FONT, {
     canvas: "#FAFBFC", panel: "#FFFFFF", inset: "#EEF1F5", accent: "#172554",
   }),
+
+  // ── WorkBuddy ───────────────────────────────────────────────────────────
+  // Written out rather than seeded through lightScheme()/darkScheme() because
+  // those derive every token by mixing one accent and pin the status ramp to
+  // LIGHT_STATUS/DARK_STATUS. WorkBuddy's values are not derivable from each
+  // other — the accent is near-black while success/active are green — so each
+  // one is transcribed from the client's `--cb-*` tokens instead of guessed.
+  "wb-light": {
+    id: "wb-light",
+    name: "WorkBuddy Light",
+    appearance: "light",
+    font: WORKBUDDY_FONT,
+    surface: {
+      canvas: "#FFFFFF",
+      panel: "#FFFFFF",
+      raised: "#F7F7F7",
+      inset: "#F5F5F5",
+      hover: "#EBEBEB",
+      disabled: "#F2F2F2",
+    },
+    text: {
+      primary: "#333333",
+      secondary: "#666666",
+      muted: "#808080",
+      inverse: "rgba(255, 255, 255, 0.9)",
+    },
+    border: {
+      subtle: "#EBEBEB",
+      strong: "#D8DEE4",
+    },
+    // `--cb-send-button-loading-bg: rgba(0,0,0,0.9)` — the near-black send
+    // button is the only strong accent surface in the light client.
+    accent: {
+      action: "rgba(0, 0, 0, 0.9)",
+      hover: "#000000",
+      soft: "#F2F2F2",
+    },
+    status: { ...WORKBUDDY_STATUS },
+  },
+  "wb-dark": {
+    id: "wb-dark",
+    name: "WorkBuddy Dark",
+    appearance: "dark",
+    font: WORKBUDDY_FONT,
+    surface: {
+      canvas: "#101114",
+      panel: "#212234",
+      raised: "#313248",
+      inset: "#17191D",
+      hover: "#272C34",
+      disabled: "#343841",
+    },
+    text: {
+      primary: "#D2D3E0",
+      secondary: "#858699",
+      muted: "#A0A0A0",
+      inverse: "#101114",
+    },
+    border: {
+      subtle: "rgba(255, 255, 255, 0.08)",
+      strong: "#4C4F6B",
+    },
+    accent: {
+      action: "rgba(255, 255, 255, 0.9)",
+      hover: "#FFFFFF",
+      soft: "#313248",
+    },
+    status: { ...WORKBUDDY_STATUS },
+  },
 };
 
 export function isThemePresetId(id: string): id is ThemePresetId {
