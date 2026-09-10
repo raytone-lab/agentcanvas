@@ -588,6 +588,24 @@ export const RAIL_HIDDEN_OPTION_IDS = new Set([
 ]);
 
 /**
+ * Options held back from the rail by choice.
+ *
+ * Not always-on controls and not unbuilt — these work, but they are scope the
+ * product is not asking the reader to think about yet. Which reasoning kinds a
+ * provider exposes, and whether a summary precedes the detail, are decisions
+ * about the model's output rather than about the interface being drawn here.
+ *
+ * They stay wired to their project fields, so the values they set still hold
+ * and putting them back is deleting a line from this set.
+ */
+const RAIL_WITHHELD_OPTION_IDS = new Set([
+  "reasoning-status-only",
+  "reasoning-public-summary",
+  "reasoning-model-thinking",
+  "summary-first",
+]);
+
+/**
  * Whether an option belongs in the rail at all.
  *
  * Named-but-unbuilt options are out. They were there to show the shape of what
@@ -597,7 +615,11 @@ export const RAIL_HIDDEN_OPTION_IDS = new Set([
  * still complete in one place.
  */
 export function isOptionShownInRail(option: { id: string; pending?: boolean }): boolean {
-  return !option.pending && !RAIL_HIDDEN_OPTION_IDS.has(option.id);
+  return (
+    !option.pending &&
+    !RAIL_HIDDEN_OPTION_IDS.has(option.id) &&
+    !RAIL_WITHHELD_OPTION_IDS.has(option.id)
+  );
 }
 
 /** The option a layer row edits or deletes, or null if it maps to none. */

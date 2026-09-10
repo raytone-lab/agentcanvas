@@ -281,3 +281,34 @@ describe("rail contents", () => {
     );
   });
 });
+
+describe("thinking group scope", () => {
+  it("holds back the reasoning-visibility options and the summary order", () => {
+    // Not always-on and not unbuilt — these work, but which reasoning kinds a
+    // provider exposes, and whether a summary precedes the detail, are
+    // decisions about the model's output rather than about the interface being
+    // drawn here. They stay wired to their project fields.
+    for (const id of [
+      "reasoning-status-only",
+      "reasoning-public-summary",
+      "reasoning-model-thinking",
+      "summary-first",
+    ]) {
+      const option = presetGroups
+        .flatMap((group) => group.options)
+        .find((entry) => entry.id === id);
+      expect(option, `${id} should still exist in the schema`).toBeTruthy();
+      expect(isOptionShownInRail(option!), id).toBe(false);
+    }
+
+    // What is left is the motion and how it collapses.
+    const shown = presetGroups
+      .find((group) => group.id === "ux-effects")!
+      .options.filter(isOptionShownInRail)
+      .map((option) => option.id);
+    expect(shown).toContain("thinking-wave");
+    expect(shown).toContain("reasoning-auto-collapse");
+    expect(shown).toContain("reasoning-expanded");
+    expect(shown).not.toContain("summary-first");
+  });
+});

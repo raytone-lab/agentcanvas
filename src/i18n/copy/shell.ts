@@ -67,7 +67,7 @@ const en = {
       },
       "ux-effects": {
         label: "Thinking",
-        description: "Reasoning motion, summary order, and collapse behavior.",
+        description: "Reasoning motion and collapse behaviour.",
       },
       "tool-calls": {
         label: "Tool calls",
@@ -261,8 +261,8 @@ const zh: typeof en = {
         description: "左侧导航栏：显示与否、新建对话、搜索、按日期分组、版本号。",
       },
       "ux-effects": {
-        label: "思考中",
-        description: "推理动效、摘要顺序以及折叠行为。",
+        label: "思考",
+        description: "推理动效和折叠行为。",
       },
       "tool-calls": {
         label: "工具调用",
@@ -457,8 +457,8 @@ const ja: typeof en = {
         description: "左のナビゲーション：表示の有無、新規チャット、検索、日付でのグループ化、バージョン表記。",
       },
       "ux-effects": {
-        label: "思考中",
-        description: "推論のモーション、要約の表示順、折りたたみの挙動。",
+        label: "思考",
+        description: "推論のモーションと折りたたみの挙動。",
       },
       "tool-calls": {
         label: "ツール呼出",
