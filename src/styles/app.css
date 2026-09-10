@@ -12700,6 +12700,90 @@ pre {
   list-style: none;
 }
 
+/* ---- Event flow as a vertical axis ------------------------------- *
+ * The event flow is a sequence, so Components draws one: a line down the
+ * left, a dot per stage, a tick once that stage has something picked in it.
+ *
+ * The line is on the list rather than between the rows so it does not break
+ * when a stage is expanded — an open stage's options push the next dot down
+ * and the line has to follow. */
+.preset-panel[data-nav-section="components"] > .group-list {
+  position: relative;
+}
+
+.preset-panel[data-nav-section="components"] > .group-list::before {
+  content: "";
+  position: absolute;
+  /* Measured against the markers rather than derived: the row's own padding and
+     the list item's box put their centres at 29.5px, and a computed guess of
+     20.5px left the line running 9px to their left. */
+  left: 29.5px;
+  top: 20px;
+  bottom: 20px;
+  width: 1px;
+  background: var(--border-subtle);
+}
+
+/* One fixed box at every state, so the dot's centre stays on the line. Sizing
+   the marker itself to its content moved the tick a few pixels right of the
+   line the moment a stage was covered. */
+.flow-axis-marker {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  position: relative;
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  color: transparent;
+}
+
+/* The dot. Drawn as a child so the box above can stay one size. */
+.flow-axis-marker::before {
+  content: "";
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-muted) 60%, transparent);
+  /* Hides the axis line where it passes behind the dot. */
+  box-shadow: 0 0 0 3px var(--fn-bg);
+  transition: background var(--motion-fast) var(--ease-out);
+}
+
+/* An exit, not a step: an error or a stop can happen at any stage, so its
+   marker is a ring rather than a point on the line. */
+.flow-axis-marker[data-kind="exit"]::before {
+  background: var(--fn-bg);
+  box-shadow: 0 0 0 3px var(--fn-bg), inset 0 0 0 1.5px color-mix(in srgb, var(--text-muted) 60%, transparent);
+}
+
+/* Covered: something in this stage has been picked. */
+.flow-axis-marker[data-covered="true"] {
+  color: var(--select-text);
+  background: var(--select-fill);
+  box-shadow: 0 0 0 3px var(--fn-bg), inset 0 0 0 1px var(--select-line);
+}
+
+.flow-axis-marker[data-covered="true"]::before {
+  content: none;
+}
+
+/* The selected row paints its own background over the line, so the halo that
+   hides the line elsewhere reads as a white ring here. */
+.group-row[data-active="true"] .flow-axis-marker,
+.group-row[data-active="true"] .flow-axis-marker::before {
+  box-shadow: none;
+}
+
+.group-row[data-active="true"] .flow-axis-marker[data-covered="true"] {
+  box-shadow: inset 0 0 0 1px var(--select-line);
+}
+
+.preset-panel[data-nav-section="components"] .group-row {
+  gap: 7px;
+}
+
 /* A disclosure header. The chevron replaces the group's icon: with the options
    nested underneath, what the row needs to say is whether it is open, not what
    kind of group it is — the name already says that. */

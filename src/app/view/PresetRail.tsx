@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, Clock3, Copy, GitMerge, Pencil, RotateCcw } from "lucide-react";
+import { Check, ChevronDown, Clock3, Copy, GitMerge, Pencil, RotateCcw } from "lucide-react";
 
 import { StateGallery, type StateCard } from "../../components/agentmatrix/StateGallery";
 import { PresetOptionPreview } from "../../components/PresetOptionPreview";
@@ -26,6 +26,8 @@ import type {
 import { themeTokens } from "../../theme/themeTokens";
 import type { MessageActionKey } from "../appTypes";
 import {
+  FLOW_EXIT_GROUP_IDS,
+  OPTION_GROUP_IDS,
   groupsForNavSection,
   navSections,
   presetStyleOptions,
@@ -157,6 +159,20 @@ export function PresetRail({
   // row is the header, and the options it owns are nested under it. The other
   // destinations have a single group, so there is nothing to nest.
   const nestsOptionsUnderGroups = navSection === "structure" || navSection === "components";
+  /**
+   * Which stages of the turn have been covered.
+   *
+   * The event flow is a sequence, so Components reads as a vertical axis: a dot
+   * per stage, and a tick once that stage has something picked in it. Progress,
+   * not a gate — an agent with no tools never enters 工具调用, and demanding all
+   * seven would mean configuring states it cannot reach. Preview and export are
+   * where a project is actually held to a requirement.
+   */
+  const flowCovered = new Set(
+    pickedOptionIds
+      .map((optionId) => OPTION_GROUP_IDS.get(optionId))
+      .filter((groupId): groupId is PresetGroupId => groupId !== undefined),
+  );
   // Exactly one group is open at a time, because the option set is projected for
   // the selected group — expanding a second would have to re-project the first,
   // which is work the panel does not need to do to be read top to bottom.
@@ -559,6 +575,16 @@ export function PresetRail({
                               onPresetGroupClick(group.id);
                             }}
                           >
+                            {navSection === "components" ? (
+                              <span
+                                className="flow-axis-marker"
+                                data-covered={flowCovered.has(group.id) ? "true" : undefined}
+                                data-kind={FLOW_EXIT_GROUP_IDS.has(group.id) ? "exit" : "stage"}
+                                aria-hidden="true"
+                              >
+                                {flowCovered.has(group.id) ? <Check size={9} strokeWidth={3} /> : null}
+                              </span>
+                            ) : null}
                             <span className="group-row-chevron" aria-hidden="true">
                               <ChevronDown size={14} />
                             </span>

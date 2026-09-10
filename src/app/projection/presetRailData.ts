@@ -345,6 +345,16 @@ const presetOptionIds = new Set(
   presetGroups.flatMap((group) => group.options.map((option) => option.id)),
 );
 
+/**
+ * Stages that are exits rather than steps.
+ *
+ * An error can land while thinking, mid tool call or at delivery, and the
+ * reader can stop at any of those points — neither happens "after tools and
+ * before media". They keep their place in the list, marked differently, so the
+ * axis does not claim a sequence that does not exist.
+ */
+export const FLOW_EXIT_GROUP_IDS = new Set<PresetGroupId>(["blocks", "interrupt"]);
+
 /** Option id to the group that owns it. */
 export const OPTION_GROUP_IDS = new Map(
   presetGroups.flatMap((group) => group.options.map((option) => [option.id, group.id] as const)),

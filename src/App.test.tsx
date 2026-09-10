@@ -6,7 +6,7 @@ import { App, STYLE_AVATAR_DEFAULTS, selectedComponentItemsForProject } from "./
 import { ICON_OPTIONS, IconSetProvider } from "./agentmatrix";
 import { defaultCodingAgentProject, emptyStructureProject } from "./schema/agentuxConfig";
 import { applyPresetOption, togglePresetOption } from "./schema/presetActions";
-import { presetRailSections } from "./app/projection/presetRailData";
+import { FLOW_EXIT_GROUP_IDS, presetRailSections } from "./app/projection/presetRailData";
 import { createInitialWorkspaceState } from "./app/state/workspaceState";
 import { presetGroupsForProject } from "./schema/presets";
 import { nativeThemePresetIds, themeTokens } from "./theme/themeTokens";
@@ -644,5 +644,45 @@ describe("App shell controls", () => {
     expect(ICON_OPTIONS["author.agent"][0]?.id).toBe("orange-blob");
     expect(styles).toContain('.preset-panel[data-style-preset="illustrated"] .am-state-options[data-slot="author.agent"] .am-state-option[data-option-id="orange-blob"]');
     expect(styles).toContain("order: -1;");
+  });
+});
+
+describe("event flow axis", () => {
+  it("draws the flow as an axis with a marker per stage", () => {
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+
+    // The line hangs off the list, not off the rows: an expanded stage pushes
+    // the next marker down and the line has to follow.
+    const lineRule = cssRule(
+      styles,
+      '.preset-panel[data-nav-section="components"] > .group-list::before',
+    );
+    expect(lineRule).toContain("left: 29.5px;");
+
+    // One fixed box at every state, so a marker's centre stays on the line.
+    // Sizing the marker to its content moved the tick right of the line the
+    // moment a stage was covered — measured 9px off.
+    const markerRule = cssRule(styles, ".flow-axis-marker");
+    expect(markerRule).toContain("width: 15px;");
+    expect(markerRule).toContain("height: 15px;");
+    expect(cssRule(styles, '.flow-axis-marker[data-covered="true"]')).toContain(
+      "background: var(--select-fill);",
+    );
+
+    // An exit reads as a ring rather than a point on the line.
+    expect(cssRule(styles, '.flow-axis-marker[data-kind="exit"]::before')).toContain(
+      "background: var(--fn-bg);",
+    );
+  });
+
+  it("treats errors and interrupts as exits, not steps", () => {
+    // An error can land while thinking, mid tool call or at delivery, and the
+    // reader can stop at any of those points. Neither happens "after tools and
+    // before media", so neither is a step on the axis.
+    expect([...FLOW_EXIT_GROUP_IDS]).toEqual(["blocks", "interrupt"]);
+    const flow = presetRailSections.find((section) => section.id === "event-flow")?.groupIds ?? [];
+    for (const exit of FLOW_EXIT_GROUP_IDS) {
+      expect(flow).toContain(exit);
+    }
   });
 });
