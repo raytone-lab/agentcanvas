@@ -56,6 +56,7 @@ import {
 import {
   NATIVE_HIDDEN_USER_AVATAR_IDS,
   PREVIEW_RESPONSIVE_WIDTHS,
+  LAYER_EDIT_OPTIONS,
   LAYER_HIGHLIGHT_SELECTORS,
   LAYER_PRESENCE_OPTIONS,
   layersForProject,
@@ -526,8 +527,16 @@ export function App() {
       : [];
   const deletableOptionIds = toolbarOptionIds.filter((id) => isPresetOptionActive(activeProject, id));
 
+  // Edit has its own target: the centre column has nothing to delete but still
+  // has somewhere useful to land.
+  const editOptionId = state.selectedSlotId
+    ? optionIdForModule(state.selectedSlotId)
+    : state.selectedLayerId
+      ? LAYER_EDIT_OPTIONS[state.selectedLayerId] ?? null
+      : null;
+
   const editSelectedModule = () => {
-    const location = railLocationForOption(toolbarOptionIds[0] ?? "");
+    const location = railLocationForOption(editOptionId ?? "");
     if (!location) return;
     dispatch({
       type: "patch",
@@ -536,7 +545,7 @@ export function App() {
         selectedGroup: location.groupId,
         // The rail scrolls this option into view and flashes it, so "edit"
         // lands on the control rather than just the right panel.
-        pinnedOptionId: toolbarOptionIds[0] ?? null,
+        pinnedOptionId: editOptionId,
       },
     });
   };

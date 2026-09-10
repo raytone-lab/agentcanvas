@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
+  LAYER_EDIT_OPTIONS,
   LAYER_HIGHLIGHT_SELECTORS,
   LAYER_PRESENCE_OPTIONS,
   optionIdForModule,
@@ -20,6 +21,22 @@ describe("canvas module actions", () => {
       const optionId = optionIdForModule(moduleId);
       expect(optionId, `no option for ${moduleId}`).toBeTruthy();
       expect(railLocationForOption(optionId!), `no rail location for ${optionId}`).toBeTruthy();
+    }
+  });
+
+  it("gives every column somewhere for Edit to land", () => {
+    // Edit and Delete read different maps. Sharing one left the centre's Edit
+    // button doing nothing, because the centre has no presence option to
+    // delete — the very thing that makes it undeletable.
+    for (const [layerId, expected] of [
+      ["left", "sidebar"],
+      ["center", "conversation"],
+      ["right", "output"],
+    ] as const) {
+      const optionId = LAYER_EDIT_OPTIONS[layerId];
+      expect(optionId, `no edit target for ${layerId}`).toBeTruthy();
+      expect(railLocationForOption(optionId)?.groupId).toBe(expected);
+      expect(railLocationForOption(optionId)?.navSection).toBe("structure");
     }
   });
 

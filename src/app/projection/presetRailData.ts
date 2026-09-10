@@ -316,6 +316,21 @@ export function regionsWithChosenContent(
   return regions;
 }
 
+/**
+ * The option the toolbar's Edit jumps to for a whole column.
+ *
+ * Separate from `LAYER_PRESENCE_OPTIONS` because the two answer different
+ * questions. Delete needs the options that put the column *there*, and the
+ * centre has none — that is what makes it undeletable. Edit only needs
+ * somewhere useful to land, and for the centre that is the conversation group:
+ * reading Edit off the delete list left the centre's Edit button doing nothing.
+ */
+export const LAYER_EDIT_OPTIONS: Record<string, string> = {
+  left: "sidebar-visible",
+  center: "chat-visible",
+  right: "output-visible",
+};
+
 /** The option a layer row edits or deletes, or null if it maps to none. */
 export function optionIdForModule(moduleId: string): string | null {
   const presence = SLOT_PRESENCE_OPTIONS[moduleId];
