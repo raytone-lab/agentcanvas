@@ -4,6 +4,7 @@ import {
   PRESET_GROUP_REGIONS,
   isAddedContentOption,
   layerContentsForProject,
+  layersForProject,
   regionsWithChosenContent,
 } from "./presetRailData";
 import { emptyStructureProject, type AgentFrontendProject } from "../../schema/agentuxConfig";
@@ -116,6 +117,29 @@ describe("layer contents", () => {
     expect(isAddedContentOption(picked, "sidebar-search")).toBe(true);
     // A presence toggle is not content either — it puts the column there.
     expect(isAddedContentOption(emptyStructureProject, "sidebar-visible")).toBe(false);
+  });
+
+  it("agrees with the canvas about which columns exist", () => {
+    // The tree, the region labels and the canvas all read `layersForProject`.
+    // They used to disagree: the tree and the labels read `layout.regions`
+    // directly while the canvas also required a component, so deleting 左栏
+    // removed it from the canvas and left it listed in the tree with its label
+    // drawn over empty space.
+    const withoutLeft = togglePresetOption(emptyStructureProject, "sidebar-visible");
+    expect(withoutLeft.layout.regions).toContain("sidebar");
+    expect(layersForProject(withoutLeft).map((layer) => layer.id)).toEqual(["center", "right"]);
+    expect(layerContentsForProject(withoutLeft, "zh", []).map((layer) => layer.id)).toEqual([
+      "center",
+      "right",
+    ]);
+
+    // The centre survives being emptied — it cannot be deleted, so it stays as
+    // the place a conversation will go.
+    const emptied = togglePresetOption(
+      togglePresetOption(withoutLeft, "chat-visible"),
+      "composer-visible",
+    );
+    expect(layersForProject(emptied).map((layer) => layer.id)).toContain("center");
   });
 
   it("assigns every group that renders on the canvas to a column", () => {

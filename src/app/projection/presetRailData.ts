@@ -106,9 +106,33 @@ export const REGION_LAYERS: { id: string; regions: AgentCanvasRegion[]; label: R
   { id: "overlay", regions: ["overlay"], label: { en: "Overlay", zh: "浮层", ja: "オーバーレイ" } },
 ];
 
-/** Layer rows for a project: a row shows when the layout declares its region. */
+/** Layer rows for a set of regions: a row shows when the layout declares it. */
 export function layersForRegions(regions: readonly AgentCanvasRegion[]) {
   return REGION_LAYERS.filter((layer) => layer.regions.some((region) => regions.includes(region)));
+}
+
+/**
+ * The columns a project actually has — the single answer to "which columns
+ * exist", for the canvas, the region labels and the layer tree alike.
+ *
+ * Declaring the region is not enough for a side column: it also needs a
+ * component in it, which is what deleting the column takes away. The tree and
+ * the labels used to read `layout.regions` directly while the canvas applied
+ * this extra condition, so deleting 左栏 removed it from the canvas and left it
+ * listed in the tree with its label still drawn over empty space.
+ *
+ * The centre column is exempt: it cannot be deleted, so it stays even when
+ * empty — an empty centre still reads as the place a conversation will go.
+ */
+export function layersForProject(project: {
+  layout: { regions: readonly AgentCanvasRegion[]; slots: readonly SlotConfig[] };
+}) {
+  return layersForRegions(project.layout.regions).filter((layer) => {
+    if (layer.id === "center") return true;
+    return layer.regions.some((region) =>
+      project.layout.slots.some((slot) => slot.enabled && slot.region === region),
+    );
+  });
 }
 
 /**
@@ -335,7 +359,7 @@ export function layerContentsForProject(
   locale?: AppLocale,
   selectedOptions?: readonly { id: string; groupId: PresetGroupId; label: string }[],
 ) {
-  return layersForRegions(project.layout.regions).map((layer) => {
+  return layersForProject(project).map((layer) => {
     const filled = regionsWithChosenContent(project, selectedOptions ?? []);
     const slots = project.layout.slots.filter(
       (slot) => slot.enabled && layer.regions.includes(slot.region) && filled.has(slot.region),

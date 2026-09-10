@@ -9,9 +9,10 @@ import type { AppLocale } from "../../i18n/uiCopy";
 /**
  * The File destination's panel: the canvas regions as a layer list.
  *
- * Rows come from `layout.regions` via `layersForRegions`, not from what happens
- * to be rendered — which is the point. A region with nothing in it is still a
- * layer, so an untouched project reads as three empty columns rather than as
+ * Rows come from `layersForProject`, the same rule the canvas and the region
+ * labels use, so the three cannot disagree — deleting 左栏 used to remove it
+ * from the canvas and leave it listed here. A column with nothing *in* it is
+ * still a row: an untouched project reads as three empty columns rather than as
  * nothing at all.
  *
  * Selecting a layer only moves the selection. It deliberately does not toggle

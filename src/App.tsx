@@ -58,6 +58,7 @@ import {
   PREVIEW_RESPONSIVE_WIDTHS,
   LAYER_HIGHLIGHT_SELECTORS,
   LAYER_PRESENCE_OPTIONS,
+  layersForProject,
   STYLE_AVATAR_DEFAULTS,
   groupPresetOptions,
   rawStateCardToStateCard,
@@ -240,11 +241,9 @@ export function App() {
    * to this — it is region-driven below and cannot be deleted, so an empty
    * centre still reads as the place a conversation will go.
    */
-  const regionHasContent = (region: AgentCanvasRegion) =>
-    activeProject.layout.regions.includes(region) &&
-    activeProject.layout.slots.some((slot) => slot.enabled && slot.region === region);
-  const hasSidebar = regionHasContent("sidebar");
-  const hasRightPanel = regionHasContent("right-panel");
+  const configuredLayerIds = new Set(layersForProject(activeProject).map((layer) => layer.id));
+  const hasSidebar = configuredLayerIds.has("left");
+  const hasRightPanel = configuredLayerIds.has("right");
   const loaderCanvasPreviewActive = state.surfaceMode === "builder" && state.selectedGroup === "media-generation";
   // Mounted whenever the layout has one; `leftCollapsed` is a visual state the CSS drawer
   // owns, so gating the mount on it would remove the element the transition animates.
