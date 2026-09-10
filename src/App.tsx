@@ -244,7 +244,16 @@ export function App() {
     () => outputPanelItemsSignature(defaultOutputPanelItems),
     [defaultOutputPanelItems],
   );
-  const isWelcome = !state.showStandard && displayViewModel.timeline.length === 0;
+  /**
+   * The product's welcome state — greeting, composer centred in the column.
+   *
+   * Requires having been asked for. An empty timeline is also what an
+   * unconfigured canvas looks like, so inferring it from that alone opened
+   * every new project on a greeting nobody had written, with the composer
+   * floating mid-column instead of sitting at the bottom where an input goes.
+   */
+  const isWelcome =
+    !state.showStandard && state.welcomeActive && displayViewModel.timeline.length === 0;
   // Every group is reachable now: the renderers that used to hide inside the
   // filtered-out "render" group are sections of "delivery".
   const visiblePresetGroups = useMemo(() => presetGroupsForProject(project), [project]);

@@ -6044,6 +6044,15 @@ pre {
   font-size: 11px;
 }
 
+/* The composer sits on the stack's last row, so it stays at the bottom of the
+   column whether or not a conversation is above it. The stack's rows are
+   `minmax(0, 1fr) auto`; auto-placed, a composer with no conversation above it
+   took the 1fr row and floated in the middle of the column. The welcome state
+   has its own single-row grid and centres on purpose, so it is excluded. */
+.preview-stack:not([data-welcome="true"]) > .composer-frame {
+  grid-row: 2;
+}
+
 .composer-frame {
   display: grid;
   gap: var(--space-2);

@@ -183,6 +183,21 @@ describe("App shell controls", () => {
     });
     expect(markup).not.toContain("session-new");
     expect(markup).not.toContain("session-footer");
+
+    // No welcome state either. It used to be inferred from an empty timeline,
+    // which is also what an unconfigured canvas looks like, so a new project
+    // opened on a greeting nobody had written. It is asked for now — the
+    // greeting field lights it up while it is being edited.
+    expect(createInitialWorkspaceState("zh").welcomeActive).toBe(false);
+    expect(markup).not.toContain('data-welcome="true"');
+
+    // And the composer sits on the stack's last row, so with no conversation
+    // above it it stays at the bottom of the column instead of taking the 1fr
+    // row and floating in the middle.
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+    expect(
+      cssRule(styles, '.preview-stack:not([data-welcome="true"]) > .composer-frame'),
+    ).toContain("grid-row: 2;");
   });
 
   it("keeps the centre column when it is empty, but not the side ones", () => {

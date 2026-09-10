@@ -79,6 +79,17 @@ export type WorkspaceState = {
    * choice and showed every row's first tile as picked.
    */
   pickedIconSlots: readonly string[];
+  /**
+   * Whether the canvas is showing the product's welcome state.
+   *
+   * Asked for, not inferred. It used to be inferred from an empty timeline,
+   * which is also what an unconfigured canvas looks like — so a new project
+   * opened on a greeting nobody had written and a composer floating in the
+   * middle of the column. The greeting field lights this up while it is being
+   * edited, which is the only time the welcome state is the thing being
+   * configured.
+   */
+  welcomeActive: boolean;
   selectedGroup: PresetGroupId;
   presetDrawerOpen: boolean;
   selectedFixtureId: PreviewFixtureId;
@@ -171,6 +182,7 @@ export function createInitialWorkspaceState(locale: AppLocale): WorkspaceState {
     pinnedOptionId: null,
     pickedOptionIds: [],
     pickedIconSlots: [],
+    welcomeActive: false,
     // First group of the Structure destination, so opening 架构 shows 左栏
     // expanded rather than whichever group happened to be the old default.
     selectedGroup: "sidebar",
@@ -250,6 +262,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     case "enterWelcome":
       return {
         ...state,
+        welcomeActive: true,
         showStandard: false,
         activeStateCode: null,
         runEvents: [],
