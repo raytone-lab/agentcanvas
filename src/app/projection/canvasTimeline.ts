@@ -41,6 +41,17 @@ const SAMPLE = {
     zh: "正在理解你的需求。",
     ja: "依頼内容を確認しています。",
   },
+  /**
+   * The conversation's title, which the chat header shows.
+   *
+   * Named for what was asked rather than for the product: the exchange opens
+   * with "what can you do", so this is the reader confirming what it can do.
+   */
+  title: {
+    en: "Confirming capabilities",
+    zh: "确认功能",
+    ja: "できることの確認",
+  },
   followUp: {
     en: "Take another look for me.",
     zh: "再帮我看一下。",
@@ -223,7 +234,7 @@ export function canvasTimelineEvents({
   if (!parts.userTurn && !parts.agentTurn) return [];
 
   sequence = 0;
-  const events: AgentUXEvent[] = [event("run.started", { title: "Canvas" })];
+  const events: AgentUXEvent[] = [event("run.started", { title: SAMPLE.title[locale] })];
 
   if (parts.userTurn) {
     const payload = { textId: "txt_user", role: "user", format: "markdown" };

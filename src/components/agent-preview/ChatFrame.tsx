@@ -60,10 +60,14 @@ export function ChatFrame({
       data-tool-style={project.theme.motion.toolCall}
       data-writing-motion={project.theme.motion.writing}
     >
+      {/* The conversation's own title, which is what a chat header says. It
+          used to be a fixed product label — "编码 Agent" — above the real title
+          in small print, so the header named the wrong thing twice: the product
+          is already named in the sidebar's brand. */}
       <header className="frame-header">
         <div>
-          <h2>{copy.chat.frame.title}</h2>
-          <p>{viewModel.title ?? copy.chat.frame.fallbackConversationTitle} · {copy.chat.frame.subtitleSuffix}</p>
+          <h2>{viewModel.title ?? copy.chat.frame.fallbackConversationTitle}</h2>
+          <p>{copy.chat.frame.subtitleSuffix}</p>
         </div>
       </header>
       <div className="timeline-list">

@@ -13482,7 +13482,7 @@ pre {
 }
 
 .preset-panel:is([data-nav-section="structure"], [data-nav-section="components"], [data-nav-section="theme"])
-  > :is(.preset-style-cards, .preset-panel-header) {
+  > :is(.preset-style-cards, .preset-panel-header, .layers-panel-head) {
   flex: none;
 }
 

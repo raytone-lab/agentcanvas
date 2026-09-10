@@ -37,6 +37,7 @@ import {
   type NavSectionId,
 } from "../projection/presetRailData";
 import { LayersPanel } from "./LayersPanel";
+import { ProjectTitle } from "./ProjectTitle";
 import type { SelectedComponentItem } from "../projection/selectedComponents";
 
 type PresetGroup = {
@@ -503,9 +504,21 @@ export function PresetRail({
       {/* File shows the canvas structure as layers; the other three keep the
           group panel, with App.tsx pointing `selectedGroup` at the group each
           destination owns. Reusing the panel rather than rebuilding it per
-          destination is why theme cards and provider settings still work. */}
+          destination is why theme cards and provider settings still work.
+
+          The project's name sits above both, in every destination: it names the
+          thing being configured, which does not stop being true when the reader
+          switches to Theme. It used to live inside the layer panel and vanish
+          with it. */}
       {navSection === "file" ? (
         <aside className="preset-panel" data-nav-section="file" aria-label={copy.shell.presetRail.layers.title}>
+          <div className="layers-panel-head">
+            <ProjectTitle
+              name={project.name}
+              placeholder={copy.shell.presetRail.layers.title}
+              onRename={onRenameProject}
+            />
+          </div>
           <LayersPanel
             project={project}
             locale={locale}
@@ -513,10 +526,8 @@ export function PresetRail({
             onSelectLayer={onSelectLayer}
             selectedSlotId={selectedSlotId}
             onSelectSlot={onSelectSlot}
-            onRenameProject={onRenameProject}
             selectedComponentItems={selectedComponentItems}
             pickedOptionIds={pickedOptionIds}
-            title={copy.shell.presetRail.layers.title}
             layersLabel={copy.shell.presetRail.layers.sectionTitle}
           />
         </aside>
@@ -535,6 +546,13 @@ export function PresetRail({
             selected was reachable and the other twelve were not. Grouped by the
             same `presetRailSections` as before, as a list because there is one
             column now rather than two. */}
+        <div className="layers-panel-head">
+          <ProjectTitle
+            name={project.name}
+            placeholder={copy.shell.presetRail.layers.title}
+            onRename={onRenameProject}
+          />
+        </div>
       {/* Moved inside the Theme destination. Above the columns it had 304px to
             show 550px of cards, so the fourth style was off-screen entirely and
             the third was cut in half — measured, and already true at three

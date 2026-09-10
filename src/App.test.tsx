@@ -781,3 +781,52 @@ describe("sidebar resize", () => {
     expect(createInitialWorkspaceState("zh").sidebarWidth).toBeNull();
   });
 });
+
+describe("panel header and conversation title", () => {
+  it("keeps the project name above every destination", () => {
+    const railSource = readFileSync(new URL("./app/view/PresetRail.tsx", import.meta.url), "utf8");
+    const layersSource = readFileSync(new URL("./app/view/LayersPanel.tsx", import.meta.url), "utf8");
+
+    // It names the thing being configured, which does not stop being true when
+    // the reader switches to Theme. It used to live inside the layer panel and
+    // vanish with it.
+    expect(railSource.match(/<ProjectTitle/g)).toHaveLength(2);
+    expect(layersSource).not.toContain("ProjectTitle");
+
+    // And it stays put rather than stretching or scrolling with the list.
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+    expect(
+      cssRule(
+        styles,
+        '.preset-panel:is([data-nav-section="structure"], [data-nav-section="components"], [data-nav-section="theme"])\n  > :is(.preset-style-cards, .preset-panel-header, .layers-panel-head)',
+      ),
+    ).toContain("flex: none;");
+  });
+
+  it("titles the chat header with the conversation, not the product", () => {
+    const frameSource = readFileSync(
+      new URL("./components/agent-preview/ChatFrame.tsx", import.meta.url),
+      "utf8",
+    );
+    // The header used to carry a fixed "编码 Agent" above the real title in
+    // small print, naming the wrong thing twice — the product is already named
+    // in the sidebar's brand.
+    expect(frameSource).toContain("<h2>{viewModel.title ?? copy.chat.frame.fallbackConversationTitle}</h2>");
+    expect(frameSource).not.toContain("<h2>{copy.chat.frame.title}</h2>");
+
+    // The composed conversation names what was asked, not the product.
+    const timelineSource = readFileSync(
+      new URL("./app/projection/canvasTimeline.ts", import.meta.url),
+      "utf8",
+    );
+    expect(timelineSource).toContain('zh: "确认功能"');
+    expect(timelineSource).toContain('event("run.started", { title: SAMPLE.title[locale] })');
+  });
+
+  it("names the finished reasoning block for the thing, not its state", () => {
+    // "已完成思考" restated what being collapsed and past already says.
+    const chatCopy = readFileSync(new URL("./i18n/copy/chat.ts", import.meta.url), "utf8");
+    expect(chatCopy).toContain('reasoned: "思考过程"');
+    expect(chatCopy).not.toContain('reasoned: "已完成思考"');
+  });
+});

@@ -7,7 +7,7 @@ import type { AppLocale } from "../locales";
 const en = {
   reasoning: {
     thinking: "Thinking",
-    reasoned: "Reasoned",
+    reasoned: "Thinking",
     visibility: {
       statusOnly: "status only",
       thinkingSummary: "thinking summary",
@@ -141,7 +141,7 @@ const en = {
 const zh: typeof en = {
   reasoning: {
     thinking: "思考中",
-    reasoned: "已完成思考",
+    reasoned: "思考过程",
     visibility: {
       statusOnly: "仅状态",
       thinkingSummary: "思考摘要",
@@ -267,7 +267,7 @@ const zh: typeof en = {
 const ja: typeof en = {
   reasoning: {
     thinking: "思考中",
-    reasoned: "思考完了",
+    reasoned: "思考プロセス",
     visibility: {
       statusOnly: "ステータスのみ",
       thinkingSummary: "思考の要約",
