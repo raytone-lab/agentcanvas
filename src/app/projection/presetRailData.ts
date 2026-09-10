@@ -27,6 +27,7 @@ import { previewCopy } from "../../i18n/copy/preview";
 import type { AppLocale } from "../../i18n/uiCopy";
 import type { PreviewScenarioId } from "../../preview-runner/PreviewRunner";
 import type { PresetStyleId } from "../../schema/agentuxConfig";
+import { isPresetOptionActive, togglePresetOption } from "../../schema/presetActions";
 import { presetGroups } from "../../schema/presets";
 import type { PresetGroupId, PresetOption } from "../../schema/presets";
 import { themeTokens } from "../../theme/themeTokens";
@@ -174,7 +175,10 @@ export const PRESET_GROUP_REGIONS: Partial<Record<PresetGroupId, AgentCanvasRegi
   "tool-calls": "main",
   blocks: "main",
   "media-generation": "main",
-  delivery: "main",
+  // Output source and renderer describe the right panel's contents, which is
+  // also how `isEffectiveSelectedComponent` treats them — they stop counting
+  // when the panel is hidden.
+  delivery: "right-panel",
 };
 
 /**
@@ -182,7 +186,7 @@ export const PRESET_GROUP_REGIONS: Partial<Record<PresetGroupId, AgentCanvasRegi
  * stands for it — listing both would put "会话列表" and "显示侧边栏" in the tree
  * as if they were two things.
  */
-const PRESENCE_OPTION_IDS = new Set([
+export const PRESENCE_OPTION_IDS = new Set([
   "sidebar-visible",
   "chat-visible",
   "composer-visible",
@@ -243,6 +247,51 @@ export const LAYER_PRESENCE_OPTIONS: Record<string, readonly string[]> = {
   right: ["output-visible", "git-visible"],
 };
 
+/**
+ * Whether an option is something you *add*, as opposed to a variant you pick.
+ *
+ * Derived rather than listed: an additive option can be turned off, so toggling
+ * it makes it inactive. A variant (the media placeholder style, the output
+ * source, a motion curve) is one of a mutually exclusive set — applying it
+ * again just re-picks the same value, so it stays active and no "none" state
+ * exists. Listing them by hand would have been wrong within a release; this
+ * cannot drift.
+ *
+ * It matters because variants are always active. Counting them as content would
+ * mean the centre and right columns could never be empty, and the layer tree
+ * would list a motion curve as if it were a module in a column.
+ */
+export function isAddedContentOption(project: AgentFrontendProject, optionId: string): boolean {
+  if (PRESENCE_OPTION_IDS.has(optionId)) return false;
+  if (!isPresetOptionActive(project, optionId)) return false;
+  return !isPresetOptionActive(togglePresetOption(project, optionId), optionId);
+}
+
+/**
+ * Which regions have had something chosen for them.
+ *
+ * The canvas shows only what has been picked: a column's presence toggle puts
+ * the column there, and the components inside it appear as their contents are
+ * chosen. Until then the column is an empty frame in the project's theme —
+ * which is what makes the canvas what-you-see-is-what-you-get rather than a
+ * demo that happens to be editable.
+ *
+ * Presence toggles are excluded, or every column would count as filled by
+ * virtue of existing.
+ */
+export function regionsWithChosenContent(
+  project: AgentFrontendProject,
+  items: readonly { id: string; groupId: PresetGroupId }[],
+): Set<AgentCanvasRegion> {
+  const regions = new Set<AgentCanvasRegion>();
+  for (const item of items) {
+    if (!isAddedContentOption(project, item.id)) continue;
+    const region = PRESET_GROUP_REGIONS[item.groupId];
+    if (region) regions.add(region);
+  }
+  return regions;
+}
+
 /** The option a layer row edits or deletes, or null if it maps to none. */
 export function optionIdForModule(moduleId: string): string | null {
   const presence = SLOT_PRESENCE_OPTIONS[moduleId];
@@ -287,8 +336,9 @@ export function layerContentsForProject(
   selectedOptions?: readonly { id: string; groupId: PresetGroupId; label: string }[],
 ) {
   return layersForRegions(project.layout.regions).map((layer) => {
+    const filled = regionsWithChosenContent(project, selectedOptions ?? []);
     const slots = project.layout.slots.filter(
-      (slot) => slot.enabled && layer.regions.includes(slot.region),
+      (slot) => slot.enabled && layer.regions.includes(slot.region) && filled.has(slot.region),
     );
     const children: LayerChild[] = slots.map((slot) => ({
       id: slot.id,
@@ -296,7 +346,9 @@ export function layerContentsForProject(
       kind: "slot",
     }));
     for (const option of selectedOptions ?? []) {
-      if (PRESENCE_OPTION_IDS.has(option.id)) continue;
+      // Variants are settings, not modules: a motion curve is not a thing
+      // sitting in a column.
+      if (!isAddedContentOption(project, option.id)) continue;
       const region = PRESET_GROUP_REGIONS[option.groupId];
       if (!region || !layer.regions.includes(region)) continue;
       // Only if the component it lives in is actually on the canvas. Several

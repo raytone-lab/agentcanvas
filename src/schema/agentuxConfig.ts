@@ -593,11 +593,11 @@ const OPENING_SLOT_IDS = ["sessions", "chat", "composer", "output"];
 
 export const emptyStructureProject: AgentFrontendProject = {
   ...defaultCodingAgentProject,
-  // Unnamed until the reader names it. The Layers panel shows a localised
-  // placeholder while this is blank, and `createScaffoldPackageJson` already
-  // falls back to "agentux-scaffold" for a blank name, so an export of an
-  // un-renamed project is still valid.
-  name: "",
+  // The name the canvas shows as the product's brand, and the name the Layers
+  // panel edits — one value, so renaming in the rail renames on the canvas.
+  // A real default rather than a placeholder: an unnamed project would put
+  // "未命名" on the canvas, which is not a name anyone would ship.
+  name: "My Agent",
   layout: {
     ...defaultCodingAgentProject.layout,
     regions: ["sidebar", "main", "composer", "right-panel"],
@@ -610,9 +610,37 @@ export const emptyStructureProject: AgentFrontendProject = {
       enabled: OPENING_SLOT_IDS.includes(slot.id),
     })),
   },
-  // The sidebar's "Content" section, unpicked. Same rule as the slots: the
-  // column is present, its contents are not chosen yet.
+  // Nothing is picked yet, in any column. The canvas opens as three empty
+  // frames in the project's theme and fills in as components are chosen —
+  // which is what makes it what-you-see-is-what-you-get rather than a demo
+  // that happens to be editable.
+  //
+  // Only the additive options appear here. The mutually exclusive ones (a
+  // motion curve, a media placeholder style, the output source) have no "off"
+  // state to set; `isAddedContentOption` keeps them from counting as content.
   sidebar: { newButton: false, search: false, grouping: false, footer: false },
+  conversation: {
+    ...defaultCodingAgentProject.conversation,
+    speakerLabels: false,
+    userAvatar: false,
+    agentAvatar: false,
+  },
+  composer: {
+    ...defaultCodingAgentProject.composer,
+    fileUpload: false,
+    thinkingBudget: false,
+    modelSwitcher: false,
+    toolToggle: false,
+  },
+  git: {
+    ...defaultCodingAgentProject.git,
+    showBranchStatus: false,
+    showChangedFiles: false,
+    showDiff: false,
+    suggestCommitMessage: false,
+    allowCommit: false,
+    allowPush: false,
+  },
 };
 
 /** Project the branch-owned Canvas model into the portable v2 product contract. */

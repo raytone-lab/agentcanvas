@@ -221,14 +221,16 @@ describe("App shell controls", () => {
     expect(markup).not.toContain("选择风格");
   });
 
-  it("opens with the project unnamed and the name editable", () => {
+  it("opens named, with the name editable and shown on the canvas", () => {
     const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
 
-    // The panel title is `project.name`, not a fixed label — the same field the
-    // export turns into the package name. It starts blank, so what shows is the
-    // localised placeholder.
+    // The panel title is `project.name` — the same value the canvas shows as
+    // the product's brand, and the one the export turns into the package name.
+    // A real default rather than a placeholder: an unnamed project would put
+    // "未命名" on the canvas, which is not a name anyone would ship.
     expect(markup).toContain('class="layers-panel-title"');
-    expect(markup).toContain(">未命名<");
+    expect(markup).toContain(">My Agent<");
+    expect(emptyStructureProject.name).toBe("My Agent");
     // A button, so it is reachable by keyboard and reads as editable. It used to
     // be a <span>.
     expect(markup).toMatch(/<button[^>]*class="layers-panel-title"/);
@@ -446,7 +448,7 @@ describe("App shell controls", () => {
     // instead" is one of the choices on the panel.
     const appSource = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
     const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
-    const composerSlots = '{renderSlots(visibleLayoutSlots, "composer", slotContext)}';
+    const composerSlots = '{renderRegion("composer")}';
 
     // Checked per stack, not across the whole file: the preview renders one stack with the
     // right panel and one without, and a first-occurrence search would let a regression in

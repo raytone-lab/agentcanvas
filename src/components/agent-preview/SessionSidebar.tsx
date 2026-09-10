@@ -141,7 +141,11 @@ export function SessionSidebar({
   return (
     <aside ref={sidebarRef} className="session-sidebar" data-preview-anchor="sidebar" aria-label={c.ariaLabel}>
       <header className="session-brand">
-        <span className="session-brand-name">{c.brandName}</span>
+        {/* The project's own name, which the Layers panel edits — the title in
+            the rail and the brand on the canvas are one value, so renaming in
+            one place renames in the other. The localised default stands in
+            while the project is unnamed. */}
+        <span className="session-brand-name">{project.name.trim() || c.brandName}</span>
         <span className="session-brand-actions">
           {search ? (
             <div className="session-search-menu">

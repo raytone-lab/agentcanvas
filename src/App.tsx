@@ -63,6 +63,7 @@ import {
   rawStateCardToStateCard,
   optionIdForModule,
   railLocationForOption,
+  regionsWithChosenContent,
   resolveGroupForNavSection,
   visibleStateCards,
   type NavSectionId,
@@ -724,8 +725,20 @@ export function App() {
   };
   // Resolved once so "does this column have anything in it" is one question
   // rather than one per render site. An empty list is the normal case on open.
-  const sidebarSlots = renderSlots(visibleLayoutSlots, "sidebar", slotContext);
-  const rightPanelSlots = renderSlots(visibleLayoutSlots, "right-panel", slotContext);
+  /**
+   * The canvas shows only what has been chosen.
+   *
+   * A column's presence toggle puts the column on the canvas; the components
+   * inside it appear as their contents are picked. Until then each column is an
+   * empty frame in the project's theme. Rendering the components as soon as the
+   * column existed made the canvas open as a populated demo — a session list,
+   * a greeting, an output panel — none of which the reader had asked for.
+   */
+  const filledRegions = regionsWithChosenContent(activeProject, selectedComponentItems);
+  const renderRegion = (region: AgentCanvasRegion) =>
+    filledRegions.has(region) ? renderSlots(visibleLayoutSlots, region, slotContext) : [];
+  const sidebarSlots = renderRegion("sidebar");
+  const rightPanelSlots = renderRegion("right-panel");
   const previewOverlaySlots = renderSlots(
     visibleLayoutSlots.filter((slot) => slot.component === "OutputFrame"),
     "overlay",
@@ -888,13 +901,13 @@ export function App() {
                     <PanelGroup className="preview-panels" orientation="horizontal">
                       <Panel className="preview-panel" defaultSize={`${activeProject.layout.mainSize}%`} minSize="52%">
                         <section className="preview-stack" data-welcome={isWelcome ? "true" : undefined}>
-                          {renderSlots(visibleLayoutSlots, "main", slotContext)}
+                          {renderRegion("main")}
                           {/* Approvals before the composer: the question is answered above the field it
                               would otherwise cover, and every approval surface shares one placement. */}
                           {inlineRuntimeApprovalOverlay}
                           {externalApprovalOverlay}
                           {inlineApprovalDemoOverlay}
-                          {renderSlots(visibleLayoutSlots, "composer", slotContext)}
+                          {renderRegion("composer")}
                         </section>
                       </Panel>
                       <PanelResizeHandle className="resize-handle" />
@@ -906,11 +919,11 @@ export function App() {
                     </PanelGroup>
                   ) : (
                     <section className="preview-stack preview-stack-solo" data-welcome={isWelcome ? "true" : undefined}>
-                      {renderSlots(visibleLayoutSlots, "main", slotContext)}
+                      {renderRegion("main")}
                       {inlineRuntimeApprovalOverlay}
                       {externalApprovalOverlay}
                       {inlineApprovalDemoOverlay}
-                      {renderSlots(visibleLayoutSlots, "composer", slotContext)}
+                      {renderRegion("composer")}
                     </section>
                   )}
                   {hasSidebar && state.leftCollapsed && !state.autoHiddenRails.left ? (
