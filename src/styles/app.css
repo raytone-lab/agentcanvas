@@ -366,31 +366,35 @@ p {
   max-width: 145px;
 }
 
+/* Every control in the topbar reads as the same control. These were 40px tall
+   with a visible border while the zoom readout beside them was 32px on a plain
+   inset fill, so the bar had two kinds of button in it. Matched to the zoom
+   readout — that is the one the reader sees in both surfaces. */
 .topbar-controls > .secondary-button,
 .topbar-controls .scenario-picker .ui-select,
 .topbar-controls .run-mode-picker .ui-select {
-  height: 40px;
-  border-color: var(--border-strong);
-  border-radius: var(--fn-r-sm);
-  background: transparent;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--surface-inset);
   box-shadow: none;
 }
 
 .topbar-controls > .secondary-button {
-  padding: 0 18px;
+  padding: 0 10px;
 }
 
 .topbar-controls .scenario-picker .ui-select,
 .topbar-controls .run-mode-picker .ui-select {
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 560;
 }
 
 .topbar-controls > .secondary-button:hover:not(:disabled),
 .topbar-controls .scenario-picker .ui-select:hover:not(:disabled),
 .topbar-controls .run-mode-picker .ui-select:hover:not(:disabled) {
-  border-color: var(--border-strong);
-  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  border-color: transparent;
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
   color: var(--text-primary);
 }
 
@@ -3159,6 +3163,20 @@ textarea:focus-visible {
   background: transparent;
 }
 
+/* The sidebar's edge. The right split is a `PanelGroup`, which brings its own
+   handle; the sidebar is a fixed-width flex item outside it, so this one drives
+   `--session-width-set` directly. Same class, so it looks and behaves like the
+   other one — including being exempt from the canvas's click suppression. */
+.sidebar-resize-handle {
+  flex: 0 0 auto;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.sidebar-resize-handle[data-dragging="true"]::after {
+  background: var(--select-line);
+}
+
 .resize-handle::after {
   display: block;
   width: 1px;
@@ -3494,7 +3512,9 @@ textarea:focus-visible {
 }
 
 .session-sidebar {
-  --session-width: 236px;
+  /* Overridable so the editor's drag handle can set it, with 236px as the
+     default the exported scaffold ships with. */
+  --session-width: var(--session-width-set, 236px);
   --session-edge-x: 22px;
   /* How far the highlight pill bleeds past the row text on each side. Text/labels
      stay aligned with the New Chat icon at --session-edge-x (22px); the pill sits

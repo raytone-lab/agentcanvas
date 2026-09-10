@@ -90,6 +90,13 @@ export type WorkspaceState = {
    * configured.
    */
   welcomeActive: boolean;
+  /**
+   * Sidebar width in px, or null for the style's own default.
+   *
+   * Session state, like the right split: `layout.mainSize` is the *default*
+   * the panel group starts from, and dragging it does not write back either.
+   */
+  sidebarWidth: number | null;
   selectedGroup: PresetGroupId;
   presetDrawerOpen: boolean;
   selectedFixtureId: PreviewFixtureId;
@@ -183,6 +190,7 @@ export function createInitialWorkspaceState(locale: AppLocale): WorkspaceState {
     pickedOptionIds: [],
     pickedIconSlots: [],
     welcomeActive: false,
+    sidebarWidth: null,
     // First group of the Structure destination, so opening 架构 shows 左栏
     // expanded rather than whichever group happened to be the old default.
     selectedGroup: "sidebar",

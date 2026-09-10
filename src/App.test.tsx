@@ -66,7 +66,7 @@ describe("App shell controls", () => {
     expect(controls).not.toContain("Run replay");
   });
 
-  it("keeps saved-preview pickers icon-free and visually aligned with selected components control", () => {
+  it("keeps saved-preview pickers icon-free and matched to the zoom readout", () => {
     const appSource = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
     const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
     const topbarControlRule = cssRule(styles, ".topbar-controls > .secondary-button,\n.topbar-controls .scenario-picker .ui-select,\n.topbar-controls .run-mode-picker .ui-select");
@@ -74,10 +74,16 @@ describe("App shell controls", () => {
 
     expect(appSource).not.toContain("<span>{copy.shell.topbar.runModeLabel}</span>");
     expect(appSource).not.toContain("<span>{copy.shell.topbar.scenarioLabel}</span>");
-    expect(topbarControlRule).toContain("height: 40px;");
-    expect(topbarControlRule).toContain("border-color: var(--border-strong);");
-    expect(topbarControlRule).toContain("border-radius: var(--fn-r-sm);");
-    expect(hoverRule).toContain("background: color-mix(in srgb, var(--text-primary) 6%, transparent);");
+    // Every control in the topbar reads as the same control. These were 40px
+    // tall with a visible border while the zoom readout beside them was 32px on
+    // a plain inset fill, so the bar had two kinds of button in it.
+    const zoomRule = cssRule(styles, ".zoom-trigger");
+    for (const declaration of ["height: 32px;", "border-radius: 8px;", "background: var(--surface-inset);"]) {
+      expect(topbarControlRule, declaration).toContain(declaration);
+      expect(zoomRule, declaration).toContain(declaration.replace("border-radius: 8px;", "border-radius: 8px;"));
+    }
+    expect(topbarControlRule).toContain("border: 1px solid transparent;");
+    expect(hoverRule).toContain("background: color-mix(in srgb, var(--text-primary) 8%, transparent);");
   });
 
   it("counts only effective selected components in the topbar summary", () => {
@@ -727,5 +733,29 @@ describe("event flow axis", () => {
     for (const exit of FLOW_EXIT_GROUP_IDS) {
       expect(flow).toContain(exit);
     }
+  });
+});
+
+describe("sidebar resize", () => {
+  it("gives the left column its own drag handle", () => {
+    const appSource = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+
+    // The centre/right split gets its handle from `PanelGroup`. The sidebar is
+    // a fixed-width flex item outside it, so it needs one of its own that sets
+    // `--session-width-set` directly.
+    expect(appSource).toContain('className="resize-handle sidebar-resize-handle"');
+    expect(appSource).toContain('"--session-width-set"');
+    // Same class as the panel group's handle, which also exempts it from the
+    // canvas's click suppression.
+    expect(cssRule(styles, ".sidebar-resize-handle")).toContain("cursor: col-resize;");
+
+    // Overridable with the shipped 236px as the fallback, so an export that
+    // was never dragged is unchanged.
+    expect(styles).toContain("--session-width: var(--session-width-set, 236px);");
+
+    // Session state, like the right split: `layout.mainSize` is the default the
+    // panel group starts from, and dragging that does not write back either.
+    expect(createInitialWorkspaceState("zh").sidebarWidth).toBeNull();
   });
 });

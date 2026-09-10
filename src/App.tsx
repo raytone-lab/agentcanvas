@@ -627,6 +627,8 @@ export function App() {
    * point, so a half-built agent is a normal state to look at and only a
    * problem at the moment you try to run or ship it.
    */
+  const sidebarDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
+  const [draggingSidebar, setDraggingSidebar] = useState(false);
   const [pendingRun, setPendingRun] = useState<"preview" | "export" | null>(null);
   const missingRequirements = missingRequirementsForProject(activeProject, selectedComponentItems);
   const runOrAsk = (intent: "preview" | "export") => {
@@ -1061,9 +1063,56 @@ export function App() {
                   // can name a module inside a component (a search field, a
                   // version footer), which has no slot to look up.
                   data-selected-module={state.selectedSlotId ?? undefined}
+                  style={
+                    state.sidebarWidth === null
+                      ? undefined
+                      : ({ "--session-width-set": `${state.sidebarWidth}px` } as CSSProperties)
+                  }
                 >
                   {leftSidebarMounted ? (
                     sidebarSlots.length > 0 ? sidebarSlots : <div className="session-sidebar region-empty" />
+                  ) : null}
+                  {/* The sidebar's edge. The centre/right split gets its handle
+                      from `PanelGroup`; the sidebar is a fixed-width flex item
+                      outside it, so this one sets its width directly. */}
+                  {leftSidebarMounted && !state.leftCollapsed ? (
+                    <div
+                      className="resize-handle sidebar-resize-handle"
+                      role="separator"
+                      aria-orientation="vertical"
+                      aria-label={copy.shell.editor.resizeSidebar}
+                      data-dragging={draggingSidebar ? "true" : undefined}
+                      onPointerDown={(event) => {
+                        const sidebar = event.currentTarget.previousElementSibling;
+                        if (!(sidebar instanceof HTMLElement)) return;
+                        event.currentTarget.setPointerCapture(event.pointerId);
+                        setDraggingSidebar(true);
+                        sidebarDragRef.current = {
+                          startX: event.clientX,
+                          startWidth: sidebar.getBoundingClientRect().width,
+                        };
+                      }}
+                      onPointerMove={(event) => {
+                        const drag = sidebarDragRef.current;
+                        if (!drag) return;
+                        dispatch({
+                          type: "patch",
+                          patch: {
+                            sidebarWidth: clampSidebarWidth(
+                              drag.startWidth + (event.clientX - drag.startX),
+                            ),
+                          },
+                        });
+                      }}
+                      onPointerUp={(event) => {
+                        event.currentTarget.releasePointerCapture(event.pointerId);
+                        sidebarDragRef.current = null;
+                        setDraggingSidebar(false);
+                      }}
+                      // Double-click restores the style's own width, the same
+                      // escape hatch a panel group's handle gives.
+                      onDoubleClick={() => dispatch({ type: "patch", patch: { sidebarWidth: null } })}
+                    />
                   ) : null}
                   {rightPanelVisible ? (
                     <PanelGroup className="preview-panels" orientation="horizontal">
@@ -1181,6 +1230,17 @@ export function App() {
       </IconStyleProvider>
     </>
   );
+}
+
+/**
+ * Sidebar width bounds.
+ *
+ * The floor is where the session titles stop being readable; the ceiling keeps
+ * the conversation wider than the list beside it, which is the point of the
+ * layout.
+ */
+function clampSidebarWidth(width: number): number {
+  return Math.round(Math.min(420, Math.max(180, width)));
 }
 
 /** Matches `--motion-slow`, the column collapse transition. */
