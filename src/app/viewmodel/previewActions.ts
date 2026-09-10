@@ -9,6 +9,7 @@ import type { PreviewAnchor } from "../../preview/presetPreviewTarget";
 import { collectPreviewRunEvents, type PreviewScenarioId } from "../../preview-runner/PreviewRunner";
 import { initialSavedPreviewRunMode } from "../../preview-runner/runModeState";
 import { applyPresetOption, isPresetOptionActive, togglePresetOption } from "../../schema/presetActions";
+import { presetGroups } from "../../schema/presets";
 import type { PresetGroupId } from "../../schema/presets";
 import type { AgentFrontendProject, OutputSource, ProviderCatalogId, ProviderConnectionId } from "../../schema/agentuxConfig";
 import { themeTokens } from "../../theme/themeTokens";
@@ -115,6 +116,19 @@ export function createPreviewActions(ctx: ControllerContext) {
     });
   }
 
+  /**
+   * The option a group's state gallery stands for.
+   *
+   * The galleries are pickers for their group rather than for one option, so
+   * the canvas needs *something* from the group recorded. The first option that
+   * is actually built is the honest choice — a placeholder would record a pick
+   * for a component that does not exist.
+   */
+  function canonicalOptionIdForSelectedGroup(): string | undefined {
+    const group = presetGroups.find((entry) => entry.id === state.selectedGroup);
+    return group?.options.find((option) => !option.pending)?.id;
+  }
+
   function previewToolActionsOverview(options: { forceOpen?: boolean } = {}) {
     const cards = visibleStateCards("tool-calls").map((card) => rawStateCardToStateCard(card, locale));
     refs.standardStreamRef.current?.cancel();
@@ -129,7 +143,16 @@ export function createPreviewActions(ctx: ControllerContext) {
     }
   }
 
+  /**
+   * The tool-action gallery selects through here, not through `selectPreset`,
+   * so a click in it never reached `optionPicked` and the canvas showed nothing
+   * for 工具调用. Recorded against the group's display option, which is what
+   * the gallery is a picker for. Group expansion calls
+   * `previewToolActionsOverview` directly and is deliberately left out —
+   * opening a group is not picking something from it.
+   */
   function previewToolActionsOverviewFromCard() {
+    dispatch({ type: "optionPicked", optionId: "command-cards" });
     previewToolActionsOverview();
   }
 
@@ -280,6 +303,12 @@ export function createPreviewActions(ctx: ControllerContext) {
   function toggleStateCard(card: StateCard) {
     const key = avatarFlagKey(card);
     if (!key) {
+      // Not an avatar, so it is a state gallery standing in for its group's
+      // options — 结果报错 renders twenty cards and no option cell at all.
+      // Clicking one has to register as picking from that group, or the canvas
+      // shows nothing for it.
+      const groupOptionId = canonicalOptionIdForSelectedGroup();
+      if (groupOptionId) dispatch({ type: "optionPicked", optionId: groupOptionId });
       previewState(card);
       return;
     }
@@ -291,6 +320,10 @@ export function createPreviewActions(ctx: ControllerContext) {
   function pickStateCardIcon(card: StateCard) {
     const key = avatarFlagKey(card);
     if (!key) {
+      // Same as the card itself: outside the avatar galleries these tiles are
+      // the group's only picker, so the click has to register as a pick.
+      const groupOptionId = canonicalOptionIdForSelectedGroup();
+      if (groupOptionId) dispatch({ type: "optionPicked", optionId: groupOptionId });
       previewState(card);
       return;
     }

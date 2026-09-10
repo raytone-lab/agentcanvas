@@ -48,6 +48,12 @@ const SAMPLE = {
   },
   toolTitle: { en: "Read file", zh: "读取文件", ja: "ファイルを読む" },
   artifactTitle: { en: "Notes.md", zh: "Notes.md", ja: "Notes.md" },
+  errorMessage: {
+    en: "Could not write the file.",
+    zh: "文件写入失败。",
+    ja: "ファイルを書き込めませんでした。",
+  },
+  mediaTitle: { en: "cover.png", zh: "cover.png", ja: "cover.png" },
 } satisfies Record<string, Record<AppLocale, string>>;
 
 /** Groups whose content belongs to the reader's turn rather than the agent's. */
@@ -195,6 +201,15 @@ export function canvasTimelineParts({
      */
     liveTurn: asked.some((item) => isTransientOption(item.id)),
     liveReasoning: asked.some((item) => item.id.startsWith("thinking-")),
+    /** A failed turn, from 结果报错. Rendered by `run.error`. */
+    error: clickedIn("blocks"),
+    /**
+     * A media placeholder, from 生成中. There are no media events in the
+     * protocol — the loaders key off an *artifact* whose mime type is an image,
+     * audio or video — so this composes one and the style follows whichever
+     * variant was picked.
+     */
+    media: clickedIn("media-generation"),
   };
 }
 
@@ -258,12 +273,37 @@ export function canvasTimelineEvents({
     );
   }
 
+  if (parts.media) {
+    const kind = project.mediaGeneration.videoStyle && false ? "video" : "image";
+    events.push(
+      event("artifact.created", {
+        artifactId: "art_canvas_media",
+        kind,
+        title: SAMPLE.mediaTitle[locale],
+        mimeType: "image/png",
+      }),
+    );
+    // No `artifact.finished`: a finished image is a picture, and what 生成中
+    // configures is the loader shown while it is still arriving.
+  }
+
   if (parts.agentTurn) {
     const payload = { textId: "txt_agent", role: "assistant", format: "markdown" };
     events.push(
       event("text.started", payload, { messageId: "msg_agent" }),
       event("text.delta", { textId: "txt_agent", delta: SAMPLE.answer[locale] }, { messageId: "msg_agent" }),
       event("text.finished", { textId: "txt_agent" }, { messageId: "msg_agent" }),
+    );
+  }
+
+  if (parts.error) {
+    events.push(
+      event("run.error", {
+        code: "E_WRITE_FILE",
+        category: "tool",
+        retryable: true,
+        userMessage: SAMPLE.errorMessage[locale],
+      }),
     );
   }
 

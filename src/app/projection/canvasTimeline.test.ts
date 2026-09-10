@@ -121,6 +121,31 @@ describe("multi-turn transcript", () => {
     expect(types.at(-1)).toBe("reasoning.delta");
   });
 
+  it("composes an error block and a media placeholder", () => {
+    // 结果报错 and 生成中 showed nothing at all: the timeline had no part for
+    // either. Errors ride on `run.error`; media has no events in the protocol,
+    // so the loaders key off an artifact whose mime type is an image.
+    const errorTypes = canvasTimelineEvents({
+      project: emptyStructureProject,
+      items: [],
+      picked: ["error-collapse"],
+      locale: "zh",
+    }).map((event) => event.type);
+    expect(errorTypes).toContain("run.error");
+
+    const mediaEvents = canvasTimelineEvents({
+      project: emptyStructureProject,
+      items: [],
+      picked: ["media-image-grid"],
+      locale: "zh",
+    });
+    const created = mediaEvents.find((event) => event.type === "artifact.created");
+    expect((created?.payload as { mimeType?: string })?.mimeType).toBe("image/png");
+    // No `artifact.finished`: a finished image is a picture, and what 生成中
+    // configures is the loader shown while it is still arriving.
+    expect(mediaEvents.some((event) => event.type === "artifact.finished")).toBe(false);
+  });
+
   it("ends the run when nothing transient is picked", () => {
     const types = canvasTimelineEvents({
       project: emptyStructureProject,
