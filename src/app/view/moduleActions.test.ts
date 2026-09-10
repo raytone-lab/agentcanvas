@@ -97,19 +97,24 @@ describe("preview and export completeness", () => {
     expect(missingRequirementsForProject(filled, [])).toEqual([]);
   });
 
-  it("still asks for the conversation when only its contents were picked", () => {
-    // The conversation has its own visible toggle, so it does not appear just
-    // because something inside it was picked — that would put a thing on the
-    // canvas the reader had not selected. So the requirement stands until the
-    // toggle is ticked, and preview offers to tick it.
+  it("takes a pick from the conversation's own group as the conversation", () => {
+    // Picking 名称标签 or an avatar is configuring the conversation, in the very
+    // group that turns it on, so it appears and the requirement is met. The
+    // reader is not being surprised by a component they were not looking at.
     const withLabels = togglePresetOption(emptyStructureProject, "speaker-labels");
     const items = [{ id: "speaker-labels", groupId: "conversation" as const }];
-    expect(missingRequirementsForProject(withLabels, items).map((item) => item.optionId)).toEqual([
-      "chat-visible",
-    ]);
+    expect(missingRequirementsForProject(withLabels, items)).toEqual([]);
+  });
+
+  it("will not let another destination summon the conversation", () => {
+    // A thinking effect renders *into* the conversation but does not belong to
+    // it. Reaching in from the event flow stays refused — that destination says
+    // what is missing instead of conjuring a conversation nobody picked.
+    const withThinking = togglePresetOption(emptyStructureProject, "thinking-wave");
+    const items = [{ id: "thinking-wave", groupId: "ux-effects" as const }];
     expect(
-      missingRequirementsForProject(togglePresetOption(withLabels, "chat-visible"), items),
-    ).toEqual([]);
+      missingRequirementsForProject(withThinking, items).map((item) => item.optionId),
+    ).toEqual(["chat-visible"]);
   });
 
   it("waits for the filled project before running", () => {

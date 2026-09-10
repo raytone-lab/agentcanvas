@@ -177,6 +177,22 @@ const PRESENCE_MOUNTS_COMPONENT = new Set<SlotConfig["component"]>(["ChatFrame",
 const REQUIRES_OWN_PRESENCE = new Set<SlotConfig["component"]>(["ChatFrame", "GitFrame"]);
 
 /**
+ * The group each component belongs to — the one holding its presence toggle.
+ *
+ * Several groups render *into* a component: a thinking effect and a tool card
+ * both appear in the conversation. Only one group is the conversation's own,
+ * and that distinction is what decides whether picking something summons the
+ * component it needs.
+ */
+const COMPONENT_OWNER_GROUP: Record<string, PresetGroupId> = {
+  SessionSidebar: "sidebar",
+  ChatFrame: "conversation",
+  ComposerFrame: "composer",
+  OutputFrame: "output",
+  GitFrame: "git",
+};
+
+/**
  * What the canvas should render.
  *
  * A component appears as soon as something inside it is picked — no second step
@@ -192,10 +208,26 @@ export function mountedComponentsForProject(
   for (const slot of project.layout.slots) {
     if (slot.enabled && PRESENCE_MOUNTS_COMPONENT.has(slot.component)) mounted.add(slot.component);
   }
-  // Anything that needs its own toggle drops out again unless it has one.
+  /*
+   * Anything that needs its own toggle drops out again unless it has one — or
+   * unless the pick came from its own group.
+   *
+   * Picking 用户头像 is configuring the conversation, in the very group that
+   * turns the conversation on, so it should appear; the reader is not being
+   * surprised by a component they were not looking at. Picking 思考中 is a
+   * different destination reaching in, and that stays refused — the event flow
+   * says what is missing instead.
+   */
   for (const component of REQUIRES_OWN_PRESENCE) {
     const enabled = project.layout.slots.some((slot) => slot.component === component && slot.enabled);
-    if (!enabled) mounted.delete(component);
+    const ownGroup = COMPONENT_OWNER_GROUP[component];
+    const pickedInOwnGroup = [...items, ...picked.flatMap((id) => {
+      const groupId = OPTION_GROUP_IDS.get(id);
+      return groupId ? [{ id, groupId }] : [];
+    })].some(
+      (item) => item.groupId === ownGroup && isAddedContentOption(project, item.id),
+    );
+    if (!enabled && !pickedInOwnGroup) mounted.delete(component);
   }
   return mounted;
 }
