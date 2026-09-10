@@ -12714,10 +12714,10 @@ pre {
 .preset-panel[data-nav-section="components"] > .group-list::before {
   content: "";
   position: absolute;
-  /* Measured against the markers rather than derived: the row's own padding and
-     the list item's box put their centres at 29.5px, and a computed guess of
-     20.5px left the line running 9px to their left. */
-  left: 29.5px;
+  /* Centred on the markers, which sit in the rail's left gutter: 8px of row
+     padding plus half of the 15px marker. Measured, not derived — the rows
+     inherit a 22px indent from `.layers-row` that a computed guess missed. */
+  left: 15.5px;
   top: 20px;
   bottom: 20px;
   width: 1px;
@@ -12780,8 +12780,20 @@ pre {
   box-shadow: inset 0 0 0 1px var(--select-line);
 }
 
+/* The axis lives in the gutter, so the stage rows give up the 22px indent they
+   inherit from `.layers-row` and start at the marker instead. Moving the line
+   left rather than pushing the content right is what keeps the option cards
+   their full 97px — indenting the body far enough to clear a line at 29.5px
+   would have cost them 5px each. */
 .preset-panel[data-nav-section="components"] .group-row {
   gap: 7px;
+  padding-left: 8px;
+}
+
+/* Nested options clear the line instead of being crossed by it. The axis is a
+   spine: markers on it, everything else to its right. */
+.preset-panel[data-nav-section="components"] .group-row-body > .preset-panel-body {
+  padding-left: 24px;
 }
 
 /* A disclosure header. The chevron replaces the group's icon: with the options

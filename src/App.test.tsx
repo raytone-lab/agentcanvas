@@ -657,7 +657,21 @@ describe("event flow axis", () => {
       styles,
       '.preset-panel[data-nav-section="components"] > .group-list::before',
     );
-    expect(lineRule).toContain("left: 29.5px;");
+    expect(lineRule).toContain("left: 15.5px;");
+
+    // The axis sits in the rail's left gutter and the nested options clear it,
+    // rather than the line running down through the option cards. Moving the
+    // line left instead of indenting the body is what keeps the cards their
+    // width — measured 96px, against 97px before the axis existed.
+    expect(
+      cssRule(styles, '.preset-panel[data-nav-section="components"] .group-row'),
+    ).toContain("padding-left: 8px;");
+    expect(
+      cssRule(
+        styles,
+        '.preset-panel[data-nav-section="components"] .group-row-body > .preset-panel-body',
+      ),
+    ).toContain("padding-left: 24px;");
 
     // One fixed box at every state, so a marker's centre stays on the line.
     // Sizing the marker to its content moved the tick right of the line the
