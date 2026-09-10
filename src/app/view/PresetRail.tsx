@@ -29,6 +29,7 @@ import {
   FLOW_EXIT_GROUP_IDS,
   OPTION_GROUP_IDS,
   isOptionSelectedInRail,
+  mountedComponentsForProject,
   groupsForNavSection,
   navSections,
   presetStyleOptions,
@@ -172,6 +173,9 @@ export function PresetRail({
    * seven would mean configuring states it cannot reach. Preview and export are
    * where a project is actually held to a requirement.
    */
+  // What the canvas is drawing, so a presence toggle can tick when its
+  // component is on it.
+  const mountedComponents = mountedComponentsForProject(project, selectedComponentItems, pickedOptionIds);
   const flowCovered = new Set(
     pickedOptionIds
       .map((optionId) => OPTION_GROUP_IDS.get(optionId))
@@ -293,7 +297,13 @@ export function PresetRail({
                 ) : null}
                 <div className="preset-option-list">
                   {section.items.map((option) => {
-                    const active = isOptionSelectedInRail(project, option, selectedPresetGroup.id, pickedOptionIds);
+                    const active = isOptionSelectedInRail(
+                      project,
+                      option,
+                      selectedPresetGroup.id,
+                      pickedOptionIds,
+                      mountedComponents,
+                    );
                     const showParams = active && hasWritingParams(option.id);
                     const optionLabel = translatePresetOptionLabel(option.id, option.label, locale);
                     // Named but unbuilt: inert and dimmed, with the description

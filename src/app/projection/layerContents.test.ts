@@ -6,6 +6,7 @@ import {
   isAddedContentOption,
   isOptionSelectedInRail,
   layerContentsForProject,
+  mountedComponentsForProject,
   layersForProject,
   regionsWithChosenContent,
 } from "./presetRailData";
@@ -168,10 +169,15 @@ describe("rail selection honesty", () => {
     // "active in the project", and for the variant groups one option is always
     // active by construction — `reasoning.show` has no off value — so the rail
     // claimed a dozen picks while the canvas showed nothing.
+    // Asked the way the rail asks: with the components the canvas is drawing,
+    // and skipping the options the rail never renders.
+    const mounted = mountedComponentsForProject(emptyStructureProject, [], []);
     for (const group of presetGroups) {
-      const selected = group.options.filter((option) =>
-        isOptionSelectedInRail(emptyStructureProject, option, group.id),
-      );
+      const selected = group.options
+        .filter((option) => !RAIL_HIDDEN_OPTION_IDS.has(option.id))
+        .filter((option) =>
+          isOptionSelectedInRail(emptyStructureProject, option, group.id, [], mounted),
+        );
       if (group.id === "theme") {
         // A palette is a variant with no off state, and the canvas genuinely
         // shows it, so the project's own answer is the honest one.
@@ -180,6 +186,26 @@ describe("rail selection honesty", () => {
       }
       expect(selected.map((option) => option.id), `${group.id} should open unselected`).toEqual([]);
     }
+  });
+
+  it("ticks a presence toggle when its component is on the canvas", () => {
+    // Picking 思考中 brings the conversation with it, so 显示对话流 has to tick:
+    // reading only the toggle's own state left it unticked while a
+    // conversation was plainly showing — the rule broken the other way round,
+    // the canvas showing something no control claims.
+    const group = presetGroups.find((entry) => entry.id === "conversation")!;
+    const chatVisible = group.options.find((option) => option.id === "chat-visible")!;
+    const picked = ["thinking-wave"];
+    const mounted = mountedComponentsForProject(emptyStructureProject, [], picked);
+    expect(mounted.has("ChatFrame")).toBe(true);
+    expect(isOptionSelectedInRail(emptyStructureProject, chatVisible, "conversation", picked, mounted)).toBe(
+      true,
+    );
+    // And unticked while nothing has put a conversation there.
+    const empty = mountedComponentsForProject(emptyStructureProject, [], []);
+    expect(isOptionSelectedInRail(emptyStructureProject, chatVisible, "conversation", [], empty)).toBe(
+      false,
+    );
   });
 
   it("moves the tick when a second variant in a section is picked", () => {

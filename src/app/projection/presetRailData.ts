@@ -517,8 +517,20 @@ export function isOptionSelectedInRail(
   option: { id: string },
   groupId: PresetGroupId,
   picked: readonly string[] = [],
+  /** Components the canvas is drawing, for the presence toggles below. */
+  mounted?: ReadonlySet<SlotConfig["component"]>,
 ): boolean {
   if (groupId === "theme") return isPresetOptionActive(project, option.id);
+  // A presence toggle ticks when its component is on the canvas, however it
+  // got there. Picking 思考中 brings the conversation with it, and reading only
+  // the toggle's own state left 显示对话流 unticked while a conversation was
+  // plainly showing — the rule broken in the other direction: the canvas
+  // showing something no control claims.
+  if (PRESENCE_OPTION_IDS.has(option.id)) {
+    const component = PRESET_GROUP_COMPONENTS[groupId];
+    if (mounted && component) return mounted.has(component);
+    return isPresetOptionActive(project, option.id);
+  }
   if (isAddedContentOption(project, option.id)) return true;
   return picked.includes(option.id) && isPresetOptionActive(project, option.id);
 }
