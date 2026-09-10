@@ -629,6 +629,7 @@ export function App() {
    */
   const sidebarDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const [draggingSidebar, setDraggingSidebar] = useState(false);
+  const [panelLayout, setPanelLayout] = useState<{ main: number; right: number } | undefined>();
   const [pendingRun, setPendingRun] = useState<"preview" | "export" | null>(null);
   const missingRequirements = missingRequirementsForProject(activeProject, selectedComponentItems);
   const runOrAsk = (intent: "preview" | "export") => {
@@ -1029,7 +1030,19 @@ export function App() {
                     magnifying the canvas does not reflow the design being
                     edited — a 200% canvas is a bigger picture of the same
                     layout, not a narrower viewport. */}
-                <div className="canvas-zoom">
+                <div
+                  className="canvas-zoom"
+                  // The sidebar's width lives here, not on the frame: the
+                  // region labels are a sibling of the frame — they had to
+                  // leave it to escape its clipping — so a property set on the
+                  // frame never reached them and the labels stayed put while
+                  // the columns moved.
+                  style={
+                    state.sidebarWidth === null
+                      ? undefined
+                      : ({ "--session-width-set": `${state.sidebarWidth}px` } as CSSProperties)
+                  }
+                >
                 {/* Region labels, one per column, sitting in the gap above the
                     frame. Outside the frame rather than inside it: the frame
                     clips to its rounded corners, so a child at a negative
@@ -1043,6 +1056,7 @@ export function App() {
                   rightPanelVisible={rightPanelVisible}
                   selectedComponentItems={selectedComponentItems}
                   pickedOptionIds={state.pickedOptionIds}
+                  panelLayout={panelLayout}
                 />
                 <div
                   ref={previewFrameRef}
@@ -1063,11 +1077,6 @@ export function App() {
                   // can name a module inside a component (a search field, a
                   // version footer), which has no slot to look up.
                   data-selected-module={state.selectedSlotId ?? undefined}
-                  style={
-                    state.sidebarWidth === null
-                      ? undefined
-                      : ({ "--session-width-set": `${state.sidebarWidth}px` } as CSSProperties)
-                  }
                 >
                   {leftSidebarMounted ? (
                     sidebarSlots.length > 0 ? sidebarSlots : <div className="session-sidebar region-empty" />
@@ -1115,8 +1124,20 @@ export function App() {
                     />
                   ) : null}
                   {rightPanelVisible ? (
-                    <PanelGroup className="preview-panels" orientation="horizontal">
-                      <Panel className="preview-panel" defaultSize={`${activeProject.layout.mainSize}%`} minSize="52%">
+                    <PanelGroup
+                      className="preview-panels"
+                      orientation="horizontal"
+                      // The region labels sit above these columns and have to
+                      // follow them; the project's sizes are only where the
+                      // split starts.
+                      onLayoutChange={(layout) =>
+                        setPanelLayout({
+                          main: layout.main ?? activeProject.layout.mainSize,
+                          right: layout.right ?? activeProject.layout.rightPanelSize,
+                        })
+                      }
+                    >
+                      <Panel id="main" className="preview-panel" defaultSize={`${activeProject.layout.mainSize}%`} minSize="52%">
                         <section className="preview-stack" data-welcome={isWelcome ? "true" : undefined}>
                           {renderRegion("main")}
                           {/* Approvals before the composer: the question is answered above the field it
@@ -1128,7 +1149,7 @@ export function App() {
                         </section>
                       </Panel>
                       <PanelResizeHandle className="resize-handle" />
-                      <Panel className="preview-panel" defaultSize={`${activeProject.layout.rightPanelSize}%`} minSize="24%">
+                      <Panel id="right" className="preview-panel" defaultSize={`${activeProject.layout.rightPanelSize}%`} minSize="24%">
                         <aside className="right-panel" data-empty={rightPanelSlots.length === 0 ? "true" : undefined}>
                           {rightPanelSlots}
                         </aside>

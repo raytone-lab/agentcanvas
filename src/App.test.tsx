@@ -737,6 +737,28 @@ describe("event flow axis", () => {
 });
 
 describe("sidebar resize", () => {
+  it("keeps the region labels over their columns as the widths change", () => {
+    const appSource = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+    const labelsSource = readFileSync(new URL("./app/view/RegionLabels.tsx", import.meta.url), "utf8");
+
+    // The labels track the same custom property the sidebar's width reads, so
+    // the left column needs no JavaScript. It is set on the zoom wrapper, not
+    // the frame: the labels are a sibling of the frame — they had to leave it
+    // to escape its clipping — so a property on the frame never reached them
+    // and they stayed put while the columns moved.
+    expect(labelsSource).toContain("var(--session-width-set, 236px)");
+    const frameIndex = appSource.indexOf('className="preview-frame"');
+    const varIndex = appSource.indexOf('"--session-width-set"');
+    expect(varIndex).toBeGreaterThan(-1);
+    expect(varIndex).toBeLessThan(frameIndex);
+
+    // The centre/right split belongs to the panel group, so the labels read its
+    // live layout. `mainSize` and `rightPanelSize` are only where it starts.
+    expect(appSource).toContain("onLayoutChange={(layout) =>");
+    expect(labelsSource).toContain("panelLayout?.main ?? mainSize");
+    expect(labelsSource).toContain("panelLayout?.right ?? rightPanelSize");
+  });
+
   it("gives the left column its own drag handle", () => {
     const appSource = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
     const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");

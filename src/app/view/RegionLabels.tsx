@@ -27,6 +27,7 @@ export function RegionLabels({
   rightPanelVisible,
   selectedComponentItems,
   pickedOptionIds,
+  panelLayout,
 }: {
   project: AgentFrontendProject;
   locale: AppLocale;
@@ -35,6 +36,8 @@ export function RegionLabels({
   /** Counted in the label badge, same as the Layers tree counts them. */
   selectedComponentItems: readonly { id: string; groupId: PresetGroupId; label: string }[];
   pickedOptionIds: readonly string[];
+  /** The panel group's live centre/right split, once it has reported one. */
+  panelLayout?: { main: number; right: number };
 }) {
   // `layerContentsForProject` already drops a column the project does not have.
   // The extra filter is only about whether the right column *fits*: it is
@@ -45,12 +48,21 @@ export function RegionLabels({
   );
   if (layers.length === 0) return null;
 
+  /**
+   * Widths that follow the columns as they are dragged.
+   *
+   * The left column reads the same custom property its own width does, so it
+   * tracks without any JavaScript. The centre/right split belongs to the panel
+   * group, which reports its live layout — the project's `mainSize` and
+   * `rightPanelSize` are only where that split *starts*, so using them left the
+   * labels behind the moment the divider moved.
+   */
   const { mainSize, rightPanelSize } = project.layout;
   const template = layers
     .map((layer) => {
-      if (layer.id === "left") return "var(--session-width, 236px)";
-      if (layer.id === "center") return `${mainSize}fr`;
-      return `${rightPanelSize}fr`;
+      if (layer.id === "left") return "var(--session-width-set, 236px)";
+      if (layer.id === "center") return `${panelLayout?.main ?? mainSize}fr`;
+      return `${panelLayout?.right ?? rightPanelSize}fr`;
     })
     .join(" ");
 
