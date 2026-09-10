@@ -151,8 +151,13 @@ export function createPreviewActions(ctx: ControllerContext) {
    * `previewToolActionsOverview` directly and is deliberately left out —
    * opening a group is not picking something from it.
    */
-  function previewToolActionsOverviewFromCard() {
+  function previewToolActionsOverviewFromCard(card?: StateCard) {
     dispatch({ type: "optionPicked", optionId: "command-cards" });
+    // The gallery calls this for both the card body and its icon tiles. Only
+    // the tile click is a choice of icon, but both arrive with the card, and
+    // recording the slot is what lets the tile's ring mean "you chose this"
+    // rather than "this is the default".
+    if (card) dispatch({ type: "iconSlotPicked", slot: card.slot });
     previewToolActionsOverview();
   }
 
@@ -318,6 +323,9 @@ export function createPreviewActions(ctx: ControllerContext) {
 
   // Icon-tile click: choose that icon and enable the avatar so the pick shows.
   function pickStateCardIcon(card: StateCard) {
+    // Records that this slot's icon was chosen, so the gallery can tell a
+    // choice apart from the default it always had.
+    dispatch({ type: "iconSlotPicked", slot: card.slot });
     const key = avatarFlagKey(card);
     if (!key) {
       // Same as the card itself: outside the avatar galleries these tiles are

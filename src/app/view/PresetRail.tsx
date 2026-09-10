@@ -64,6 +64,7 @@ export function PresetRail({
   onRenameProject,
   selectedComponentItems,
   pickedOptionIds,
+  pickedIconSlots,
   pinnedOptionId,
   onPinnedOptionShown,
   presetDrawerOpen,
@@ -110,6 +111,8 @@ export function PresetRail({
   selectedComponentItems: readonly SelectedComponentItem[];
   /** Clicked options, which the layer tree needs for variant-only picks. */
   pickedOptionIds: readonly string[];
+  /** Icon slots the reader has chosen, so a default does not read as a pick. */
+  pickedIconSlots: readonly string[];
   /** Set by the canvas toolbar's Edit: scroll this option in and flash it. */
   pinnedOptionId: string | null;
   onPinnedOptionShown: () => void;
@@ -131,7 +134,7 @@ export function PresetRail({
   onStateCardToggle: (card: StateCard) => void;
   onStateCardPickIcon: (card: StateCard) => void;
   onStateCardDisable: (card: StateCard) => void;
-  onToolActionsOverview: () => void;
+  onToolActionsOverview: (card?: StateCard) => void;
   renderedPresetSections: { label: string; items: PresetOption[] }[];
   showPresetSectionLabels: boolean;
   onSelectPreset: (optionId: string) => void;
@@ -207,6 +210,7 @@ export function PresetRail({
                 onSelect={onStateCardToggle}
                 onPickIcon={onStateCardPickIcon}
                 onDeselect={onStateCardDisable}
+                pickedSlots={pickedIconSlots}
               />
               {selectedPresetGroup.id === "conversation" ? (
                 <div className="preset-option-cell" data-option-id="speaker-labels">
@@ -254,6 +258,7 @@ export function PresetRail({
                 onSelect={onToolActionsOverview}
                 onPickIcon={onToolActionsOverview}
                 onDeselect={onToolActionsOverview}
+                pickedSlots={pickedIconSlots}
               />
             </section>
           ) : null}

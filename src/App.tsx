@@ -954,6 +954,7 @@ export function App() {
               onRenameProject={(name) => setProject((current) => ({ ...current, name }))}
               selectedComponentItems={selectedComponentItems}
               pickedOptionIds={state.pickedOptionIds}
+              pickedIconSlots={state.pickedIconSlots}
               pinnedOptionId={state.pinnedOptionId}
               onPinnedOptionShown={() => dispatch({ type: "patch", patch: { pinnedOptionId: null } })}
               presetDrawerOpen={state.presetDrawerOpen}

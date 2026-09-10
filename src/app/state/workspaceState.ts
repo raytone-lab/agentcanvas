@@ -71,6 +71,14 @@ export type WorkspaceState = {
    * picked means picked.
    */
   pickedOptionIds: readonly string[];
+  /**
+   * Icon slots whose icon the reader has chosen, this session.
+   *
+   * Same problem as `pickedOptionIds` in a different place: every slot always
+   * holds an icon, so the galleries had no way to tell a default apart from a
+   * choice and showed every row's first tile as picked.
+   */
+  pickedIconSlots: readonly string[];
   selectedGroup: PresetGroupId;
   presetDrawerOpen: boolean;
   selectedFixtureId: PreviewFixtureId;
@@ -116,6 +124,7 @@ export type WorkspaceAction =
   | { type: "enterWelcome" }
   | { type: "fixtureSelected"; fixtureId: PreviewFixtureId }
   | { type: "optionPicked"; optionId: string }
+  | { type: "iconSlotPicked"; slot: string }
   | { type: "presetFixtureSelected"; optionId: string }
   | { type: "beginStandardStream"; scenarioId: ScenarioId; externalApproval: boolean }
   | { type: "streamEvents"; events: AgentUXEvent[] }
@@ -161,6 +170,7 @@ export function createInitialWorkspaceState(locale: AppLocale): WorkspaceState {
     canvasZoom: 100,
     pinnedOptionId: null,
     pickedOptionIds: [],
+    pickedIconSlots: [],
     // First group of the Structure destination, so opening 架构 shows 左栏
     // expanded rather than whichever group happened to be the old default.
     selectedGroup: "sidebar",
@@ -263,6 +273,10 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         gitPreviewStateOverride: undefined,
         forcePreviewToolsOpen: false,
       };
+    case "iconSlotPicked":
+      return state.pickedIconSlots.includes(action.slot)
+        ? state
+        : { ...state, pickedIconSlots: [...state.pickedIconSlots, action.slot] };
     case "optionPicked":
       return {
         ...state,

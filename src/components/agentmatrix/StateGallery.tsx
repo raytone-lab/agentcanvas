@@ -30,6 +30,7 @@ export function StateGallery({
   onSelect,
   onPickIcon,
   onDeselect,
+  pickedSlots,
 }: {
   cards: StateCard[];
   /** The state currently shown live in the preview (highlights its card). */
@@ -42,6 +43,17 @@ export function StateGallery({
   onPickIcon?: (card: StateCard) => void;
   /** Re-click the already-selected icon — deselect / disable the card. */
   onDeselect?: (card: StateCard) => void;
+  /**
+   * Slots whose icon the reader has actually chosen.
+   *
+   * Every slot has an icon — a tool card has to draw something — so "the
+   * current icon" is never empty and every row used to open with its first
+   * tile ringed. That read as a dozen picks the reader had not made, and the
+   * canvas showed none of them. Passing the slots that were really chosen keeps
+   * the ring meaning what it says. Undefined leaves the old behaviour, for
+   * galleries where the current icon is the useful thing to show.
+   */
+  pickedSlots?: readonly string[];
 }) {
   const { iconSet, setSlot } = useIconSet();
   const iconStyle = useIconStyle();
@@ -78,7 +90,8 @@ export function StateGallery({
                   // Avatar cards are enable/disable toggles, so their icon
                   // border only shows when enabled. Other state rows always
                   // show their current icon choice; the unset default is first.
-                  const active = chosen === option.id && (!isToggleCard || selected);
+                  const pickedThisSlot = pickedSlots === undefined || pickedSlots.includes(card.slot);
+                  const active = chosen === option.id && (!isToggleCard || selected) && pickedThisSlot;
                   return (
                     <button
                       key={option.id}
