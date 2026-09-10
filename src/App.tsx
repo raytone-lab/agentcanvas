@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { PanelLeft, PanelRight } from "lucide-react";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 
 import { useAgentUXRuntime, useAgentUXViewModel } from "./agentux";
 import { IconStyleProvider, scenarioById, useIconSet } from "./agentmatrix";
@@ -967,6 +967,10 @@ export function App() {
               selectedComponentItems={selectedComponentItems}
               pickedOptionIds={state.pickedOptionIds}
               pickedIconSlots={state.pickedIconSlots}
+              eventFlowReady={mountedComponents.has("ChatFrame")}
+              onEventFlowLocked={() =>
+                toast(copy.shell.editor.flowNeedsConversation, { duration: 3000 })
+              }
               pinnedOptionId={state.pinnedOptionId}
               onPinnedOptionShown={() => dispatch({ type: "patch", patch: { pinnedOptionId: null } })}
               presetDrawerOpen={state.presetDrawerOpen}

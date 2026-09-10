@@ -97,12 +97,19 @@ describe("preview and export completeness", () => {
     expect(missingRequirementsForProject(filled, [])).toEqual([]);
   });
 
-  it("counts content as satisfying the requirement, not just the toggle", () => {
-    // Building in any order is the point: picking 名称标签 puts a conversation
-    // on the canvas, so the project is no longer missing one.
+  it("still asks for the conversation when only its contents were picked", () => {
+    // The conversation has its own visible toggle, so it does not appear just
+    // because something inside it was picked — that would put a thing on the
+    // canvas the reader had not selected. So the requirement stands until the
+    // toggle is ticked, and preview offers to tick it.
     const withLabels = togglePresetOption(emptyStructureProject, "speaker-labels");
     const items = [{ id: "speaker-labels", groupId: "conversation" as const }];
-    expect(missingRequirementsForProject(withLabels, items)).toEqual([]);
+    expect(missingRequirementsForProject(withLabels, items).map((item) => item.optionId)).toEqual([
+      "chat-visible",
+    ]);
+    expect(
+      missingRequirementsForProject(togglePresetOption(withLabels, "chat-visible"), items),
+    ).toEqual([]);
   });
 
   it("waits for the filled project before running", () => {

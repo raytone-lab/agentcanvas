@@ -12817,6 +12817,20 @@ pre {
   padding-left: 24px;
 }
 
+/* The event flow with nowhere to show itself. Dimmed rather than removed —
+   the stages are still worth reading — and still clickable, so the click can be
+   answered with what is missing instead of nothing happening. */
+.group-list[data-flow-locked="true"] {
+  opacity: 0.45;
+}
+
+.group-list[data-flow-locked="true"] .group-row,
+.group-list[data-flow-locked="true"] .preset-option,
+.group-list[data-flow-locked="true"] .am-state-card,
+.group-list[data-flow-locked="true"] .am-state-option {
+  cursor: not-allowed;
+}
+
 /* A disclosure header. The chevron replaces the group's icon: with the options
    nested underneath, what the row needs to say is whether it is open, not what
    kind of group it is — the name already says that. */

@@ -4,6 +4,7 @@ import {
   PRESET_GROUP_REGIONS,
   RAIL_HIDDEN_OPTION_IDS,
   isAddedContentOption,
+  isEventFlowReady,
   isOptionSelectedInRail,
   layerContentsForProject,
   mountedComponentsForProject,
@@ -188,24 +189,39 @@ describe("rail selection honesty", () => {
     }
   });
 
-  it("ticks a presence toggle when its component is on the canvas", () => {
-    // Picking 思考中 brings the conversation with it, so 显示对话流 has to tick:
-    // reading only the toggle's own state left it unticked while a
-    // conversation was plainly showing — the rule broken the other way round,
-    // the canvas showing something no control claims.
-    const group = presetGroups.find((entry) => entry.id === "conversation")!;
-    const chatVisible = group.options.find((option) => option.id === "chat-visible")!;
-    const picked = ["thinking-wave"];
-    const mounted = mountedComponentsForProject(emptyStructureProject, [], picked);
+  it("will not put a conversation on the canvas until it is picked", () => {
+    // Its toggle is visible in the rail, so mounting it because a stage was
+    // picked would put a thing on the canvas the reader had not selected while
+    // the control for it sat unticked. Picking 思考中 used to conjure a whole
+    // conversation that way.
+    expect(mountedComponentsForProject(emptyStructureProject, [], ["thinking-wave"]).has("ChatFrame"))
+      .toBe(false);
+
+    // Ticked, it appears — and the toggle reads the canvas, so it agrees.
+    const shown = togglePresetOption(emptyStructureProject, "chat-visible");
+    const mounted = mountedComponentsForProject(shown, [], []);
     expect(mounted.has("ChatFrame")).toBe(true);
-    expect(isOptionSelectedInRail(emptyStructureProject, chatVisible, "conversation", picked, mounted)).toBe(
-      true,
-    );
-    // And unticked while nothing has put a conversation there.
-    const empty = mountedComponentsForProject(emptyStructureProject, [], []);
-    expect(isOptionSelectedInRail(emptyStructureProject, chatVisible, "conversation", [], empty)).toBe(
-      false,
-    );
+    const chatVisible = presetGroups
+      .find((entry) => entry.id === "conversation")!
+      .options.find((option) => option.id === "chat-visible")!;
+    expect(isOptionSelectedInRail(shown, chatVisible, "conversation", [], mounted)).toBe(true);
+    expect(
+      isOptionSelectedInRail(
+        emptyStructureProject,
+        chatVisible,
+        "conversation",
+        [],
+        mountedComponentsForProject(emptyStructureProject, [], []),
+      ),
+    ).toBe(false);
+  });
+
+  it("locks the event flow until there is a conversation to show it in", () => {
+    // Every stage renders inside the conversation, and a stage no longer
+    // conjures one, so a pick with no conversation would change nothing. The
+    // rail says what is missing rather than accepting a pick that does nothing.
+    expect(isEventFlowReady(emptyStructureProject, [], [])).toBe(false);
+    expect(isEventFlowReady(togglePresetOption(emptyStructureProject, "chat-visible"), [], [])).toBe(true);
   });
 
   it("moves the tick when a second variant in a section is picked", () => {

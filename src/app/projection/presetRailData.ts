@@ -163,6 +163,20 @@ export function layersForProject(
 const PRESENCE_MOUNTS_COMPONENT = new Set<SlotConfig["component"]>(["ChatFrame", "ComposerFrame"]);
 
 /**
+ * Components that will not appear until their own toggle is ticked.
+ *
+ * Their toggle is visible in the rail, so mounting them because something
+ * inside them was picked would put a thing on the canvas the reader had not
+ * selected, while the control for it sat there unticked. Picking 思考中 used to
+ * conjure a whole conversation that way.
+ *
+ * The components missing from this list are the ones whose toggle is hidden
+ * (`RAIL_HIDDEN_OPTION_IDS`) — there is no control to bypass, so their contents
+ * bring them along.
+ */
+const REQUIRES_OWN_PRESENCE = new Set<SlotConfig["component"]>(["ChatFrame", "GitFrame"]);
+
+/**
  * What the canvas should render.
  *
  * A component appears as soon as something inside it is picked — no second step
@@ -178,7 +192,28 @@ export function mountedComponentsForProject(
   for (const slot of project.layout.slots) {
     if (slot.enabled && PRESENCE_MOUNTS_COMPONENT.has(slot.component)) mounted.add(slot.component);
   }
+  // Anything that needs its own toggle drops out again unless it has one.
+  for (const component of REQUIRES_OWN_PRESENCE) {
+    const enabled = project.layout.slots.some((slot) => slot.component === component && slot.enabled);
+    if (!enabled) mounted.delete(component);
+  }
   return mounted;
+}
+
+/**
+ * Whether the event-flow destination can be used yet.
+ *
+ * Every stage renders inside the conversation, and the conversation no longer
+ * appears just because a stage was picked — so without one, a pick there would
+ * change nothing on the canvas. The rail says so instead of accepting a pick
+ * that does nothing.
+ */
+export function isEventFlowReady(
+  project: AgentFrontendProject,
+  items: readonly { id: string; groupId: PresetGroupId }[],
+  picked: readonly string[] = [],
+): boolean {
+  return mountedComponentsForProject(project, items, picked).has("ChatFrame");
 }
 
 /** The project's slots, enabled exactly where the canvas should draw them. */

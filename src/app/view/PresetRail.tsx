@@ -66,6 +66,8 @@ export function PresetRail({
   selectedComponentItems,
   pickedOptionIds,
   pickedIconSlots,
+  eventFlowReady,
+  onEventFlowLocked,
   pinnedOptionId,
   onPinnedOptionShown,
   presetDrawerOpen,
@@ -114,6 +116,10 @@ export function PresetRail({
   pickedOptionIds: readonly string[];
   /** Icon slots the reader has chosen, so a default does not read as a pick. */
   pickedIconSlots: readonly string[];
+  /** False until a conversation exists for the event flow's stages to show in. */
+  eventFlowReady: boolean;
+  /** A click landed in the locked event flow; say what is missing. */
+  onEventFlowLocked: () => void;
   /** Set by the canvas toolbar's Edit: scroll this option in and flash it. */
   pinnedOptionId: string | null;
   onPinnedOptionShown: () => void;
@@ -557,7 +563,22 @@ export function PresetRail({
             the list shows one section and the section label would only repeat
             the destination name. */}
         {navSection === "structure" || navSection === "components" ? (
-          <div className="group-list">
+          <div
+            className="group-list"
+            // Locked until there is a conversation to show a stage in. Clicks
+            // are intercepted rather than blocked with `pointer-events`, so the
+            // rail can say why instead of going quiet.
+            data-flow-locked={navSection === "components" && !eventFlowReady ? "true" : undefined}
+            onClickCapture={
+              navSection === "components" && !eventFlowReady
+                ? (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onEventFlowLocked();
+                  }
+                : undefined
+            }
+          >
             {[groupsForNavSection(navSection)].map((groupIds, index) => {
               const groups = groupIds
                 .map((id) => visiblePresetGroups.find((group) => group.id === id))
