@@ -588,8 +588,19 @@ export const defaultCodingAgentProject: AgentFrontendProject = {
  * approval overlay, which are not part of the three-column structure and would
  * otherwise show as two more empty layers with nothing to put in them.
  */
-/** The slots a new project opens with — one per column, nothing extra. */
-const OPENING_SLOT_IDS = ["sessions", "chat", "composer", "output"];
+/**
+ * The slots a new project opens with.
+ *
+ * These two are the side columns' presence toggles: `sessions` is 显示侧边栏
+ * and `output` is 显示输出面板, and having them on is what puts the left and
+ * right columns on the canvas. Neither mounts its component — see
+ * `PRESENCE_MOUNTS_COMPONENT` — so the columns open empty.
+ *
+ * `chat` and `composer` are off because their toggles *do* mount: the centre
+ * column is always there, so 显示对话流 and 显示输入框 have nothing to create
+ * and put the conversation and the composer on the canvas instead.
+ */
+const OPENING_SLOT_IDS = ["sessions", "output"];
 
 export const emptyStructureProject: AgentFrontendProject = {
   ...defaultCodingAgentProject,

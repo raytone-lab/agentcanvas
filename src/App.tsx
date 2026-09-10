@@ -59,13 +59,16 @@ import {
   LAYER_EDIT_OPTIONS,
   LAYER_HIGHLIGHT_SELECTORS,
   LAYER_PRESENCE_OPTIONS,
+  PRESET_GROUP_COMPONENTS,
+  REGION_LAYERS,
+  canvasSlotsForProject,
   layersForProject,
+  mountedComponentsForProject,
   STYLE_AVATAR_DEFAULTS,
   groupPresetOptions,
   rawStateCardToStateCard,
   optionIdForModule,
   railLocationForOption,
-  regionsWithChosenContent,
   resolveGroupForNavSection,
   visibleStateCards,
   type NavSectionId,
@@ -242,7 +245,10 @@ export function App() {
    * to this — it is region-driven below and cannot be deleted, so an empty
    * centre still reads as the place a conversation will go.
    */
-  const configuredLayerIds = new Set(layersForProject(activeProject).map((layer) => layer.id));
+  const mountedComponents = mountedComponentsForProject(activeProject, selectedComponentItems);
+  const configuredLayerIds = new Set(
+    layersForProject(activeProject, mountedComponents).map((layer) => layer.id),
+  );
   const hasSidebar = configuredLayerIds.has("left");
   const hasRightPanel = configuredLayerIds.has("right");
   const loaderCanvasPreviewActive = state.surfaceMode === "builder" && state.selectedGroup === "media-generation";
@@ -520,10 +526,27 @@ export function App() {
     : state.selectedLayerId
       ? { left: ".session-sidebar", center: ".preview-stack", right: ".right-panel" }[state.selectedLayerId] ?? null
       : null;
+  // Deleting a column takes its contents with it. Otherwise the column comes
+  // straight back: a component appears as soon as something inside it is
+  // picked, so leaving a search box or an avatar on would re-mount the very
+  // column that had just been deleted.
+  const layerContentOptionIds = state.selectedLayerId
+    ? selectedComponentItems
+        .filter((item) => {
+          const component = PRESET_GROUP_COMPONENTS[item.groupId];
+          if (!component) return false;
+          const region = activeProject.layout.slots.find((slot) => slot.component === component)?.region;
+          return (
+            region !== undefined &&
+            (REGION_LAYERS.find((layer) => layer.id === state.selectedLayerId)?.regions.includes(region) ?? false)
+          );
+        })
+        .map((item) => item.id)
+    : [];
   const toolbarOptionIds = state.selectedSlotId
     ? [optionIdForModule(state.selectedSlotId)].filter((id): id is string => id !== null)
     : state.selectedLayerId
-      ? [...(LAYER_PRESENCE_OPTIONS[state.selectedLayerId] ?? [])]
+      ? [...(LAYER_PRESENCE_OPTIONS[state.selectedLayerId] ?? []), ...layerContentOptionIds]
       : [];
   const deletableOptionIds = toolbarOptionIds.filter((id) => isPresetOptionActive(activeProject, id));
 
@@ -742,9 +765,15 @@ export function App() {
    * column existed made the canvas open as a populated demo — a session list,
    * a greeting, an output panel — none of which the reader had asked for.
    */
-  const filledRegions = regionsWithChosenContent(activeProject, selectedComponentItems);
+  // What the canvas draws: a component appears as soon as something inside it
+  // is picked. The project itself is untouched — this is what the canvas shows,
+  // not a silent edit.
+  const canvasSlots = slotsForTemplate(
+    canvasSlotsForProject(activeProject, selectedComponentItems),
+    activeProject.template,
+  );
   const renderRegion = (region: AgentCanvasRegion) =>
-    filledRegions.has(region) ? renderSlots(visibleLayoutSlots, region, slotContext) : [];
+    renderSlots(canvasSlots, region, slotContext);
   const sidebarSlots = renderRegion("sidebar");
   const rightPanelSlots = renderRegion("right-panel");
   const previewOverlaySlots = renderSlots(

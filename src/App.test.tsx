@@ -113,11 +113,14 @@ describe("App shell controls", () => {
 
     expect(defaultItems.some((item) => item.group === "Git")).toBe(false);
     expect(defaultItems.some((item) => item.id === "reasoning-public-summary")).toBe(false);
-    expect(sidebarItems.some((item) => item.id === "sidebar-search")).toBe(false);
-    expect(sidebarItems.some((item) => item.id === "sidebar-new-button")).toBe(false);
-    expect(sidebarItems.some((item) => item.group === "左导航")).toBe(false);
-    expect(outputItems.some((item) => item.id === "output-source-artifact")).toBe(false);
-    expect(outputItems.some((item) => item.group === "右面板")).toBe(false);
+    // No presence gate any more. An option that is on counts as selected even
+    // when its component's own toggle is off, because picking the option is
+    // what puts the component on the canvas — gating it on the component
+    // already being there meant picking 名称标签 did nothing at all.
+    expect(sidebarItems.some((item) => item.id === "sidebar-search")).toBe(true);
+    expect(outputItems.some((item) => item.id === "output-source-artifact")).toBe(true);
+    // Which is why deleting a column clears its contents as well: leaving them
+    // on would re-mount the column that had just been deleted.
     expect(gitItems.some((item) => item.id === "branch-status")).toBe(false);
     expect(gitItems.some((item) => item.group === "Git")).toBe(false);
     expect(hiddenOptionItems.some((item) => item.id === "error-collapse")).toBe(false);
@@ -163,8 +166,12 @@ describe("App shell controls", () => {
     for (const layer of ["左栏", "中栏", "右栏"]) {
       expect(markup).toContain(layer);
     }
+    // Only the two side columns' presence toggles. Neither mounts its
+    // component, so the columns open empty; `chat` and `composer` are off
+    // because their toggles *do* mount — the centre column is always there, so
+    // they have no column to create.
     expect(emptyStructureProject.layout.slots.filter((slot) => slot.enabled).map((slot) => slot.id))
-      .toEqual(["sessions", "chat", "composer", "output"]);
+      .toEqual(["sessions", "output"]);
 
     // The sidebar's "Content" section starts unpicked — the column is present,
     // its contents are not chosen. Same rule as the slots.

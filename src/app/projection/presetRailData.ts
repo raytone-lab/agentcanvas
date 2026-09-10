@@ -124,15 +124,68 @@ export function layersForRegions(regions: readonly AgentCanvasRegion[]) {
  * The centre column is exempt: it cannot be deleted, so it stays even when
  * empty — an empty centre still reads as the place a conversation will go.
  */
-export function layersForProject(project: {
-  layout: { regions: readonly AgentCanvasRegion[]; slots: readonly SlotConfig[] };
-}) {
+export function layersForProject(
+  project: {
+    layout: { regions: readonly AgentCanvasRegion[]; slots: readonly SlotConfig[] };
+  },
+  mounted?: ReadonlySet<SlotConfig["component"]>,
+) {
   return layersForRegions(project.layout.regions).filter((layer) => {
     if (layer.id === "center") return true;
     return layer.regions.some((region) =>
-      project.layout.slots.some((slot) => slot.enabled && slot.region === region),
+      project.layout.slots.some(
+        (slot) =>
+          slot.region === region &&
+          // Either its presence toggle is on — which is what the side columns'
+          // toggles mean — or something in it has been picked, which brings the
+          // column back along with the component.
+          (slot.enabled || (mounted?.has(slot.component) ?? false)),
+      ),
     );
   });
+}
+
+/**
+ * Components whose presence toggle mounts them rather than creating a column.
+ *
+ * The presence toggles mean two different things, and which one depends on
+ * whether the column can be deleted. 显示侧边栏 and 显示输出面板 put the left
+ * and right *columns* on the canvas — untick either and the column is gone and
+ * the centre takes the width. The centre column cannot be deleted, so its two
+ * toggles have nothing to create: 显示对话流 and 显示输入框 mount the
+ * conversation and the composer instead.
+ *
+ * That asymmetry is why the canvas can open with all three columns present and
+ * nothing in them: the side columns' toggles are on, and mounting waits for
+ * something to actually be picked.
+ */
+const PRESENCE_MOUNTS_COMPONENT = new Set<SlotConfig["component"]>(["ChatFrame", "ComposerFrame"]);
+
+/**
+ * What the canvas should render.
+ *
+ * A component appears as soon as something inside it is picked — no second step
+ * of ticking its own presence toggle first, which is what made picking 我的头像
+ * or 名称标签 look broken: the option was on and had nowhere to show.
+ */
+export function mountedComponentsForProject(
+  project: AgentFrontendProject,
+  items: readonly { id: string; groupId: PresetGroupId }[],
+): Set<SlotConfig["component"]> {
+  const mounted = componentsWithChosenContent(project, items);
+  for (const slot of project.layout.slots) {
+    if (slot.enabled && PRESENCE_MOUNTS_COMPONENT.has(slot.component)) mounted.add(slot.component);
+  }
+  return mounted;
+}
+
+/** The project's slots, enabled exactly where the canvas should draw them. */
+export function canvasSlotsForProject(
+  project: AgentFrontendProject,
+  items: readonly { id: string; groupId: PresetGroupId }[],
+): SlotConfig[] {
+  const mounted = mountedComponentsForProject(project, items);
+  return project.layout.slots.map((slot) => ({ ...slot, enabled: mounted.has(slot.component) }));
 }
 
 /**
@@ -272,6 +325,32 @@ export const LAYER_PRESENCE_OPTIONS: Record<string, readonly string[]> = {
 };
 
 /**
+ * Which component each group configures.
+ *
+ * Finer than `PRESET_GROUP_REGIONS`, and the map the canvas mounts from: the
+ * right column holds two components, so picking a Git option should bring the
+ * Git panel and not the output panel with it.
+ *
+ * This is what makes "pick it and it appears" work. Mounting used to need the
+ * component's own presence toggle *as well*, so picking 我的头像 or 名称标签
+ * did nothing until 显示对话流 was ticked first — the option was on and had
+ * nowhere to show.
+ */
+export const PRESET_GROUP_COMPONENTS: Partial<Record<PresetGroupId, SlotConfig["component"]>> = {
+  sidebar: "SessionSidebar",
+  conversation: "ChatFrame",
+  "ux-effects": "ChatFrame",
+  approval: "ChatFrame",
+  "tool-calls": "ChatFrame",
+  blocks: "ChatFrame",
+  "media-generation": "ChatFrame",
+  composer: "ComposerFrame",
+  output: "OutputFrame",
+  delivery: "OutputFrame",
+  git: "GitFrame",
+};
+
+/**
  * Whether an option is something you *add*, as opposed to a variant you pick.
  *
  * Derived rather than listed: an additive option can be turned off, so toggling
@@ -303,15 +382,28 @@ export function isAddedContentOption(project: AgentFrontendProject, optionId: st
  * Presence toggles are excluded, or every column would count as filled by
  * virtue of existing.
  */
+export function componentsWithChosenContent(
+  project: AgentFrontendProject,
+  items: readonly { id: string; groupId: PresetGroupId }[],
+): Set<SlotConfig["component"]> {
+  const components = new Set<SlotConfig["component"]>();
+  for (const item of items) {
+    if (!isAddedContentOption(project, item.id)) continue;
+    const component = PRESET_GROUP_COMPONENTS[item.groupId];
+    if (component) components.add(component);
+  }
+  return components;
+}
+
+/** The same answer as a set of regions, for callers that think in columns. */
 export function regionsWithChosenContent(
   project: AgentFrontendProject,
   items: readonly { id: string; groupId: PresetGroupId }[],
 ): Set<AgentCanvasRegion> {
+  const components = componentsWithChosenContent(project, items);
   const regions = new Set<AgentCanvasRegion>();
-  for (const item of items) {
-    if (!isAddedContentOption(project, item.id)) continue;
-    const region = PRESET_GROUP_REGIONS[item.groupId];
-    if (region) regions.add(region);
+  for (const slot of project.layout.slots) {
+    if (components.has(slot.component)) regions.add(slot.region);
   }
   return regions;
 }
@@ -374,10 +466,11 @@ export function layerContentsForProject(
   locale?: AppLocale,
   selectedOptions?: readonly { id: string; groupId: PresetGroupId; label: string }[],
 ) {
-  return layersForProject(project).map((layer) => {
-    const filled = regionsWithChosenContent(project, selectedOptions ?? []);
+  // The same rule the canvas draws by, so the tree lists exactly what is on it.
+  const mounted = mountedComponentsForProject(project, selectedOptions ?? []);
+  return layersForProject(project, mounted).map((layer) => {
     const slots = project.layout.slots.filter(
-      (slot) => slot.enabled && layer.regions.includes(slot.region) && filled.has(slot.region),
+      (slot) => layer.regions.includes(slot.region) && mounted.has(slot.component),
     );
     const children: LayerChild[] = slots.map((slot) => ({
       id: slot.id,
@@ -390,16 +483,16 @@ export function layerContentsForProject(
       if (!isAddedContentOption(project, option.id)) continue;
       const region = PRESET_GROUP_REGIONS[option.groupId];
       if (!region || !layer.regions.includes(region)) continue;
-      // Only if the component it lives in is actually on the canvas. Several
-      // groups have defaults enabled with no presence toggle of their own (an
-      // avatar, a thinking effect), so without this the centre column listed a
-      // dozen modules while holding nothing. Checked per region, not per layer:
-      // the centre layer merges `main` and `composer`, and a composer with no
-      // conversation should list composer options only.
-      const regionFilled = project.layout.slots.some(
-        (slot) => slot.enabled && slot.region === region,
+      // Only if the component it lives in is actually on the canvas. Checked
+      // against the mounting rule rather than the project's own enabled flags:
+      // picking an option mounts its component without switching that flag on,
+      // so reading the flag hid the very option that had just been picked.
+      // Per region, not per layer: the centre merges `main` and `composer`, and
+      // a composer with no conversation should list composer options only.
+      const regionMounted = project.layout.slots.some(
+        (slot) => slot.region === region && mounted.has(slot.component),
       );
-      if (!regionFilled) continue;
+      if (!regionMounted) continue;
       children.push({ id: option.id, label: option.label, kind: "option" });
     }
     return { ...layer, components: slots, children };

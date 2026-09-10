@@ -87,25 +87,14 @@ function isEffectiveSelectedComponent(project: AgentFrontendProject, groupId: Pr
   if (!isPresetOptionActive(project, optionId)) {
     return false;
   }
-  if (groupId === "sidebar" && optionId !== "sidebar-visible") {
-    return isPresetOptionActive(project, "sidebar-visible");
-  }
-  // Same rule for the two components that only just gained a presence toggle:
-  // styling a conversation that is not shown is not a selected component.
-  if (groupId === "conversation" && optionId !== "chat-visible") {
-    return isPresetOptionActive(project, "chat-visible");
-  }
-  if (groupId === "composer" && optionId !== "composer-visible") {
-    return isPresetOptionActive(project, "composer-visible");
-  }
-  if (groupId === "output" && optionId !== "output-visible") {
-    return isPresetOptionActive(project, "output-visible");
-  }
-  // Source and renderer moved into "delivery", but they still describe the
-  // right panel's contents, so hiding the panel still un-counts them.
-  if (groupId === "delivery" && (optionId.startsWith("output-source-") || optionId.startsWith("renderer-"))) {
-    return isPresetOptionActive(project, "output-visible");
-  }
+  // No presence gate here any more.
+  //
+  // These five clauses used to un-count an option whose component was not
+  // shown — styling a conversation that is not on the canvas is not a selected
+  // component. That was right when the presence toggle had to come first. It is
+  // backwards now: picking a component's content is what *puts* it on the
+  // canvas, so gating the pick on the component already being there meant
+  // picking 名称标签 or 我的头像 did nothing at all.
   return true;
 }
 

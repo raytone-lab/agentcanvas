@@ -1,0 +1,5 @@
+{"protocol":"agent-ux","version":"0.1","id":"evt_1","runId":"run_simple","seq":1,"type":"run.started","ts":1760000000000,"payload":{"title":"Simple chat"}}
+{"protocol":"agent-ux","version":"0.1","id":"evt_5","runId":"run_simple","messageId":"msg_agent","seq":5,"type":"text.started","ts":1760000000300,"payload":{"textId":"txt_agent","role":"assistant","format":"markdown"}}
+{"protocol":"agent-ux","version":"0.1","id":"evt_6","runId":"run_simple","messageId":"msg_agent","seq":6,"type":"text.delta","ts":1760000000350,"payload":{"textId":"txt_agent","delta":"I can read your project, run tools, and explain what I changed."}}
+{"protocol":"agent-ux","version":"0.1","id":"evt_7","runId":"run_simple","messageId":"msg_agent","seq":7,"type":"text.finished","ts":1760000000400,"payload":{"textId":"txt_agent"}}
+{"protocol":"agent-ux","version":"0.1","id":"evt_8","runId":"run_simple","runId2":"","seq":8,"type":"run.finished","ts":1760000000500,"payload":{}}

@@ -151,7 +151,11 @@ export function createInitialWorkspaceState(locale: AppLocale): WorkspaceState {
     // expanded rather than whichever group happened to be the old default.
     selectedGroup: "sidebar",
     presetDrawerOpen: false,
-    selectedFixtureId: "coding-agent",
+    // The smallest complete conversation. A full coding run put reasoning, two
+    // tool cards and an artifact on the canvas before anything had been
+    // configured; presets that need that richer content switch to it
+    // themselves (see `presetFixture.ts`).
+    selectedFixtureId: "simple-chat",
     standardScenarioId: "normal-turn",
     showStandard: false,
     activeStateCode: null,

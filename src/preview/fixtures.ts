@@ -3,6 +3,7 @@ import type { AgentUXEvent } from "@agent-ux/protocol";
 
 import artifactActionRaw from "../fixtures/agentux/artifacts-action-correlation.events.jsonl?raw";
 import basicTextRaw from "../fixtures/agentux/basic-text.events.jsonl?raw";
+import simpleChatRaw from "../fixtures/agentux/simple-chat.events.jsonl?raw";
 import codingAgentRaw from "../fixtures/agentux/coding-agent.events.jsonl?raw";
 import capabilityFilesystemRaw from "../fixtures/agentux/capability-filesystem.events.jsonl?raw";
 import reasoningKindsRaw from "../fixtures/agentux/reasoning-kinds.events.jsonl?raw";
@@ -10,6 +11,7 @@ import blockErrorRaw from "../fixtures/agentux/block-error.events.jsonl?raw";
 import toolApprovalRaw from "../fixtures/agentux/tool-approval-lifecycle.events.jsonl?raw";
 
 export type PreviewFixtureId =
+  | "simple-chat"
   | "coding-agent"
   | "basic-text"
   | "reasoning-kinds"
@@ -26,6 +28,17 @@ export type PreviewFixture = {
 };
 
 export const previewFixtures: PreviewFixture[] = [
+  {
+    // The configurator's default. One exchange and nothing else: the canvas is
+    // meant to show what has been configured, and a full coding run puts
+    // reasoning, two tool cards and an artifact on screen that nobody asked
+    // for. Presets that need richer content switch the fixture themselves —
+    // see `presetFixture.ts`.
+    id: "simple-chat",
+    label: "Simple chat",
+    description: "One question and one answer — the smallest complete conversation.",
+    raw: simpleChatRaw,
+  },
   {
     id: "coding-agent",
     label: "Coding agent",

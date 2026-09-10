@@ -68,7 +68,7 @@ const shippedStreams: Array<{ id: string; events: readonly unknown[] }> = [
 describe("admission is a no-op for everything already shipping", () => {
   it("covers every shipped stream", () => {
     // A parity suite that silently stops covering things is worse than none.
-    expect(shippedStreams.length).toBe(16);
+    expect(shippedStreams.length).toBe(17);
   });
 
   it("passes the same events through untouched", () => {

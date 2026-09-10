@@ -1,11 +1,12 @@
 import type { PreviewFixtureId } from "./fixtures";
 
+/**
+ * Presets whose effect only shows in a fuller run — tool cards, artifacts,
+ * output panes. Conversation styling is deliberately absent: those read fine on
+ * a two-turn exchange, and switching the canvas to a whole coding run to show a
+ * name label buried the change in content nobody had asked for.
+ */
 const codingAgentPresetIds = new Set([
-  "writing-smooth",
-  "writing-typewriter",
-  "writing-chunked",
-  "speaker-labels",
-  "message-actions",
   "compact-chips",
   "timeline-rail",
   "terminal-log",

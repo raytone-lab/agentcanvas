@@ -24,10 +24,19 @@ describe("preset fixture routing", () => {
   });
 
   it("routes common preset options away from stale error fixtures", () => {
-    expect(fixtureForPresetOption("writing-smooth", "block-error")).toBe("coding-agent");
+    // Presets whose effect needs a fuller run to be visible at all.
     expect(fixtureForPresetOption("compact-chips", "block-error")).toBe("coding-agent");
     expect(fixtureForPresetOption("output-source-artifact", "block-error")).toBe("coding-agent");
     expect(fixtureForPresetOption("provider-openai", "block-error")).toBe("coding-agent");
     expect(fixtureForPresetOption("thinking-bars", "block-error")).toBe("coding-agent");
+  });
+
+  it("leaves conversation styling on whatever conversation is showing", () => {
+    // These read fine on a two-turn exchange. Switching the canvas to a whole
+    // coding run to show a name label or a writing curve buried the change in
+    // content nobody had asked for.
+    for (const optionId of ["speaker-labels", "writing-smooth", "writing-typewriter", "message-actions"]) {
+      expect(fixtureForPresetOption(optionId, "simple-chat"), optionId).toBe("simple-chat");
+    }
   });
 });

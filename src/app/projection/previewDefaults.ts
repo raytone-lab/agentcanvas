@@ -2,10 +2,18 @@ import type { Scenario, ScenarioId } from "../../agentmatrix";
 import type { AppLocale } from "../../i18n/uiCopy";
 import type { GitPreviewState, PreviewScenarioId } from "../../preview-runner/PreviewRunner";
 
+/**
+ * The user's turn on the configurator canvas, and the prompt a preview run
+ * starts from.
+ *
+ * Short and generic on purpose: it pairs with the two-turn `simple-chat`
+ * fixture, and the canvas is there to show the layout rather than to tell a
+ * story about search-input validation.
+ */
 const defaultPreviewPrompt = {
-  en: "Add validation to the search input and show a loading state while results are fetched.",
-  zh: "给搜索框加校验，并在获取结果时显示加载状态。",
-  ja: "検索欄にバリデーションを追加し、結果の取得中はローディング状態を表示してください。",
+  en: "What can you do?",
+  zh: "你都能做什么？",
+  ja: "何ができますか？",
 } satisfies Record<AppLocale, string>;
 
 export const livePreviewFallbackPrompt = {

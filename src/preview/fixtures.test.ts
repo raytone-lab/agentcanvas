@@ -11,7 +11,7 @@ describe("preview fixtures", () => {
     }
   });
 
-  it("defaults to a completed coding-agent replay with tool, artifact, and message output", () => {
+  it("defaults to the smallest complete conversation", () => {
     const fixture = previewFixtures[0];
     const events = parsePreviewFixture(fixture);
     const viewModel = createAgentUXViewModel(replayAgentUXEvents(events), {
@@ -21,12 +21,25 @@ describe("preview fixtures", () => {
       },
     });
 
-    expect(fixture.id).toBe("coding-agent");
+    // One question and one answer. The configurator canvas is there to show
+    // the layout being configured, and the coding run put reasoning, two tool
+    // cards and an artifact on it before anything had been picked.
+    expect(fixture.id).toBe("simple-chat");
     expect(events.at(-1)?.type).toBe("run.finished");
     expect(viewModel.status).toBe("finished");
-    expect(viewModel.timeline.some((item) => item.kind === "tool")).toBe(true);
-    expect(viewModel.timeline.some((item) => item.kind === "artifact")).toBe(true);
     expect(viewModel.timeline.some((item) => item.kind === "message")).toBe(true);
+    // Nothing but the exchange: tool cards and artifacts belong to the presets
+    // that ask for them, and the coding-agent fixture still has both.
+    expect(viewModel.timeline.some((item) => item.kind === "tool")).toBe(false);
+    expect(viewModel.timeline.some((item) => item.kind === "artifact")).toBe(false);
+
+    const coding = previewFixtures.find((item) => item.id === "coding-agent");
+    const codingTimeline = createAgentUXViewModel(
+      replayAgentUXEvents(parsePreviewFixture(coding!)),
+      { policy: { reasoning: { show: "summary" }, tool: { showArgs: "safe", showResult: "summary" } } },
+    ).timeline;
+    expect(codingTimeline.some((item) => item.kind === "tool")).toBe(true);
+    expect(codingTimeline.some((item) => item.kind === "artifact")).toBe(true);
   });
 
   it("keeps the tool approval fixture aligned to real tool information flow", () => {

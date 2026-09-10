@@ -7,6 +7,14 @@ import type { PreviewFixtureId } from "../preview/fixtures";
 import { previewFixtures } from "../preview/fixtures";
 
 const fixtureCopy: Record<PreviewFixtureId, { label: Record<AppLocale, string>; description: Record<AppLocale, string> }> = {
+  "simple-chat": {
+    label: { en: "Simple chat", zh: "简单对话", ja: "シンプルな会話" },
+    description: {
+      en: "One question and one answer — the smallest complete conversation.",
+      zh: "一问一答——最小的一段完整对话。",
+      ja: "一問一答——最小構成の会話。",
+    },
+  },
   "coding-agent": {
     label: { en: "Coding Agent", zh: "编码 Agent", ja: "コーディング Agent" },
     description: { en: "Completed coding run with reasoning, tools, artifact, and final output.", zh: "包含推理、工具、产物和最终输出的完整编码运行。", ja: "推論・ツール・アーティファクト・最終出力を含む、完了したコーディング実行。" },

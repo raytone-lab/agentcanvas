@@ -160,7 +160,7 @@ describe("scaffold package manifest", () => {
     expect(demo).toContain("SCENARIOS");
     expect(snapshot.files).toContain("src/preview/fixtures.ts");
     const jsonl = snapshot.files.filter((file) => file.endsWith(".events.jsonl"));
-    expect(jsonl).toHaveLength(7);
+    expect(jsonl).toHaveLength(8);
     const scenarios = snapshot.files.filter((file) => file.startsWith("src/agentmatrix/fixtures/"));
     expect(scenarios).toHaveLength(9);
   });
