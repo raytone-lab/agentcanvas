@@ -52,7 +52,7 @@ import { IncompleteProjectDialog } from "./app/view/IncompleteProjectDialog";
 import { canvasTimelineEvents } from "./app/projection/canvasTimeline";
 import { ModuleToolbar } from "./app/view/ModuleToolbar";
 import { PointerHint, type PointerHintState } from "./app/view/PointerHint";
-import { nextCanvasPan, sidewaysWheelDelta } from "./app/view/canvasPan";
+import { NO_CANVAS_PAN, nextCanvasPan, wheelPanDelta, type CanvasPan } from "./app/view/canvasPan";
 import { clampZoom, zoomIn, zoomOut } from "./app/view/ZoomControl";
 import {
   collectDefaultOutputPanelItems,
@@ -526,36 +526,40 @@ export function App() {
   }, [dispatch, state.surfaceMode, state.workspaceView]);
 
   /**
-   * Sideways swipes slide the canvas.
+   * The wheel moves the canvas.
    *
-   * The whole window is the canvas, so it behaves like one. Done with a
-   * transform rather than by making the surface scrollable: the canvas holds a
-   * frame sized to the free space, so at 100% there is nothing to scroll, and
-   * adding scrollable slack would have to be re-centred on every resize.
+   * The whole window is the canvas, so the wheel does to it what a wheel does
+   * to a canvas: slides it. Nothing inside it scrolls while it is being
+   * designed — it is a drawing of the product, and a drawing that scrolls its
+   * own contents under the pointer is a page with a preview in it.
    *
-   * When the canvas *is* magnified past the window, the surface genuinely
-   * scrolls and the browser's own panning is better than anything here —
-   * momentum, rubber-banding, and the toolbar already re-measures on scroll —
-   * so this stands aside.
+   * Done with a transform rather than by making the surface scrollable. A
+   * scroll container can only reach as far as its content, which is a frame
+   * sized to the free space, so at 100% there would be nothing to scroll at
+   * all — and any slack added to fix that would have to be re-centred on every
+   * resize and every zoom step.
+   *
+   * The preview surface is left alone: the wheel belongs to the running agent
+   * there, the same way its clicks do.
    */
   useEffect(() => {
+    if (state.surfaceMode !== "builder") return;
     const surface = builderSurfaceRef.current;
     if (!surface) return;
     const onWheel = (event: WheelEvent) => {
-      // Read from the zoom, not from `scrollWidth`: the pan is a transform, and
-      // a translated child counts towards the scrollable area, so the first
-      // swipe made the surface look scrollable and every later one bailed out.
-      if (state.canvasZoom > 100) return;
-      const delta = sidewaysWheelDelta(event);
-      if (delta === 0) return;
-      // Only once it is ours: preventing the default on a gesture we then
-      // ignore would deaden vertical scrolling inside the canvas.
+      const delta = wheelPanDelta(event);
+      if (delta.x === 0 && delta.y === 0) return;
       event.preventDefault();
-      canvasPanRef.current = nextCanvasPan(canvasPanRef.current, delta, surface.clientWidth);
+      canvasPanRef.current = nextCanvasPan(
+        canvasPanRef.current,
+        delta,
+        { width: surface.clientWidth, height: surface.clientHeight },
+        state.canvasZoom / 100,
+      );
       if (canvasPanFrameRef.current !== null) return;
       canvasPanFrameRef.current = window.requestAnimationFrame(() => {
         canvasPanFrameRef.current = null;
-        setCanvasPanX(canvasPanRef.current);
+        setCanvasPan(canvasPanRef.current);
       });
     };
     surface.addEventListener("wheel", onWheel, { passive: false });
@@ -598,8 +602,8 @@ export function App() {
       // canvas slid halfway off screen is not back.
       if ((event.metaKey || event.ctrlKey) && event.key === "0") {
         event.preventDefault();
-        canvasPanRef.current = 0;
-        setCanvasPanX(0);
+        canvasPanRef.current = NO_CANVAS_PAN;
+        setCanvasPan(NO_CANVAS_PAN);
         dispatch({ type: "patch", patch: { canvasZoom: 100 } });
         return;
       }
@@ -678,16 +682,16 @@ export function App() {
   const [draggingSidebar, setDraggingSidebar] = useState(false);
   const [panelLayout, setPanelLayout] = useState<{ main: number; right: number } | undefined>();
   /**
-   * How far the canvas has been slid sideways, in screen pixels.
+   * How far the canvas has been slid, in screen pixels.
    *
-   * Local state with a ref in front of it: a swipe fires wheel events faster
-   * than the shell can re-render, so the ref accumulates and one animation
-   * frame publishes the result. The value still has to reach React, because the
-   * module toolbar is positioned from client rects and has to re-measure when
-   * what it points at moves.
+   * Local state with a ref in front of it: a wheel fires faster than the shell
+   * can re-render, so the ref accumulates and one animation frame publishes the
+   * result. The value still has to reach React, because the module toolbar is
+   * positioned from client rects and has to re-measure when what it points at
+   * moves.
    */
-  const [canvasPanX, setCanvasPanX] = useState(0);
-  const canvasPanRef = useRef(0);
+  const [canvasPan, setCanvasPan] = useState<CanvasPan>(NO_CANVAS_PAN);
+  const canvasPanRef = useRef<CanvasPan>(NO_CANVAS_PAN);
   const canvasPanFrameRef = useRef<number | null>(null);
   const [pointerHint, setPointerHint] = useState<PointerHintState>(null);
   const [pendingRun, setPendingRun] = useState<"preview" | "export" | null>(null);
@@ -1092,7 +1096,8 @@ export function App() {
             // along the same way.
             style={{
               "--canvas-zoom": state.canvasZoom / 100,
-              "--canvas-pan-x": `${canvasPanX}px`,
+              "--canvas-pan-x": `${canvasPan.x}px`,
+              "--canvas-pan-y": `${canvasPan.y}px`,
             } as CSSProperties}
             // Only a magnified canvas scrolls. Left at `auto` the whole time,
             // sub-pixel rounding puts a scrollbar on an unzoomed canvas.
@@ -1284,7 +1289,7 @@ export function App() {
                     target={toolbarTarget}
                     surfaceRef={builderSurfaceRef}
                     zoom={state.canvasZoom}
-                    pan={canvasPanX}
+                    pan={canvasPan}
                     canDelete={deletableOptionIds.length > 0}
                     onEdit={editSelectedModule}
                     onDelete={deleteSelected}

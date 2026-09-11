@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { Pencil, Trash2 } from "lucide-react";
 
 import type { UiCopy } from "../../i18n/uiCopy";
+import type { CanvasPan } from "./canvasPan";
 
 /** Gap between the module's top edge and the toolbar sitting above it. */
 const GAP = 8;
@@ -42,11 +43,11 @@ export function ModuleToolbar({
    */
   zoom: number;
   /**
-   * How far the canvas is slid sideways, for the same reason as `zoom`: the pan
-   * is a transform, which fires neither a scroll nor a resize, so nothing else
-   * would tell the toolbar that what it points at has moved.
+   * How far the canvas is slid, for the same reason as `zoom`: the pan is a
+   * transform, which fires neither a scroll nor a resize, so nothing else would
+   * tell the toolbar that what it points at has moved.
    */
-  pan: number;
+  pan: CanvasPan;
   canDelete: boolean;
   onEdit: () => void;
   onDelete: () => void;

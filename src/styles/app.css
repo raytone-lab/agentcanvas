@@ -13237,15 +13237,21 @@ pre {
   /* Centres the canvas when it is smaller than the surface; collapses to 0 and
      lets it overflow (scrollably) when it is bigger. */
   margin: auto;
-  /* Sideways panning. Divided by the zoom because `zoom` scales the lengths
-     inside its own element, this one included — without it a 20px swipe moved
-     the canvas 40px at 200%, and the pan limit (which is measured in screen
-     pixels) would have meant something different at every zoom level. */
-  translate: calc(var(--canvas-pan-x, 0px) / var(--canvas-zoom, 1));
+  /* Panning. Divided by the zoom because `zoom` scales the lengths inside its
+     own element, this one included — without it a 20px wheel moved the canvas
+     40px at 200%, and the pan limit (which is measured in screen pixels) would
+     have meant something different at every zoom level. */
+  translate:
+    calc(var(--canvas-pan-x, 0px) / var(--canvas-zoom, 1))
+    calc(var(--canvas-pan-y, 0px) / var(--canvas-zoom, 1));
 }
 
+/* A magnified canvas is reached by panning it, not by scrolling the surface it
+   sits on. Two ways to move the same thing is one way too many: the wheel pans,
+   so a scrollbar would only ever show a canvas the wheel had already moved, and
+   the scrollable area a transformed child reports shifts as it travels. */
 .builder-surface[data-canvas-zoomed="true"] {
-  overflow: auto;
+  overflow: hidden;
 }
 
 /* An empty column still reads as a column. Without this a region with no

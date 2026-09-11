@@ -364,9 +364,15 @@ describe("App shell controls", () => {
     // 1248px.
     expect(zoomRule).toContain("width: calc(100% * var(--canvas-zoom, 1));");
     expect(zoomRule).toContain("height: calc(100% * var(--canvas-zoom, 1));");
-    // Only a magnified canvas scrolls; at 100% sub-pixel rounding would put a
-    // scrollbar on an unzoomed canvas.
-    expect(cssRule(styles, '.builder-surface[data-canvas-zoomed="true"]')).toContain("overflow: auto;");
+    // Nothing scrolls, at any zoom: the wheel pans the canvas, so a scrollbar
+    // would be a second way to move the same thing — and the scrollable area a
+    // translated child reports moves as it travels, which made the first pan
+    // look like the canvas had overflowed.
+    expect(cssRule(styles, '.builder-surface[data-canvas-zoomed="true"]')).toContain("overflow: hidden;");
+    // The pan is a transform on the zoom wrapper, divided back out of the zoom
+    // so a wheel moves the canvas the same distance at every magnification.
+    expect(zoomRule).toContain("calc(var(--canvas-pan-x, 0px) / var(--canvas-zoom, 1))");
+    expect(zoomRule).toContain("calc(var(--canvas-pan-y, 0px) / var(--canvas-zoom, 1))");
   });
 
   it("centres the canvas frame and keeps the region labels outside its clip", () => {
