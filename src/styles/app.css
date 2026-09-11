@@ -187,7 +187,7 @@ p {
   --fn-r-lg: 12px;  /* bordered containers / large cards */
   --fn-r-xl: 16px;  /* the floating chrome cards */
   /* How far the floating chrome sits from the window's edges. */
-  --fn-float-gap: 16px;
+  --fn-float-gap: 8px;
   /* Above the canvas and everything drawn inside it (the selection overlays at
      6, the module toolbar at 30), below the menus that open out of the chrome
      itself (--z-dropdown, 50). */
