@@ -61,6 +61,12 @@ export type WorkspaceState = {
    */
   canvasBackground: CanvasBackgroundId;
   /**
+   * Whether the rail card is folded away to its wordmark row, giving the canvas
+   * the width. Session state, like the canvas zoom: it is where the reader has
+   * put the furniture, not part of the agent being designed.
+   */
+  railCollapsed: boolean;
+  /**
    * The option the rail should scroll to and flash, set by the canvas
    * toolbar's Edit. Cleared once the rail has shown it, so re-selecting the
    * same module flashes again rather than being a no-op.
@@ -194,6 +200,7 @@ export function createInitialWorkspaceState(locale: AppLocale): WorkspaceState {
     selectedSlotId: null,
     canvasZoom: 100,
     canvasBackground: DEFAULT_CANVAS_BACKGROUND,
+    railCollapsed: false,
     pinnedOptionId: null,
     pickedOptionIds: [],
     pickedIconSlots: [],

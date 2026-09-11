@@ -58,6 +58,8 @@ const en = {
   },
   presetRail: {
     title: "UX Presets",
+    collapse: "Collapse panel",
+    expand: "Expand panel",
     defaultSection: "Options",
     activeBadge: "active",
     pendingBadge: "pending",
@@ -263,6 +265,8 @@ const zh: typeof en = {
   },
   presetRail: {
     title: "UX 预设",
+    collapse: "收起面板",
+    expand: "展开面板",
     defaultSection: "选项",
     activeBadge: "已启用",
     pendingBadge: "待建",
@@ -469,6 +473,8 @@ const ja: typeof en = {
   },
   presetRail: {
     title: "UX プリセット",
+    collapse: "パネルを折りたたむ",
+    expand: "パネルを展開",
     defaultSection: "オプション",
     activeBadge: "有効",
     pendingBadge: "未実装",

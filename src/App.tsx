@@ -1017,7 +1017,14 @@ export function App() {
           onExport={() => runOrAsk("export")}
         />
 
-        <div className="workspace-layout" data-mode={state.surfaceMode} data-drawer-open={state.surfaceMode === "builder" ? state.presetDrawerOpen : undefined}>
+        <div
+          className="workspace-layout"
+          data-mode={state.surfaceMode}
+          // One attribute for both halves of folding the rail away: the card's
+          // own size, and the canvas padding that was holding room for it.
+          data-rail-collapsed={state.surfaceMode === "builder" && state.railCollapsed ? "true" : undefined}
+          data-drawer-open={state.surfaceMode === "builder" ? state.presetDrawerOpen : undefined}
+        >
           {state.surfaceMode === "builder" ? (
             <PresetRail
               copy={copy}
@@ -1025,7 +1032,16 @@ export function App() {
               // The wordmark rides at the top of the rail card rather than in
               // a bar of its own: with the shell turned into one canvas, the
               // chrome is two floating cards and this is the top of one.
-              brand={<ShellBrand copy={copy} onOpenPreferences={() => setPreferencesOpen(true)} />}
+              brand={
+                <ShellBrand
+                  copy={copy}
+                  onOpenPreferences={() => setPreferencesOpen(true)}
+                  collapsed={state.railCollapsed}
+                  onToggleCollapsed={() =>
+                    dispatch({ type: "patch", patch: { railCollapsed: !state.railCollapsed } })
+                  }
+                />
+              }
               project={project}
               navSection={state.navSection}
               onNavSectionChange={handleNavSectionChange}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
+import { SidebarToggleIcon } from "../../components/agent-preview/SessionSidebar";
 import type { UiCopy } from "../../i18n/uiCopy";
 
 /**
@@ -15,11 +16,17 @@ import type { UiCopy } from "../../i18n/uiCopy";
 export function ShellBrand({
   copy,
   onOpenPreferences,
+  collapsed = false,
+  onToggleCollapsed,
   /** Own floating card, for the surfaces with no rail to sit in. */
   floating = false,
 }: {
   copy: UiCopy;
   onOpenPreferences: () => void;
+  /** Whether the rail below this row is folded away. */
+  collapsed?: boolean;
+  /** Omitted on the surfaces with no rail to fold. */
+  onToggleCollapsed?: () => void;
   floating?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -85,6 +92,20 @@ export function ShellBrand({
           </div>
         ) : null}
       </div>
+      {/* Folds the rail away to this row, so the canvas gets the width. The
+          same control the canvas's own sidebar uses for the same job, because
+          it is the same job. */}
+      {onToggleCollapsed ? (
+        <button
+          type="button"
+          className="rail-icon-btn rail-collapse"
+          aria-label={collapsed ? copy.shell.presetRail.expand : copy.shell.presetRail.collapse}
+          aria-expanded={!collapsed}
+          onClick={onToggleCollapsed}
+        >
+          <SidebarToggleIcon size={15} />
+        </button>
+      ) : null}
     </div>
   );
 }

@@ -111,6 +111,33 @@ describe("App shell controls", () => {
     expect(canvasBackgroundColor(createInitialWorkspaceState("zh").canvasBackground)).toBe("#DDE1E9");
   });
 
+  it("folds the rail away to its wordmark row", () => {
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+
+    // Folded, the card stops at the row — `bottom: auto` is what lets it, since
+    // the card is pinned top and bottom when open — and the columns under it are
+    // gone rather than squeezed.
+    const folded = cssRule(styles, '.workspace-layout[data-rail-collapsed="true"] .preset-nav');
+    expect(folded).toContain("bottom: auto;");
+    expect(folded).toContain("width: var(--rail-col-collapsed);");
+    expect(
+      cssRule(styles, '.workspace-layout[data-rail-collapsed="true"] .preset-columns'),
+    ).toContain("display: none;");
+    // And the canvas takes back the room that was being held for it, which is
+    // the point of folding it.
+    expect(cssRule(styles, '.workspace-layout[data-rail-collapsed="true"]')).toContain(
+      "--canvas-pad-left: 24px;",
+    );
+
+    // The chrome is white paper on the canvas, and the rail's rows tint towards
+    // the ink because a lift towards white would be invisible on it.
+    expect(cssRule(styles, ".app-shell")).toContain("--fn-bg: #ffffff;");
+    expect(cssRule(styles, ".preset-option-cell:hover")).toContain("background: var(--fn-row-wash);");
+    expect(
+      cssRule(styles, '.preset-option-cell:has(.preset-option[data-active="true"])'),
+    ).toContain("background: var(--fn-row-wash);");
+  });
+
   it("keeps saved-preview pickers icon-free and matched to the zoom readout", () => {
     const appSource = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
     const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");

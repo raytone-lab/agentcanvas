@@ -165,8 +165,17 @@ p {
      back to the canvas. */
   --iconbar-col: 56px;
   --rail-col: 292px;
-  /* Functional layer (topbar + left sidebar) shared background — design token. */
-  --fn-bg: #F4F6FA;
+  /* Folded, the card is the wordmark row: the mark, its chevron, and the fold
+     control. Measured from that content rather than guessed. */
+  --rail-col-collapsed: 132px;
+  /* The floating chrome's surface — the rail card, the controls card, and the
+     rings drawn against them. White, so the chrome reads as paper laid on the
+     canvas rather than as another shade of the canvas. */
+  --fn-bg: #ffffff;
+  /* The wash a row or a card takes on hover, and holds when selected. On white
+     chrome a lift towards white is invisible, so it tints towards the ink
+     instead — the same 4% the layer rows use. */
+  --fn-row-wash: color-mix(in srgb, var(--text-primary) 4%, transparent);
   /* Functional-area (topbar + left) radius scale — harmonious, size-tiered.
      Bigger element → bigger tier. Canvas has its own radii. */
   --fn-r-xs: 6px;   /* icon chips, swatches, badges */
@@ -247,12 +256,18 @@ p {
   align-items: center;
 }
 
-/* The mark's row at the top of the rail card. */
+/* The mark's row at the top of the rail card: the mark and its menu at one end,
+   the fold control at the other. */
 .shell-brand {
+  justify-content: space-between;
   gap: 14px;
   min-width: 0;
   padding: 10px 12px;
   border-bottom: 1px solid #e4e4e7;
+}
+
+.rail-collapse {
+  flex: none;
 }
 
 /* The preview surface has no rail, so there it is a card of its own — same
@@ -984,6 +999,13 @@ textarea:focus-visible {
   --canvas-pad-left: 24px;
 }
 
+/* Folded away, the rail only needs room for its wordmark row — and that row is
+   above the canvas's content, not beside it, so the canvas takes the width
+   back entirely. */
+.workspace-layout[data-rail-collapsed="true"] {
+  --canvas-pad-left: 24px;
+}
+
 /* Left nav (tool chrome, #F5F5F7): the two columns, filling the rail.
    One row, not two: the second row dated from when the style cards sat above
    the columns. With the cards moved into Theme it was an empty 1fr track, and
@@ -1008,6 +1030,23 @@ textarea:focus-visible {
   border-radius: var(--fn-r-xl);
   background: var(--fn-bg);
   box-shadow: var(--shadow-md);
+}
+
+/* Folded: the card is its wordmark row and nothing else, and the canvas takes
+   the width back (see `--canvas-pad-left`). `bottom: auto` is what lets it stop
+   at the row instead of running to the bottom of the window. */
+.workspace-layout[data-rail-collapsed="true"] .preset-nav {
+  bottom: auto;
+  width: var(--rail-col-collapsed);
+}
+
+.workspace-layout[data-rail-collapsed="true"] .preset-columns {
+  display: none;
+}
+
+/* No divider with nothing under it. */
+.workspace-layout[data-rail-collapsed="true"] .shell-brand {
+  border-bottom: 0;
 }
 
 .preset-columns {
@@ -1812,7 +1851,7 @@ textarea:focus-visible {
 }
 
 .preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"]) .preset-option-cell:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--fn-row-wash);
 }
 
 .preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"]) .preset-option {
@@ -1860,16 +1899,16 @@ textarea:focus-visible {
 }
 
 .preset-option-cell:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--fn-row-wash);
 }
 
+/* Selected looks like hover, which is the rule for this column: an opened row
+   is not something you are about to act on, and the accent belongs to the
+   canvas. The border is the only difference, and it is what holds when the
+   pointer leaves. */
 .preset-option-cell:has(.preset-option[data-active="true"]) {
   border-color: #D5DCEC;
-  background: #ffffff;
-}
-
-.preset-option-cell:has(.preset-option[data-active="true"]):hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--fn-row-wash);
 }
 
 .preset-panel[data-preset-group="conversation"] .am-states + .preset-option-cell {
