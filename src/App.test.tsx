@@ -66,6 +66,34 @@ describe("App shell controls", () => {
     expect(controls).not.toContain("Run replay");
   });
 
+  it("floats the chrome over a canvas that fills the window", () => {
+    const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+
+    // The canvas is the only thing in flow — it spans the whole window, and the
+    // chrome sits on it as cards. The shell's first row used to be the topbar.
+    expect(cssRule(styles, ".app-shell")).toContain("grid-template-rows: minmax(0, 1fr) auto;");
+    for (const selector of [".topbar", ".preset-nav", '.shell-brand[data-floating="true"]']) {
+      const rule = cssRule(styles, selector);
+      expect(rule, `${selector} should float`).toContain("position: absolute;");
+      expect(rule, `${selector} needs the chrome layer`).toContain("z-index: var(--z-shell-chrome);");
+    }
+
+    // The room each card takes comes back as canvas padding, so what the canvas
+    // draws still centres in the part of it nothing is covering. The exported
+    // shell shares the rule and has no chrome, hence the fallbacks.
+    expect(cssRule(styles, ".builder-surface,\n.exported-shell")).toContain(
+      "padding: var(--canvas-pad-top, 24px) 24px 24px var(--canvas-pad-left, 24px);",
+    );
+    expect(cssRule(styles, ".workspace-layout")).toContain(
+      "--canvas-pad-left: calc(var(--fn-float-gap) * 2 + var(--rail-col));",
+    );
+
+    // And the wordmark is inside the rail card rather than in a bar of its own.
+    expect(markup.indexOf('class="shell-brand"')).toBeGreaterThan(markup.indexOf('class="preset-nav"'));
+    expect(topbarControls(markup)).not.toContain("brand-logo");
+  });
+
   it("keeps saved-preview pickers icon-free and matched to the zoom readout", () => {
     const appSource = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
     const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
@@ -374,10 +402,11 @@ describe("App shell controls", () => {
   it("gives the group list the leftover height so long groups scroll", () => {
     const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
 
-    // One row, not two. The second row dated from when the style cards sat
-    // above the columns; empty, it left the columns content-sized, so the rail
-    // could not bound its own children.
-    expect(cssRule(styles, ".preset-nav")).toContain("grid-template-rows: minmax(0, 1fr);");
+    // The wordmark row is content-sized and the columns take everything left,
+    // so the rail bounds its own children. What must never come back is a track
+    // the columns share with empty space: the style cards used to sit above
+    // them in a 1fr row, which left the columns content-sized.
+    expect(cssRule(styles, ".preset-nav")).toContain("grid-template-rows: auto minmax(0, 1fr);");
 
     // With the options nested inside it, the list is the panel body — it takes
     // the leftover height and scrolls. Measured before the fix: 1803px of list

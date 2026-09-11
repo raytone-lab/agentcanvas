@@ -23,6 +23,7 @@ export function ModuleToolbar({
   target,
   surfaceRef,
   zoom,
+  pan,
   canDelete,
   onEdit,
   onDelete,
@@ -40,6 +41,12 @@ export function ModuleToolbar({
    * 200%.
    */
   zoom: number;
+  /**
+   * How far the canvas is slid sideways, for the same reason as `zoom`: the pan
+   * is a transform, which fires neither a scroll nor a resize, so nothing else
+   * would tell the toolbar that what it points at has moved.
+   */
+  pan: number;
   canDelete: boolean;
   onEdit: () => void;
   onDelete: () => void;
@@ -74,7 +81,7 @@ export function ModuleToolbar({
       top: below ? moduleRect.bottom - surfaceRect.top + surface.scrollTop + GAP : above,
       below,
     });
-  }, [surfaceRef, target, zoom]);
+  }, [surfaceRef, target, zoom, pan]);
 
   useLayoutEffect(() => {
     measure();

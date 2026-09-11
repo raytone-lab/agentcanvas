@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Activity, ChevronDown, Download, Eye, Save, Settings2 } from "lucide-react";
+import { Settings2 } from "lucide-react";
 
 import { SelectMenu } from "../../components/ui";
-import { APP_LOCALES, type UiCopy, type AppLocale } from "../../i18n/uiCopy";
+import type { UiCopy, AppLocale } from "../../i18n/uiCopy";
 import { previewScenarios, type PreviewScenarioId } from "../../preview-runner/PreviewRunner";
 import type { RunMode } from "../appTypes";
 import { previewScenarioLabel } from "../projection/previewDefaults";
@@ -10,14 +10,17 @@ import type { SelectedComponentItem } from "../projection/selectedComponents";
 import { ZoomControl } from "./ZoomControl";
 
 /**
- * App top bar (pure view). Owns only its local chrome state — the language
- * menu and the selected-components popover — everything else arrives as props
- * from the workspace controller.
+ * The shell's controls (pure view), floating at the top right of the canvas.
+ *
+ * Not a bar any more: the whole window is the canvas, so this is a card over
+ * it rather than a row above it. The wordmark and language switch it used to
+ * carry moved to `ShellBrand`, at the top of the rail card. Owns only its local
+ * chrome state — the selected-components popover — everything else arrives as
+ * props from the workspace controller.
  */
 export function Topbar({
   copy,
   locale,
-  setLocale,
   surfaceMode,
   onReturnToBuilder,
   runMode,
@@ -36,7 +39,6 @@ export function Topbar({
 }: {
   copy: UiCopy;
   locale: AppLocale;
-  setLocale: (locale: AppLocale) => void;
   surfaceMode: "builder" | "saved-preview";
   onReturnToBuilder: () => void;
   runMode: RunMode;
@@ -53,7 +55,6 @@ export function Topbar({
   onCanvasZoomChange: (zoom: number) => void;
   onExport: () => void;
 }) {
-  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const [selectedComponentsOpen, setSelectedComponentsOpen] = useState(false);
   const selectedComponentsRef = useRef<HTMLDivElement | null>(null);
 
@@ -85,55 +86,6 @@ export function Topbar({
 
   return (
     <header className="topbar">
-      <div className="topbar-leading">
-        <div className="brand-block">
-          {/* The wordmark is in the image, so the h1 carries the name for
-              assistive tech and the img is decorative. */}
-          <h1 className="brand-logo">
-            <img src="/brand-logo.png" alt="AgentCanvas" />
-          </h1>
-        </div>
-        <div
-          className="language-picker"
-          onBlur={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-              setLanguageMenuOpen(false);
-            }
-          }}
-        >
-          <button
-            className="language-trigger"
-            type="button"
-            aria-label={copy.shell.topbar.languageSwitchAria}
-            aria-haspopup="menu"
-            aria-expanded={languageMenuOpen}
-            onClick={() => setLanguageMenuOpen((open) => !open)}
-          >
-            <span>{copy.shell.topbar.languageLabels[locale]}</span>
-            <ChevronDown size={14} aria-hidden="true" />
-          </button>
-          {languageMenuOpen ? (
-            <div className="language-menu" role="menu">
-              {APP_LOCALES.map((option) => (
-                <button
-                  key={option}
-                  className="language-option"
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={locale === option}
-                  data-active={locale === option}
-                  onClick={() => {
-                    setLocale(option);
-                    setLanguageMenuOpen(false);
-                  }}
-                >
-                  {copy.shell.topbar.languageLabels[option]}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      </div>
       <div className="topbar-controls">
         {surfaceMode === "saved-preview" ? (
           <label className="run-mode-picker">

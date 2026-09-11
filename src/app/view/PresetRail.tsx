@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Check, ChevronDown, Clock3, Copy, GitMerge, Pencil, RotateCcw } from "lucide-react";
 
 import { StateGallery, type StateCard } from "../../components/agentmatrix/StateGallery";
@@ -56,6 +56,7 @@ type WritingParamKey = keyof AgentFrontendProject["theme"]["motion"]["writingPar
 export function PresetRail({
   copy,
   locale,
+  brand,
   project,
   navSection,
   onNavSectionChange,
@@ -104,6 +105,8 @@ export function PresetRail({
 }: {
   copy: UiCopy;
   locale: AppLocale;
+  /** The product wordmark and language switch, which sit at the top of the card. */
+  brand?: ReactNode;
   project: AgentFrontendProject;
   navSection: NavSectionId;
   onNavSectionChange: (section: NavSectionId) => void;
@@ -474,6 +477,7 @@ export function PresetRail({
           </DialogContent>
         ) : null}
       </Dialog>
+      {brand}
       <div className="preset-columns">
       {/* Four destinations, not thirteen groups. The groups still exist — they
           moved one level down, into the Components destination — so nothing is

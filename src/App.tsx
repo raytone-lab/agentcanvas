@@ -46,11 +46,13 @@ import { piConversationSidebarItems } from "./pi/piConversationState";
 import { InlineApprovalDemo, demoApprovalTool, findPendingApprovalTool } from "./app/view/InlineApprovalDemo";
 import { PresetRail } from "./app/view/PresetRail";
 import { RegionLabels } from "./app/view/RegionLabels";
+import { ShellBrand } from "./app/view/ShellBrand";
 import { Topbar } from "./app/view/Topbar";
 import { IncompleteProjectDialog } from "./app/view/IncompleteProjectDialog";
 import { canvasTimelineEvents } from "./app/projection/canvasTimeline";
 import { ModuleToolbar } from "./app/view/ModuleToolbar";
 import { PointerHint, type PointerHintState } from "./app/view/PointerHint";
+import { nextCanvasPan, sidewaysWheelDelta } from "./app/view/canvasPan";
 import { clampZoom, zoomIn, zoomOut } from "./app/view/ZoomControl";
 import {
   collectDefaultOutputPanelItems,
@@ -523,6 +525,49 @@ export function App() {
     };
   }, [dispatch, state.surfaceMode, state.workspaceView]);
 
+  /**
+   * Sideways swipes slide the canvas.
+   *
+   * The whole window is the canvas, so it behaves like one. Done with a
+   * transform rather than by making the surface scrollable: the canvas holds a
+   * frame sized to the free space, so at 100% there is nothing to scroll, and
+   * adding scrollable slack would have to be re-centred on every resize.
+   *
+   * When the canvas *is* magnified past the window, the surface genuinely
+   * scrolls and the browser's own panning is better than anything here —
+   * momentum, rubber-banding, and the toolbar already re-measures on scroll —
+   * so this stands aside.
+   */
+  useEffect(() => {
+    const surface = builderSurfaceRef.current;
+    if (!surface) return;
+    const onWheel = (event: WheelEvent) => {
+      // Read from the zoom, not from `scrollWidth`: the pan is a transform, and
+      // a translated child counts towards the scrollable area, so the first
+      // swipe made the surface look scrollable and every later one bailed out.
+      if (state.canvasZoom > 100) return;
+      const delta = sidewaysWheelDelta(event);
+      if (delta === 0) return;
+      // Only once it is ours: preventing the default on a gesture we then
+      // ignore would deaden vertical scrolling inside the canvas.
+      event.preventDefault();
+      canvasPanRef.current = nextCanvasPan(canvasPanRef.current, delta, surface.clientWidth);
+      if (canvasPanFrameRef.current !== null) return;
+      canvasPanFrameRef.current = window.requestAnimationFrame(() => {
+        canvasPanFrameRef.current = null;
+        setCanvasPanX(canvasPanRef.current);
+      });
+    };
+    surface.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      surface.removeEventListener("wheel", onWheel);
+      if (canvasPanFrameRef.current !== null) {
+        window.cancelAnimationFrame(canvasPanFrameRef.current);
+        canvasPanFrameRef.current = null;
+      }
+    };
+  }, [state.canvasZoom, state.surfaceMode]);
+
   useEffect(() => {
     if (state.selectedLayerId === null && state.selectedSlotId === null) {
       return;
@@ -548,9 +593,13 @@ export function App() {
       }
 
       // ⌘0 resets zoom even from inside a field — it is unambiguous, and the
-      // zoom menu's own percentage field relies on it.
+      // zoom menu's own percentage field relies on it. It recentres the canvas
+      // too: it is the "put the view back" shortcut, and a reset zoom on a
+      // canvas slid halfway off screen is not back.
       if ((event.metaKey || event.ctrlKey) && event.key === "0") {
         event.preventDefault();
+        canvasPanRef.current = 0;
+        setCanvasPanX(0);
         dispatch({ type: "patch", patch: { canvasZoom: 100 } });
         return;
       }
@@ -628,6 +677,18 @@ export function App() {
   const sidebarDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const [draggingSidebar, setDraggingSidebar] = useState(false);
   const [panelLayout, setPanelLayout] = useState<{ main: number; right: number } | undefined>();
+  /**
+   * How far the canvas has been slid sideways, in screen pixels.
+   *
+   * Local state with a ref in front of it: a swipe fires wheel events faster
+   * than the shell can re-render, so the ref accumulates and one animation
+   * frame publishes the result. The value still has to reach React, because the
+   * module toolbar is positioned from client rects and has to re-measure when
+   * what it points at moves.
+   */
+  const [canvasPanX, setCanvasPanX] = useState(0);
+  const canvasPanRef = useRef(0);
+  const canvasPanFrameRef = useRef<number | null>(null);
   const [pointerHint, setPointerHint] = useState<PointerHintState>(null);
   const [pendingRun, setPendingRun] = useState<"preview" | "export" | null>(null);
   const missingRequirements = missingRequirementsForProject(activeProject, selectedComponentItems);
@@ -932,7 +993,6 @@ export function App() {
         <Topbar
           copy={copy}
           locale={locale}
-          setLocale={setLocale}
           surfaceMode={state.surfaceMode}
           onReturnToBuilder={() => dispatch({ type: "patch", patch: { surfaceMode: "builder" } })}
           runMode={state.runMode}
@@ -955,6 +1015,10 @@ export function App() {
             <PresetRail
               copy={copy}
               locale={locale}
+              // The wordmark rides at the top of the rail card rather than in
+              // a bar of its own: with the shell turned into one canvas, the
+              // chrome is two floating cards and this is the top of one.
+              brand={<ShellBrand copy={copy} locale={locale} setLocale={setLocale} />}
               project={project}
               navSection={state.navSection}
               onNavSectionChange={handleNavSectionChange}
@@ -1012,7 +1076,11 @@ export function App() {
               onWelcomeGreetingChange={provider.updateWelcomeGreeting}
               onWelcomeActivate={controller.previewWelcomeState}
             />
-          ) : null}
+          ) : (
+            // No rail on the preview surface, so the wordmark floats on its
+            // own — the language switch has to stay reachable from here too.
+            <ShellBrand copy={copy} locale={locale} setLocale={setLocale} floating />
+          )}
 
           <main
             ref={builderSurfaceRef}
@@ -1020,8 +1088,12 @@ export function App() {
             data-output-zone="generated-scaffold"
             // Zoom is a CSS variable rather than a prop threaded into every
             // component: nothing inside the canvas needs to know it is being
-            // magnified, and nothing re-renders when it changes.
-            style={{ "--canvas-zoom": state.canvasZoom / 100 } as CSSProperties}
+            // magnified, and nothing re-renders when it changes. The pan rides
+            // along the same way.
+            style={{
+              "--canvas-zoom": state.canvasZoom / 100,
+              "--canvas-pan-x": `${canvasPanX}px`,
+            } as CSSProperties}
             // Only a magnified canvas scrolls. Left at `auto` the whole time,
             // sub-pixel rounding puts a scrollbar on an unzoomed canvas.
             data-canvas-zoomed={state.canvasZoom > 100 ? "true" : undefined}
@@ -1212,6 +1284,7 @@ export function App() {
                     target={toolbarTarget}
                     surfaceRef={builderSurfaceRef}
                     zoom={state.canvasZoom}
+                    pan={canvasPanX}
                     canDelete={deletableOptionIds.length > 0}
                     onEdit={editSelectedModule}
                     onDelete={deleteSelected}

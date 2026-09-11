@@ -173,8 +173,19 @@ p {
   --fn-r-sm: 8px;   /* topbar buttons, style cards, option rows, tabs */
   --fn-r-md: 10px;  /* larger cards, dropdown menus */
   --fn-r-lg: 12px;  /* bordered containers / large cards */
+  --fn-r-xl: 16px;  /* the floating chrome cards */
+  /* How far the floating chrome sits from the window's edges. */
+  --fn-float-gap: 16px;
+  /* Above the canvas and everything drawn inside it (the selection overlays at
+     6, the module toolbar at 30), below the menus that open out of the chrome
+     itself (--z-dropdown, 50). */
+  --z-shell-chrome: 40;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  /* One row for the canvas, which is now the whole window, plus the debug
+     footer's. The chrome used to be the first row; it floats over the canvas
+     instead, so it is out of flow and takes no track. */
+  grid-template-rows: minmax(0, 1fr) auto;
+  position: relative;
   gap: 0;
   height: 100vh;
   padding: 0;
@@ -201,24 +212,29 @@ p {
   box-shadow: none;
 }
 
+/* The controls, floating at the canvas's top right.
+   Not a bar: the whole window is the canvas now, so preview / zoom / export sit
+   on it as a card instead of in a strip above it. The class keeps its name —
+   it is still the thing at the top — and so do the rules that style what is
+   inside it. */
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  /* 52px: 8px above/below a 36px control row. Was 72px with 16px padding, which
-     was sized for a control group and a component-count menu that no longer
-     live here. */
-  min-height: 52px;
-  padding: 8px 14px;
-  /* Functional layer chrome — separated from the canvas by a straight full-width
-     hairline (no rounded corners). */
+  position: absolute;
+  z-index: var(--z-shell-chrome);
+  top: var(--fn-float-gap);
+  right: var(--fn-float-gap);
+  gap: 8px;
+  /* 6px around a 36px control row, which is what makes it read as a holder for
+     the controls rather than as a panel with controls in it. */
+  padding: 6px;
   background: var(--fn-bg);
-  border-radius: 0;
-  border-bottom: 1px solid #e4e4e7;
+  border-radius: var(--fn-r-xl);
+  border-bottom: 0;
+  box-shadow: var(--shadow-md);
 }
 
-.topbar-leading,
+.shell-brand,
 .brand-block,
 .topbar-controls,
 .rail-title,
@@ -232,14 +248,29 @@ p {
   align-items: center;
 }
 
-.topbar-leading {
-  /* Width tied to the rail column so the language picker (right-aligned inside)
-     ends exactly at the rail/content divider. */
-  flex: none;
-  width: calc(var(--rail-col) - 12px);
+/* The wordmark row at the top of the rail card: name on the left, language on
+   the right, with the card's own width doing the work the old fixed
+   `--rail-col - 12px` used to do. */
+.shell-brand {
   justify-content: space-between;
   gap: 14px;
   min-width: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e4e4e7;
+}
+
+/* The preview surface has no rail, so there it is a card of its own — same
+   inset and radius as the controls opposite it. */
+.shell-brand[data-floating="true"] {
+  position: absolute;
+  z-index: var(--z-shell-chrome);
+  top: var(--fn-float-gap);
+  left: var(--fn-float-gap);
+  padding: 6px 14px;
+  border-bottom: 0;
+  border-radius: var(--fn-r-xl);
+  background: var(--fn-bg);
+  box-shadow: var(--shadow-md);
 }
 
 .brand-block {
@@ -885,15 +916,26 @@ textarea:focus-visible {
 /* Two-level nav: L1 (.preset-rail) is the labeled group list; L2
    (.preset-detail-rail) slides in and covers L1 in place — same column, same
    width — when a group is clicked. Both live in the single .preset-nav column. */
+/* One column, because there is one thing in flow: the canvas. The rail floats
+   over it, so the space it would have taken is given back as canvas padding —
+   the canvas reaches the window's edges, and its *contents* still centre in
+   the part of it nothing is covering. */
 .workspace-layout {
   display: grid;
-  grid-template-columns: var(--rail-col) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  position: relative;
   gap: 0;
   min-height: 0;
+  /* The room the floating chrome needs, as canvas padding. The top matches
+     what the old topbar row plus the canvas's own padding came to (52 + 24),
+     so the frame does not move. */
+  --canvas-pad-top: calc(var(--fn-float-gap) * 2 + 44px);
+  --canvas-pad-left: calc(var(--fn-float-gap) * 2 + var(--rail-col));
 }
 
 .workspace-layout[data-mode="saved-preview"] {
-  grid-template-columns: minmax(0, 1fr);
+  /* No rail to leave room for. */
+  --canvas-pad-left: 24px;
 }
 
 /* Left nav (tool chrome, #F5F5F7): the two columns, filling the rail.
@@ -902,12 +944,24 @@ textarea:focus-visible {
    it left `.preset-columns` on the `auto` row — content-sized instead of
    viewport-sized, so a long group list grew past the bottom of the window with
    nothing to scroll it. Measured: rail 848px, columns 467px, 381px empty. */
+/* The rail as a floating card: the wordmark row, then the two columns under it.
+   Full height between the gaps rather than content-sized — the panel scrolls
+   inside itself (`.preset-panel-body`), and a card that grew and shrank with
+   whichever group was open would move the canvas's edge around with it. */
 .preset-nav {
   display: grid;
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  position: absolute;
+  z-index: var(--z-shell-chrome);
+  top: var(--fn-float-gap);
+  bottom: var(--fn-float-gap);
+  left: var(--fn-float-gap);
+  width: var(--rail-col);
   min-width: 0;
   min-height: 0;
+  border-radius: var(--fn-r-xl);
   background: var(--fn-bg);
+  box-shadow: var(--shadow-md);
 }
 
 .preset-columns {
@@ -1171,10 +1225,8 @@ textarea:focus-visible {
   min-width: 0;
   min-height: 0;
   background: transparent;
-  border-right: 1px solid #e4e4e7;
-}
-
-.preset-panel[data-preset-group="provider"] {
+  /* No right hairline: the panel is the right edge of a floating card now, and
+     the card's own edge is the separation. */
   border-right: 0;
 }
 
@@ -3271,7 +3323,10 @@ textarea:focus-visible {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  padding: 24px;
+  /* The builder sets these to the room the floating chrome needs, so the canvas
+     spans the window while its contents stay in the clear. The exported shell
+     has no chrome and falls through to an even 24px. */
+  padding: var(--canvas-pad-top, 24px) 24px 24px var(--canvas-pad-left, 24px);
   border: 0;
   border-radius: 0;
   background: #DDE1E9;
@@ -10399,7 +10454,9 @@ pre {
 .command-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  /* A modal's backdrop has to cover the shell chrome, which floats over the
+     canvas now — at its old 20 the rail card sat on top of the dimming. */
+  z-index: var(--z-overlay);
   display: grid;
   place-items: start center;
   background: rgba(15, 18, 24, 0.28);
@@ -13180,6 +13237,11 @@ pre {
   /* Centres the canvas when it is smaller than the surface; collapses to 0 and
      lets it overflow (scrollably) when it is bigger. */
   margin: auto;
+  /* Sideways panning. Divided by the zoom because `zoom` scales the lengths
+     inside its own element, this one included — without it a 20px swipe moved
+     the canvas 40px at 200%, and the pan limit (which is measured in screen
+     pixels) would have meant something different at every zoom level. */
+  translate: calc(var(--canvas-pan-x, 0px) / var(--canvas-zoom, 1));
 }
 
 .builder-surface[data-canvas-zoomed="true"] {
