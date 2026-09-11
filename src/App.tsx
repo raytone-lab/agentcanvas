@@ -46,7 +46,7 @@ import { piConversationSidebarItems } from "./pi/piConversationState";
 import { InlineApprovalDemo, demoApprovalTool, findPendingApprovalTool } from "./app/view/InlineApprovalDemo";
 import { PresetRail } from "./app/view/PresetRail";
 import { RegionLabels } from "./app/view/RegionLabels";
-import { canvasBackgroundColor } from "./app/view/canvasBackgrounds";
+import { canvasBackground } from "./app/view/canvasBackgrounds";
 import { LayersPanel } from "./app/view/LayersPanel";
 import { PreferencesDialog } from "./app/view/PreferencesDialog";
 import { ProjectTitle } from "./app/view/ProjectTitle";
@@ -1161,7 +1161,12 @@ export function App() {
               "--canvas-zoom": state.canvasZoom / 100,
               "--canvas-pan-x": `${canvasPan.x}px`,
               "--canvas-pan-y": `${canvasPan.y}px`,
-              "--canvas-bg": canvasBackgroundColor(state.canvasBackground),
+              // Three properties rather than the `background` shorthand: the
+              // textured backdrops set an image and a tile size, and the
+              // exported shell reads the same rule with none of them set.
+              "--canvas-bg": canvasBackground(state.canvasBackground).color,
+              "--canvas-bg-image": canvasBackground(state.canvasBackground).texture?.image ?? "none",
+              "--canvas-bg-size": canvasBackground(state.canvasBackground).texture?.size ?? "auto",
             } as CSSProperties}
             // Only a magnified canvas scrolls. Left at `auto` the whole time,
             // sub-pixel rounding puts a scrollbar on an unzoomed canvas.

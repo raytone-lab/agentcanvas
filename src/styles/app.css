@@ -3493,9 +3493,12 @@ textarea:focus-visible {
     var(--canvas-pad-left, 24px);
   border: 0;
   border-radius: 0;
-  /* Set from preferences; the literal is the fallback for the exported shell,
-     which has no preferences to read. */
-  background: var(--canvas-bg, #DDE1E9);
+  /* Set from preferences; the literals are the fallback for the exported shell,
+     which has no preferences to read. Longhand because the textured backdrops
+     set an image and a tile size over the colour. */
+  background-color: var(--canvas-bg, #DDE1E9);
+  background-image: var(--canvas-bg-image, none);
+  background-size: var(--canvas-bg-size, auto);
   box-shadow: none;
 }
 

@@ -73,7 +73,13 @@ export function PreferencesDialog({
                 >
                   <span
                     className="pref-swatch"
-                    style={{ background: option.color }}
+                    style={{
+                      backgroundColor: option.color,
+                      // A smaller tile for the swatch: the canvas's 16px dot
+                      // grid would put one dot in an 18px square.
+                      backgroundImage: option.texture?.image,
+                      backgroundSize: option.texture?.swatchSize,
+                    }}
                     aria-hidden="true"
                   />
                   {option.label[locale]}
