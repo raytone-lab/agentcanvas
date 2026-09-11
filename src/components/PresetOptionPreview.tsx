@@ -19,7 +19,7 @@ import {
 
 import { appVersionLabel } from "../appVersion";
 import { useCopy } from "../i18n/LocaleContext";
-import { NewChatIcon, SearchIcon } from "./agent-preview/SessionSidebar";
+import { NewChatIcon, SearchIcon, SidebarToggleIcon } from "./agent-preview/SessionSidebar";
 import {
   AudioSkeletonLoader,
   AudioWaveLoader,
@@ -72,7 +72,14 @@ function mediaLoaderPreviewKind(style: string): string {
   return "media-image-grid";
 }
 
-export function PresetOptionPreview({ optionId }: { optionId: string }) {
+export function PresetOptionPreview({
+  optionId,
+  projectName,
+}: {
+  optionId: string;
+  /** For the cards that print a real value — the sidebar's title is the project's name. */
+  projectName?: string;
+}) {
   const copy = useCopy();
 
   // ---- Conversation · writing rhythm ---------------------------------------
@@ -158,6 +165,41 @@ export function PresetOptionPreview({ optionId }: { optionId: string }) {
     return (
       <Tile kind="icon">
         <PenLine size={18} />
+      </Tile>
+    );
+  }
+  if (optionId === "sidebar-title") {
+    // The brand line as the column prints it, from the project's own name, so
+    // renaming the project renames the card.
+    return (
+      <Tile kind="control">
+        <span className="pv-control" data-align="center">
+          <span className="pv-brand">{projectName?.trim() || copy.workspace.sessionSidebar.brandName}</span>
+        </span>
+      </Tile>
+    );
+  }
+  if (optionId === "sidebar-collapse") {
+    return (
+      <Tile kind="control">
+        <span className="pv-control" data-align="center">
+          <SidebarToggleIcon size={14} />
+        </span>
+      </Tile>
+    );
+  }
+  if (optionId === "sidebar-sessions") {
+    // Two rows of the real thing, ellipsized — which is how the list reads in a
+    // column this narrow anyway.
+    return (
+      <Tile kind="control">
+        <span className="pv-sessions">
+          {copy.workspace.sessionSidebar.sessions.slice(0, 2).map((session, index) => (
+            <span key={session} className="pv-session" data-active={index === 0 ? "true" : undefined}>
+              {session}
+            </span>
+          ))}
+        </span>
       </Tile>
     );
   }

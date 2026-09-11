@@ -351,7 +351,7 @@ export function PresetRail({
                           type="button"
                           onClick={() => onSelectPreset(option.id)}
                         >
-                          <PresetOptionPreview optionId={option.id} />
+                          <PresetOptionPreview optionId={option.id} projectName={project.name} />
                         </button>
                         {showParams ? (
                           <WritingParamControls

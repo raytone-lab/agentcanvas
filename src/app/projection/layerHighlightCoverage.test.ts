@@ -61,9 +61,29 @@ describe("layer row highlights", () => {
   });
 
   it("points the conversation-list row at the list, not the column", () => {
-    // A row that says "会话列表" lighting the entire left column is the bug this
-    // map was added to fix.
-    expect(LAYER_HIGHLIGHT_SELECTORS.sessions).toBe(".session-list");
+    // A row for the list lighting the entire left column is the bug this map
+    // was added to fix. The row is 内容模块 now — a module the reader picks —
+    // and the sidebar itself has no row here at all: the empty left column
+    // renders with the same `.session-sidebar` class, so an entry for it would
+    // answer clicks for a component that is not on the canvas.
+    expect(LAYER_HIGHLIGHT_SELECTORS["sidebar-sessions"]).toBe(".session-list");
+    expect(LAYER_HIGHLIGHT_SELECTORS.sessions).toBeUndefined();
     expect(styles).not.toContain('[data-selected-slot="SessionSidebar"]');
+  });
+
+  it("has a row for every part of the sidebar", () => {
+    // The column is nothing but these seven, and each one is a module a click
+    // on the canvas has to be able to land on.
+    for (const id of [
+      "sidebar-title",
+      "sidebar-collapse",
+      "sidebar-new-button",
+      "sidebar-search",
+      "sidebar-sessions",
+      "sidebar-grouping",
+      "sidebar-footer",
+    ]) {
+      expect(LAYER_HIGHLIGHT_SELECTORS[id], `${id} has no canvas target`).toBeTruthy();
+    }
   });
 });

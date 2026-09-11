@@ -19,6 +19,9 @@ async function renderSidebar(props: {
   activeSessionId?: string;
   onSelectSession?: (prompt: string) => void;
   search?: boolean;
+  /** Partial `project.sidebar`, for the tests about which parts are chosen. */
+  sidebar?: Partial<typeof defaultCodingAgentProject.sidebar>;
+  onCollapse?: () => void;
 }) {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -30,16 +33,21 @@ async function renderSidebar(props: {
       <LocaleProvider initialLocale="en">
         <IconSetProvider>
           <SessionSidebar
-            project={props.search === undefined
+            project={props.search === undefined && props.sidebar === undefined
               ? defaultCodingAgentProject
               : {
                   ...defaultCodingAgentProject,
-                  sidebar: { ...defaultCodingAgentProject.sidebar, search: props.search },
+                  sidebar: {
+                    ...defaultCodingAgentProject.sidebar,
+                    ...(props.search === undefined ? {} : { search: props.search }),
+                    ...props.sidebar,
+                  },
                 }}
             sessionPrompts={props.sessionPrompts}
             sessionItems={props.sessionItems}
             activeSessionId={props.activeSessionId}
             onSelectSession={props.onSelectSession}
+            onCollapse={props.onCollapse}
           />
         </IconSetProvider>
       </LocaleProvider>,
@@ -48,6 +56,17 @@ async function renderSidebar(props: {
 
   return container;
 }
+
+/** Nothing chosen, as a new project starts. */
+const NO_SIDEBAR_PARTS = {
+  title: false,
+  collapse: false,
+  newButton: false,
+  search: false,
+  sessionList: false,
+  grouping: false,
+  footer: false,
+} as const;
 
 afterEach(async () => {
   await act(async () => {
@@ -64,6 +83,51 @@ describe("SessionSidebar session data contract", () => {
     expect(container.querySelector(".session-list")).toBeNull();
     expect(container.textContent).not.toContain("What can this agent do?");
     expect(container.textContent).toContain("New chat");
+  });
+
+  it("draws only the parts the project picked", async () => {
+    // Every part of the column is a module the reader picks. The title, the
+    // collapse control and the conversation rows used to arrive with the
+    // component instead, so picking 搜索功能 put four things on the canvas.
+    const container = await renderSidebar({
+      sessionPrompts: ["Inspect the export contract"],
+      onSelectSession: () => {},
+      onCollapse: () => {},
+      sidebar: { ...NO_SIDEBAR_PARTS, title: true },
+    });
+
+    expect(container.querySelector(".session-brand-name")?.textContent).toBe(
+      defaultCodingAgentProject.name,
+    );
+    expect(container.querySelector(".session-collapse")).toBeNull();
+    expect(container.querySelector(".session-list")).toBeNull();
+    expect(container.querySelector(".session-new")).toBeNull();
+    expect(container.querySelector(".session-footer")).toBeNull();
+    expect(container.textContent).not.toContain("Inspect the export contract");
+  });
+
+  it("drops the header when none of its three parts are chosen", async () => {
+    // The header is the title and the two controls beside it; with none of them
+    // picked it is an empty band of padding at the top of the column.
+    const container = await renderSidebar({
+      onCollapse: () => {},
+      sidebar: { ...NO_SIDEBAR_PARTS, sessionList: true },
+    });
+
+    expect(container.querySelector(".session-brand")).toBeNull();
+  });
+
+  it("brings the list along with the date headings", async () => {
+    // Headings head a list, so asking for them asks for the list — otherwise
+    // picking 日期分组 would be a pick that changed nothing.
+    const container = await renderSidebar({
+      sessionPrompts: ["Inspect the export contract"],
+      onSelectSession: () => {},
+      sidebar: { ...NO_SIDEBAR_PARTS, grouping: true, sessionList: true },
+    });
+
+    expect(container.querySelector(".session-list")).not.toBeNull();
+    expect(Array.from(container.querySelectorAll("h4")).map((h) => h.textContent)).toContain("Today");
   });
 
   it("hides search when the exported configuration turns it off", async () => {

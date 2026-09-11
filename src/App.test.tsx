@@ -180,15 +180,24 @@ describe("App shell controls", () => {
       .toEqual(["sessions", "composer", "output"]);
 
     // The sidebar's "Content" section starts unpicked — the column is present,
-    // its contents are not chosen. Same rule as the slots.
+    // its contents are not chosen. Same rule as the slots, and it covers every
+    // part of the column: the title, the collapse control and the conversation
+    // rows used to arrive with the component, so picking one thing put four on
+    // the canvas.
     expect(emptyStructureProject.sidebar).toEqual({
+      title: false,
+      collapse: false,
       newButton: false,
       search: false,
+      sessionList: false,
       grouping: false,
       footer: false,
     });
     expect(markup).not.toContain("session-new");
     expect(markup).not.toContain("session-footer");
+    expect(markup).not.toContain("session-brand-name");
+    expect(markup).not.toContain("session-collapse");
+    expect(markup).not.toContain("session-list");
 
     // No welcome state either. It used to be inferred from an empty timeline,
     // which is also what an unconfigured canvas looks like, so a new project

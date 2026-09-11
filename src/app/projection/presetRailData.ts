@@ -347,26 +347,46 @@ export const PRESENCE_OPTION_IDS = new Set([
  *
  * Keyed by slot id and preset option id — the two things a layer row can be —
  * so a row points at the module it names rather than at the column that
- * contains it. `sessions` is the reason this map exists: it used to highlight
- * the whole `.session-sidebar`, which lit the entire left column when what the
- * row says is "the conversation list".
+ * contains it. The conversation list is the reason this map exists: it used to
+ * highlight the whole `.session-sidebar`, which lit the entire left column when
+ * what the row says is "the conversation list".
+ *
+ * The sidebar has no component row of its own here (see
+ * `FULLY_ENUMERATED_COMPONENTS`): every part of it is a module below, and a
+ * `.session-sidebar` entry would swallow every click in the column — the empty
+ * left column renders with that same class, so it would also answer for a
+ * component that is not there.
  *
  * CSS cannot be generated from this, so `app.css` carries one rule per entry;
  * `layerHighlightCoverage.test.ts` holds the two in step.
  */
 export const LAYER_HIGHLIGHT_SELECTORS: Record<string, string> = {
   // Components.
-  sessions: ".session-list",
   chat: ".chat-frame",
   composer: ".composer-frame",
   output: ".artifact-frame",
   git: ".git-panel",
-  // Modules inside the left column.
+  // Modules inside the left column, top to bottom.
+  "sidebar-title": ".session-brand-name",
+  "sidebar-collapse": ".session-collapse",
   "sidebar-new-button": ".session-new",
   "sidebar-search": ".session-search-menu",
+  "sidebar-sessions": ".session-list",
   "sidebar-grouping": ".session-group > h4",
   "sidebar-footer": ".session-footer",
 };
+
+/**
+ * Components whose every part is a preset option.
+ *
+ * The sidebar is nothing but its modules — title, collapse control, new chat,
+ * search, conversation list, date headings, version — so a component row for it
+ * would be a second name for the column that holds it, sitting directly above
+ * the seven rows that say what is actually in there. Worse, it competed with
+ * 内容模块 for which row means the list: both would point at `.session-list`,
+ * and a canvas click has to resolve to one of them.
+ */
+const FULLY_ENUMERATED_COMPONENTS = new Set<SlotConfig["component"]>(["SessionSidebar"]);
 
 /**
  * The preset option a slot row stands for.
@@ -704,11 +724,13 @@ export function layerContentsForProject(
     const slots = project.layout.slots.filter(
       (slot) => layer.regions.includes(slot.region) && mounted.has(slot.component),
     );
-    const children: LayerChild[] = slots.map((slot) => ({
-      id: slot.id,
-      label: locale ? SLOT_COMPONENT_LABELS[slot.component][locale] : slot.component,
-      kind: "slot",
-    }));
+    const children: LayerChild[] = slots
+      .filter((slot) => !FULLY_ENUMERATED_COMPONENTS.has(slot.component))
+      .map((slot) => ({
+        id: slot.id,
+        label: locale ? SLOT_COMPONENT_LABELS[slot.component][locale] : slot.component,
+        kind: "slot",
+      }));
     for (const option of selectedOptions ?? []) {
       // Variants are settings, not modules: a motion curve is not a thing
       // sitting in a column.

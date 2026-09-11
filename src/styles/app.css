@@ -2398,6 +2398,42 @@ textarea:focus-visible {
   text-align: center;
 }
 
+/* The brand line, at the card's scale: the weight is what makes it read as a
+   title rather than as a label. */
+.pv-brand {
+  font-size: 10px;
+  font-weight: 760;
+  line-height: 13px;
+  color: var(--text-primary);
+}
+
+/* Two conversation rows, the first one open — the list as the column draws it.
+   Ellipsized rather than wrapped: a 55px card cannot hold a whole prompt, and
+   a truncated row is what the real column shows too. */
+.pv-sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
+
+.pv-session {
+  border-radius: 3px;
+  padding: 1px 3px;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pv-session[data-active="true"] {
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  color: var(--text-primary);
+}
+
 /* The date headings, stacked, which is what the grouping is. */
 .pv-eyebrow {
   color: var(--text-muted);
@@ -3810,6 +3846,10 @@ textarea:focus-visible {
   align-items: center;
   gap: 6px;
   flex: none;
+  /* Holds the right edge when the title is not one of the chosen modules:
+     `space-between` has nothing to push against with a single child, so the
+     collapse control slid to the left of the column. */
+  margin-left: auto;
 }
 
 .session-group {
@@ -13236,14 +13276,15 @@ pre {
 }
 
 /* The modules a layer row can name, which are finer than a component: the
-   conversation list inside the sidebar, the new-chat button, the search
-   control, the date headings, the version footer. They need the same overlay
-   box as the components so a row can highlight the thing it actually names. */
-.preview-frame :is(.artifact-frame, .chat-frame, .composer-frame, .git-panel, .session-footer, .session-group > h4, .session-list, .session-new, .session-search-menu) {
+   title, the collapse control, the conversation list inside the sidebar, the
+   new-chat button, the search control, the date headings, the version footer.
+   They need the same overlay box as the components so a row can highlight the
+   thing it actually names. */
+.preview-frame :is(.artifact-frame, .chat-frame, .composer-frame, .git-panel, .session-brand-name, .session-collapse, .session-footer, .session-group > h4, .session-list, .session-new, .session-search-menu) {
   position: relative;
 }
 
-.preview-frame :is(.artifact-frame, .chat-frame, .composer-frame, .git-panel, .session-footer, .session-group > h4, .session-list, .session-new, .session-search-menu)::after {
+.preview-frame :is(.artifact-frame, .chat-frame, .composer-frame, .git-panel, .session-brand-name, .session-collapse, .session-footer, .session-group > h4, .session-list, .session-new, .session-search-menu)::after {
   content: "";
   position: absolute;
   inset: -2px;
@@ -13281,7 +13322,7 @@ pre {
  * rules this replaces guarded each level against a hardcoded list of its
  * children, so the sidebar (which had no guard at all) lit up together with
  * the conversation list inside it. */
-.preview-frame :is(.session-sidebar, .preview-stack, .right-panel, .chat-frame, .composer-frame, .artifact-frame, .git-panel, .session-list, .session-new, .session-search-menu, .session-group > h4, .session-footer):hover:not(:has(:is(.session-sidebar, .preview-stack, .right-panel, .chat-frame, .composer-frame, .artifact-frame, .git-panel, .session-list, .session-new, .session-search-menu, .session-group > h4, .session-footer):hover))::after {
+.preview-frame :is(.session-sidebar, .preview-stack, .right-panel, .chat-frame, .composer-frame, .artifact-frame, .git-panel, .session-brand-name, .session-collapse, .session-list, .session-new, .session-search-menu, .session-group > h4, .session-footer):hover:not(:has(:is(.session-sidebar, .preview-stack, .right-panel, .chat-frame, .composer-frame, .artifact-frame, .git-panel, .session-brand-name, .session-collapse, .session-list, .session-new, .session-search-menu, .session-group > h4, .session-footer):hover))::after {
   /* `display` as well as `opacity`: the native style carries an older
      `> .session-sidebar::after { display: none }`, and a hidden box cannot be
      faded in. */
@@ -13304,15 +13345,18 @@ pre {
    option ids alike. Keep in step with `LAYER_HIGHLIGHT_SELECTORS`;
    `layerHighlightCoverage.test.ts` fails if they drift.
 
-   `sessions` points at `.session-list`, not `.session-sidebar`: a row that says
-   "会话列表" should light the conversation list, not the whole left column. */
-.preview-frame[data-selected-module="sessions"] .session-list::after,
+   `sidebar-sessions` points at `.session-list`, not `.session-sidebar`: a row
+   that says "内容模块" should light the conversation list, not the whole left
+   column. The column has its own row. */
 .preview-frame[data-selected-module="chat"] .chat-frame::after,
 .preview-frame[data-selected-module="composer"] .composer-frame::after,
 .preview-frame[data-selected-module="output"] .artifact-frame::after,
 .preview-frame[data-selected-module="git"] .git-panel::after,
+.preview-frame[data-selected-module="sidebar-title"] .session-brand-name::after,
+.preview-frame[data-selected-module="sidebar-collapse"] .session-collapse::after,
 .preview-frame[data-selected-module="sidebar-new-button"] .session-new::after,
 .preview-frame[data-selected-module="sidebar-search"] .session-search-menu::after,
+.preview-frame[data-selected-module="sidebar-sessions"] .session-list::after,
 .preview-frame[data-selected-module="sidebar-grouping"] .session-group > h4::after,
 .preview-frame[data-selected-module="sidebar-footer"] .session-footer::after {
   display: block;

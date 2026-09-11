@@ -370,8 +370,14 @@ export type AgentFrontendProject = {
     emptyState: "minimal" | "suggested-prompts" | "capability-hints";
   };
   sidebar: {
+    /** The project name at the top of the column. */
+    title: boolean;
+    /** The control that collapses the column. */
+    collapse: boolean;
     newButton: boolean;
     search: boolean;
+    /** The conversation rows themselves. */
+    sessionList: boolean;
     grouping: boolean;
     footer: boolean;
   };
@@ -518,8 +524,11 @@ export const defaultCodingAgentProject: AgentFrontendProject = {
     emptyState: "minimal",
   },
   sidebar: {
+    title: true,
+    collapse: true,
     newButton: true,
     search: true,
+    sessionList: true,
     grouping: true,
     footer: true,
   },
@@ -633,7 +642,19 @@ export const emptyStructureProject: AgentFrontendProject = {
   // Only the additive options appear here. The mutually exclusive ones (a
   // motion curve, a media placeholder style, the output source) have no "off"
   // state to set; `isAddedContentOption` keeps them from counting as content.
-  sidebar: { newButton: false, search: false, grouping: false, footer: false },
+  // Every part of the column, down to its title and the list itself. The three
+  // that are not toggles of their own — the brand, the collapse control and the
+  // conversation rows — used to arrive with the component, so picking 搜索功能
+  // put four things on the canvas and the reader had asked for one.
+  sidebar: {
+    title: false,
+    collapse: false,
+    newButton: false,
+    search: false,
+    sessionList: false,
+    grouping: false,
+    footer: false,
+  },
   conversation: {
     ...defaultCodingAgentProject.conversation,
     speakerLabels: false,

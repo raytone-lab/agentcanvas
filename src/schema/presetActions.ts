@@ -186,6 +186,14 @@ const presetPatches: Record<string, PresetPatch> = {
   "sidebar-visible": (project) => toggleSlotEnabled(project, "SessionSidebar"),
   "chat-visible": (project) => toggleSlotEnabled(project, "ChatFrame"),
   "composer-visible": (project) => toggleSlotEnabled(project, "ComposerFrame"),
+  "sidebar-title": (project) => ({
+    ...project,
+    sidebar: { ...project.sidebar, title: !project.sidebar.title },
+  }),
+  "sidebar-collapse": (project) => ({
+    ...project,
+    sidebar: { ...project.sidebar, collapse: !project.sidebar.collapse },
+  }),
   "sidebar-new-button": (project) => ({
     ...project,
     sidebar: { ...project.sidebar, newButton: !project.sidebar.newButton },
@@ -194,9 +202,20 @@ const presetPatches: Record<string, PresetPatch> = {
     ...project,
     sidebar: { ...project.sidebar, search: !project.sidebar.search },
   }),
+  "sidebar-sessions": (project) => ({
+    ...project,
+    sidebar: { ...project.sidebar, sessionList: !project.sidebar.sessionList },
+  }),
   "sidebar-grouping": (project) => ({
     ...project,
-    sidebar: { ...project.sidebar, grouping: !project.sidebar.grouping },
+    sidebar: {
+      ...project.sidebar,
+      grouping: !project.sidebar.grouping,
+      // Date headings head a list, so asking for them asks for the list. Both
+      // cards tick and the canvas shows a grouped list — turning the grouping on
+      // with no list would otherwise have been a pick that changed nothing.
+      sessionList: project.sidebar.grouping ? project.sidebar.sessionList : true,
+    },
   }),
   "sidebar-footer": (project) => ({
     ...project,
@@ -587,10 +606,16 @@ export function isPresetOptionActive(project: AgentFrontendProject, optionId: st
       return slotEnabled(project, "OutputFrame");
     case "git-visible":
       return slotEnabled(project, "GitFrame");
+    case "sidebar-title":
+      return project.sidebar.title;
+    case "sidebar-collapse":
+      return project.sidebar.collapse;
     case "sidebar-new-button":
       return project.sidebar.newButton;
     case "sidebar-search":
       return project.sidebar.search;
+    case "sidebar-sessions":
+      return project.sidebar.sessionList;
     case "sidebar-grouping":
       return project.sidebar.grouping;
     case "sidebar-footer":

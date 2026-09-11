@@ -99,8 +99,15 @@ export const presetGroups: PresetGroup[] = [
     label: "Left nav",
     options: [
       { id: "sidebar-visible", label: "Show sidebar", description: "Show the conversation-history sidebar in the product shell.", section: "Layout" },
+      // Top to bottom, as the column reads. The title, the collapse control and
+      // the conversation rows are options like the rest: they used to come with
+      // the component, which put three unasked-for things on the canvas the
+      // moment anything else in the column was picked.
+      { id: "sidebar-title", label: "Title", description: "Show the project name at the top of the sidebar.", section: "Content" },
+      { id: "sidebar-collapse", label: "Collapse control", description: "Show the control that collapses the sidebar.", section: "Content" },
       { id: "sidebar-new-button", label: "New chat", description: "Show the new-chat action at the top of the sidebar.", section: "Content" },
       { id: "sidebar-search", label: "Search", description: "Show a search field for filtering conversations.", section: "Content" },
+      { id: "sidebar-sessions", label: "Conversation list", description: "Show the list of recent conversations.", section: "Content" },
       { id: "sidebar-grouping", label: "Date groups", description: "Group sessions under Today and Earlier headers.", section: "Content" },
       { id: "sidebar-footer", label: "Version", description: "Show the current version at the bottom of the sidebar.", section: "Content" },
       { id: "workspace-switcher", label: "Workspace switcher", description: "Switch between workspaces from the sidebar.", section: "Content", pending: true },

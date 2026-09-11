@@ -39,7 +39,7 @@ export function SessionSidebar({
 }) {
   const c = useCopy().workspace.sessionSidebar;
   const { locale } = useLocale();
-  const { newButton, search, grouping, footer } = project.sidebar;
+  const { title, collapse, newButton, search, sessionList, grouping, footer } = project.sidebar;
   const sidebarRef = useRef<HTMLElement | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchOverlayRoot, setSearchOverlayRoot] = useState<HTMLElement | null>(null);
@@ -47,7 +47,12 @@ export function SessionSidebar({
   const sessions: readonly SessionSidebarItem[] = onSelectSession
     ? sessionItems ?? sessionPrompts.map((prompt) => ({ id: prompt, title: prompt }))
     : [];
-  const hasSessions = sessions.length > 0;
+  const hasSessions = sessionList && sessions.length > 0;
+  const collapsible = collapse && Boolean(onCollapse);
+  // The header is the title and the two controls beside it; with none of them
+  // chosen there is no row, rather than an empty band of padding at the top of
+  // the column.
+  const hasHeader = title || search || collapsible;
   const footerLabel = c.footerNote.replace("{version}", appVersionLabel);
   // Display-only: when the active prompt does not match, highlight the first supplied
   // session so one conversation always reads as the currently-open one.
@@ -140,51 +145,55 @@ export function SessionSidebar({
 
   return (
     <aside ref={sidebarRef} className="session-sidebar" data-preview-anchor="sidebar" aria-label={c.ariaLabel}>
-      <header className="session-brand">
-        {/* The project's own name, which the Layers panel edits — the title in
-            the rail and the brand on the canvas are one value, so renaming in
-            one place renames in the other. The localised default stands in
-            while the project is unnamed. */}
-        <span className="session-brand-name">{project.name.trim() || c.brandName}</span>
-        <span className="session-brand-actions">
-          {search ? (
-            <div className="session-search-menu">
+      {hasHeader ? (
+        <header className="session-brand">
+          {/* The project's own name, which the Layers panel edits — the title in
+              the rail and the brand on the canvas are one value, so renaming in
+              one place renames in the other. The localised default stands in
+              while the project is unnamed. */}
+          {title ? (
+            <span className="session-brand-name">{project.name.trim() || c.brandName}</span>
+          ) : null}
+          <span className="session-brand-actions">
+            {search ? (
+              <div className="session-search-menu">
+                <button
+                  className="session-search-trigger"
+                  type="button"
+                  aria-label={c.searchPlaceholder}
+                  aria-expanded={searchOpen}
+                  onClick={() => {
+                    const nextOpen = !searchOpen;
+                    if (nextOpen) {
+                      setSearchOverlayRoot(resolveSearchOverlayRoot());
+                    }
+                    setSearchOpen(nextOpen);
+                  }}
+                >
+                  <span className="native-rail-icon"><SearchIcon size={15} /></span>
+                  <span className="legacy-rail-icon"><Search size={15} /></span>
+                </button>
+                {searchOpen ? (
+                  typeof document === "undefined" || !searchOverlayRoot
+                    ? searchOverlay
+                    : createPortal(searchOverlay, searchOverlayRoot)
+                ) : null}
+              </div>
+            ) : null}
+            {collapsible ? (
               <button
-                className="session-search-trigger"
                 type="button"
-                aria-label={c.searchPlaceholder}
-                aria-expanded={searchOpen}
-                onClick={() => {
-                  const nextOpen = !searchOpen;
-                  if (nextOpen) {
-                    setSearchOverlayRoot(resolveSearchOverlayRoot());
-                  }
-                  setSearchOpen(nextOpen);
-                }}
+                className="rail-icon-btn session-collapse"
+                aria-label={c.collapse}
+                onClick={onCollapse}
               >
-                <span className="native-rail-icon"><SearchIcon size={15} /></span>
-                <span className="legacy-rail-icon"><Search size={15} /></span>
+                <span className="native-rail-icon"><SidebarToggleIcon size={15} /></span>
+                <span className="legacy-rail-icon"><PanelLeft size={15} /></span>
               </button>
-              {searchOpen ? (
-                typeof document === "undefined" || !searchOverlayRoot
-                  ? searchOverlay
-                  : createPortal(searchOverlay, searchOverlayRoot)
-              ) : null}
-            </div>
-          ) : null}
-          {onCollapse ? (
-            <button
-              type="button"
-              className="rail-icon-btn"
-              aria-label={c.collapse}
-              onClick={onCollapse}
-            >
-              <span className="native-rail-icon"><SidebarToggleIcon size={15} /></span>
-              <span className="legacy-rail-icon"><PanelLeft size={15} /></span>
-            </button>
-          ) : null}
-        </span>
-      </header>
+            ) : null}
+          </span>
+        </header>
+      ) : null}
 
       <div className="session-actions">
         {newButton ? (
@@ -237,7 +246,8 @@ export function SearchIcon({ size }: { size: number }) {
   );
 }
 
-function SidebarToggleIcon({ size }: { size: number }) {
+/** Shared with the rail's option card for 展开收起, so both show one icon. */
+export function SidebarToggleIcon({ size }: { size: number }) {
   return (
     <svg
       width={size}

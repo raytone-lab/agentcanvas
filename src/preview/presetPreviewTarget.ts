@@ -41,8 +41,11 @@ const mediaGenerationOptions = new Set([
 
 const sidebarOptions = new Set([
   "sidebar-visible",
+  "sidebar-title",
+  "sidebar-collapse",
   "sidebar-new-button",
   "sidebar-search",
+  "sidebar-sessions",
   "sidebar-grouping",
   "sidebar-footer",
 ]);

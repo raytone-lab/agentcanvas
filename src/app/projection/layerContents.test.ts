@@ -48,19 +48,19 @@ const SIDEBAR_CONTENT = [
 
 describe("layer contents", () => {
   it("lists what is inside a component, not just the component", () => {
-    // The Structure panel offers four modules inside the left column; the layer
+    // The Structure panel offers the modules inside the left column; the layer
     // tree used to show only the component itself, so 左栏 claimed to hold one
-    // thing while the panel offered four more inside it.
+    // thing while the panel offered several more inside it.
+    //
+    // And no component row for the sidebar: every part of it is one of those
+    // modules, so the row was a second name for the column above it — and it
+    // competed with 内容模块 for which row means the conversation list.
     const project = withSlots(["sessions"], ["sidebar-new-button", "sidebar-search"]);
     const layers = layerContentsForProject(project, "zh", SIDEBAR_CONTENT);
     const left = layers.find((layer) => layer.id === "left");
 
-    expect(left?.children.map((child) => child.label)).toEqual([
-      "会话列表",
-      "新建对话按钮",
-      "搜索框",
-    ]);
-    expect(left?.children.map((child) => child.kind)).toEqual(["slot", "option", "option"]);
+    expect(left?.children.map((child) => child.label)).toEqual(["新建对话按钮", "搜索框"]);
+    expect(left?.children.map((child) => child.kind)).toEqual(["option", "option"]);
   });
 
   it("drops the presence toggle, which is the component it turns on", () => {
