@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 
 import { SidebarToggleIcon } from "../../components/agent-preview/SessionSidebar";
@@ -15,6 +15,7 @@ import type { UiCopy } from "../../i18n/uiCopy";
  */
 export function ShellBrand({
   copy,
+  title,
   onOpenPreferences,
   collapsed = false,
   onToggleCollapsed,
@@ -22,6 +23,12 @@ export function ShellBrand({
   floating = false,
 }: {
   copy: UiCopy;
+  /**
+   * The project's name, composed by the shell because it is editable. It sits
+   * beside the mark rather than over the rail's panel: it names the thing being
+   * configured, and that panel is only one of the ways to configure it.
+   */
+  title?: ReactNode;
   onOpenPreferences: () => void;
   /** Whether the rail below this row is folded away. */
   collapsed?: boolean;
@@ -92,6 +99,7 @@ export function ShellBrand({
           </div>
         ) : null}
       </div>
+      {title ? <div className="shell-brand-title">{title}</div> : null}
       {/* Folds the rail away to this row, so the canvas gets the width. The
           same control the canvas's own sidebar uses for the same job, because
           it is the same job. */}

@@ -49,6 +49,7 @@ import { RegionLabels } from "./app/view/RegionLabels";
 import { canvasBackgroundColor } from "./app/view/canvasBackgrounds";
 import { LayersPanel } from "./app/view/LayersPanel";
 import { PreferencesDialog } from "./app/view/PreferencesDialog";
+import { ProjectTitle } from "./app/view/ProjectTitle";
 import { ShellBrand } from "./app/view/ShellBrand";
 import { Topbar } from "./app/view/Topbar";
 import { IncompleteProjectDialog } from "./app/view/IncompleteProjectDialog";
@@ -1059,6 +1060,13 @@ export function App() {
               brand={
                 <ShellBrand
                   copy={copy}
+                  title={
+                    <ProjectTitle
+                      name={project.name}
+                      placeholder={copy.shell.presetRail.layers.title}
+                      onRename={(name) => setProject((current) => ({ ...current, name }))}
+                    />
+                  }
                   onOpenPreferences={() => setPreferencesOpen(true)}
                   collapsed={state.railCollapsed}
                   onToggleCollapsed={() =>
@@ -1069,7 +1077,6 @@ export function App() {
               project={project}
               navSection={state.navSection}
               onNavSectionChange={handleNavSectionChange}
-              onRenameProject={(name) => setProject((current) => ({ ...current, name }))}
               selectedComponentItems={selectedComponentItems}
               pickedOptionIds={state.pickedOptionIds}
               pickedIconSlots={state.pickedIconSlots}
@@ -1122,7 +1129,18 @@ export function App() {
           ) : (
             // No rail on the preview surface, so the wordmark floats on its
             // own — the language switch has to stay reachable from here too.
-            <ShellBrand copy={copy} onOpenPreferences={() => setPreferencesOpen(true)} floating />
+            <ShellBrand
+              copy={copy}
+              title={
+                <ProjectTitle
+                  name={activeProject.name}
+                  placeholder={copy.shell.presetRail.layers.title}
+                  onRename={(name) => dispatch({ type: "updateSavedProject", mutator: (current) => ({ ...current, name }) })}
+                />
+              }
+              onOpenPreferences={() => setPreferencesOpen(true)}
+              floating
+            />
           )}
 
           <main

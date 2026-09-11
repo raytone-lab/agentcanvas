@@ -165,9 +165,6 @@ p {
      back to the canvas. */
   --iconbar-col: 56px;
   --rail-col: 292px;
-  /* Folded, the card is the wordmark row: the mark, its chevron, and the fold
-     control. Measured from that content rather than guessed. */
-  --rail-col-collapsed: 132px;
   /* The strip above and below the frame that the region labels sit in. Part of
      the canvas page's height, so the frame itself keeps its ratio. */
   --canvas-label-gutter: 26px;
@@ -270,6 +267,23 @@ p {
 
 .rail-collapse {
   flex: none;
+}
+
+/* The project's name, beside the mark. `margin-right: auto` rather than letting
+   `space-between` place it: with three children in the row it would have been
+   centred, adrift between the mark and the fold control. */
+.shell-brand-title {
+  margin-right: auto;
+  min-width: 0;
+}
+
+.shell-brand-title .layers-panel-title,
+.shell-brand-title .layers-panel-title-input {
+  width: auto;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* The preview surface has no rail, so there it is a card of its own — same
@@ -1080,7 +1094,11 @@ textarea:focus-visible {
    at the row instead of running to the bottom of the window. */
 .workspace-layout[data-rail-collapsed="true"] .preset-nav {
   bottom: auto;
-  width: var(--rail-col-collapsed);
+  /* Content-sized, capped at the open width: the row carries the project's
+     name, and a fixed width would either cut short names off or leave a long
+     one no room. */
+  width: max-content;
+  max-width: var(--rail-col);
 }
 
 .workspace-layout[data-rail-collapsed="true"] .preset-columns {

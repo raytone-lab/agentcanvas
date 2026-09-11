@@ -162,14 +162,17 @@ export function Topbar({
             configuration as it is edited. So this is the same action under an
             honest label, not a replacement for saving. */}
         {surfaceMode === "builder" ? (
+          // Same button and same glyph size as the panel toggle beside it: two
+          // icon controls in one card that were drawn at different weights read
+          // as two kinds of thing.
           <button
-            className="topbar-icon-button topbar-preview-button"
+            className="rail-icon-btn topbar-preview-button"
             type="button"
             aria-label={copy.shell.topbar.viewPreview}
             title={copy.shell.topbar.viewPreview}
             onClick={onEnterPreview}
           >
-            <PreviewPlayIcon />
+            <PreviewPlayIcon size={15} />
           </button>
         ) : null}
         <button className="primary-button topbar-deploy-button" type="button" onClick={onExport}>
@@ -197,13 +200,13 @@ export function Topbar({
  * Preview control.
  *
  * Path is verbatim from the design; only the stroke is changed to
- * `currentColor` so it inherits the topbar's text colour instead of the
- * spec's literal #111E36 — that value is this theme's `--text-primary`, and
+ * `currentColor` so it inherits the button's colour instead of the spec's
+ * literal #111E36 — that value is this theme's `--text-primary`, and
  * hardcoding it would leave the icon invisible on a dark theme.
  */
-function PreviewPlayIcon() {
+function PreviewPlayIcon({ size }: { size: number }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 40 40" fill="none" aria-hidden="true" focusable="false">
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true" focusable="false">
       <path
         d="M33.25 17.835C34.9167 18.7972 34.9166 21.2028 33.25 22.165L12.25 34.2891C10.5833 35.2513 8.5 34.0485 8.5 32.124L8.5 7.87598C8.5 5.95147 10.5833 4.74869 12.25 5.71094L33.25 17.835Z"
         stroke="currentColor"

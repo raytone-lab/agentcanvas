@@ -36,7 +36,6 @@ import {
   stateSectionTitle,
   type NavSectionId,
 } from "../projection/presetRailData";
-import { ProjectTitle } from "./ProjectTitle";
 import type { SelectedComponentItem } from "../projection/selectedComponents";
 
 type PresetGroup = {
@@ -59,7 +58,6 @@ export function PresetRail({
   project,
   navSection,
   onNavSectionChange,
-  onRenameProject,
   selectedComponentItems,
   pickedOptionIds,
   pickedIconSlots,
@@ -105,7 +103,6 @@ export function PresetRail({
   project: AgentFrontendProject;
   navSection: NavSectionId;
   onNavSectionChange: (section: NavSectionId) => void;
-  onRenameProject: (name: string) => void;
   selectedComponentItems: readonly SelectedComponentItem[];
   /** Clicked options, which the layer tree needs for variant-only picks. */
   pickedOptionIds: readonly string[];
@@ -506,9 +503,9 @@ export function PresetRail({
           what it lists is: the layer list answers "what is on the canvas", and
           the rail answers "what could be".
 
-          The project's name sits above the panel in every destination: it names
-          the thing being configured, which does not stop being true when the
-          reader switches to Theme. */}
+          The project's name used to sit above this panel. It is beside the mark
+          at the top of the card now — it names the thing being configured, and
+          this panel is only one of the ways to configure it. */}
       <aside
         className="preset-panel"
         data-preset-group={selectedPresetGroup.id}
@@ -523,13 +520,6 @@ export function PresetRail({
             selected was reachable and the other twelve were not. Grouped by the
             same `presetRailSections` as before, as a list because there is one
             column now rather than two. */}
-        <div className="layers-panel-head">
-          <ProjectTitle
-            name={project.name}
-            placeholder={copy.shell.presetRail.layers.title}
-            onRename={onRenameProject}
-          />
-        </div>
       {/* Moved inside the Theme destination. Above the columns it had 304px to
             show 550px of cards, so the fourth style was off-screen entirely and
             the third was cut in half — measured, and already true at three

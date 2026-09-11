@@ -119,7 +119,10 @@ describe("App shell controls", () => {
     // gone rather than squeezed.
     const folded = cssRule(styles, '.workspace-layout[data-rail-collapsed="true"] .preset-nav');
     expect(folded).toContain("bottom: auto;");
-    expect(folded).toContain("width: var(--rail-col-collapsed);");
+    // Content-sized rather than a fixed width: the row carries the project's
+    // name, so its width is not knowable in advance.
+    expect(folded).toContain("width: max-content;");
+    expect(folded).toContain("max-width: var(--rail-col);");
     expect(
       cssRule(styles, '.workspace-layout[data-rail-collapsed="true"] .preset-columns'),
     ).toContain("display: none;");
@@ -907,8 +910,13 @@ describe("panel header and conversation title", () => {
     // the reader switches to Theme. It used to live inside the layer panel and
     // vanish with it — and the layer panel has since moved to the other side of
     // the window, which would have taken the name with it.
-    expect(railSource.match(/<ProjectTitle/g)).toHaveLength(1);
+    // It is beside the mark now, at the top of the card, rather than over the
+    // rail's panel — which is one of several ways to configure the thing it
+    // names, and used to take the name with it when the panel changed.
+    const appSource = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+    expect(railSource).not.toContain("ProjectTitle");
     expect(layersSource).not.toContain("ProjectTitle");
+    expect(appSource.match(/<ProjectTitle/g)).toHaveLength(2);
 
     // And it stays put rather than stretching or scrolling with the list.
     const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
