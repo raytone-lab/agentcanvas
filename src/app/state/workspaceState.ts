@@ -67,6 +67,13 @@ export type WorkspaceState = {
    */
   railCollapsed: boolean;
   /**
+   * Whether the canvas's panel — the layer list, and the zoom readout under it
+   * — is open. Closed to start: the chrome over a canvas should be the controls
+   * you need to reach, and a list of what is on the canvas is something you ask
+   * for.
+   */
+  layersOpen: boolean;
+  /**
    * The option the rail should scroll to and flash, set by the canvas
    * toolbar's Edit. Cleared once the rail has shown it, so re-selecting the
    * same module flashes again rather than being a no-op.
@@ -194,13 +201,15 @@ export function createInitialWorkspaceState(locale: AppLocale): WorkspaceState {
   return {
     surfaceMode: "builder",
     workspaceView: "preview",
-    // Figma opens on File with the layer list showing; so does this.
-    navSection: "file",
+    // The first question the rail asks: what is the screen made of. (It opened
+    // on File until the layer list moved to the canvas's own panel.)
+    navSection: "structure",
     selectedLayerId: null,
     selectedSlotId: null,
     canvasZoom: 100,
     canvasBackground: DEFAULT_CANVAS_BACKGROUND,
     railCollapsed: false,
+    layersOpen: false,
     pinnedOptionId: null,
     pickedOptionIds: [],
     pickedIconSlots: [],

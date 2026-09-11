@@ -47,6 +47,7 @@ import { InlineApprovalDemo, demoApprovalTool, findPendingApprovalTool } from ".
 import { PresetRail } from "./app/view/PresetRail";
 import { RegionLabels } from "./app/view/RegionLabels";
 import { canvasBackgroundColor } from "./app/view/canvasBackgrounds";
+import { LayersPanel } from "./app/view/LayersPanel";
 import { PreferencesDialog } from "./app/view/PreferencesDialog";
 import { ShellBrand } from "./app/view/ShellBrand";
 import { Topbar } from "./app/view/Topbar";
@@ -1015,6 +1016,29 @@ export function App() {
           canvasZoom={state.canvasZoom}
           onCanvasZoomChange={(zoom) => dispatch({ type: "patch", patch: { canvasZoom: clampZoom(zoom) } })}
           onExport={() => runOrAsk("export")}
+          panelOpen={state.layersOpen}
+          onTogglePanel={() => dispatch({ type: "patch", patch: { layersOpen: !state.layersOpen } })}
+          // Composed here rather than inside the card: the layer list needs the
+          // project and half the workspace's selection state, and threading all
+          // of it through a view that otherwise only knows about its own
+          // controls would make the card the shell.
+          layersPanel={
+            <LayersPanel
+              project={activeProject}
+              locale={locale}
+              selectedLayerId={state.selectedLayerId}
+              onSelectLayer={(layerId) =>
+                dispatch({ type: "patch", patch: { selectedLayerId: layerId, selectedSlotId: null } })
+              }
+              selectedSlotId={state.selectedSlotId}
+              onSelectSlot={(slotId) =>
+                dispatch({ type: "patch", patch: { selectedSlotId: slotId, selectedLayerId: null } })
+              }
+              selectedComponentItems={selectedComponentItems}
+              pickedOptionIds={state.pickedOptionIds}
+              layersLabel={copy.shell.presetRail.layers.sectionTitle}
+            />
+          }
         />
 
         <div
@@ -1045,10 +1069,6 @@ export function App() {
               project={project}
               navSection={state.navSection}
               onNavSectionChange={handleNavSectionChange}
-              selectedLayerId={state.selectedLayerId}
-              onSelectLayer={(layerId) => dispatch({ type: "patch", patch: { selectedLayerId: layerId, selectedSlotId: null } })}
-              selectedSlotId={state.selectedSlotId}
-              onSelectSlot={(slotId) => dispatch({ type: "patch", patch: { selectedSlotId: slotId, selectedLayerId: null } })}
               onRenameProject={(name) => setProject((current) => ({ ...current, name }))}
               selectedComponentItems={selectedComponentItems}
               pickedOptionIds={state.pickedOptionIds}

@@ -318,18 +318,24 @@ describe("App shell controls", () => {
     expect(emptied.layout.regions).toContain("main");
   });
 
-  it("opens the rail on File, with the layer list showing", () => {
+  it("opens the rail on Structure, with the layer list on the canvas's side", () => {
     const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
 
-    expect(markup).toContain('data-nav-section="file" data-active="true"');
-    expect(markup).toContain('class="layers-panel"');
-    // Six destinations, not the thirteen preset groups that used to be here:
-    // File, Structure, Theme, Components, Model, Git. Structure and Components
-    // were two sections of one list; each is a destination now.
-    expect(markup.match(/class="nav-section-tile"/g)?.length).toBe(6);
+    // File was the first destination and it showed the layer list. The list
+    // moved to the canvas's own panel — it answers "what is on the canvas",
+    // which is the canvas's question, not the rail's — so the rail opens on the
+    // first thing it can actually answer.
+    expect(markup).toContain('data-nav-section="structure" data-active="true"');
+    expect(markup).not.toContain('data-nav-section="file"');
+    // Five destinations, not the thirteen preset groups that used to be here:
+    // Structure, Theme, Components, Model, Git. Structure and Components were
+    // two sections of one list; each is a destination now.
+    expect(markup.match(/class="nav-section-tile"/g)?.length).toBe(5);
     for (const section of ["structure", "git"]) {
       expect(markup).toContain(`data-nav-section="${section}"`);
     }
+    // And the list is not in the rail's panel any more.
+    expect(markup).not.toContain('class="preset-panel" data-nav-section="file"');
     // The style picker moved into Theme; it is no longer always on screen (it
     // was clipped there — 550px of cards in a 304px column).
     expect(markup).not.toContain("选择风格");
@@ -382,16 +388,21 @@ describe("App shell controls", () => {
     }
   });
 
-  it("puts a zoom readout left of Export", () => {
+  it("keeps the closed card to the controls that cannot wait", () => {
     const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
     const controls = topbarControls(markup);
 
-    expect(controls).toContain('class="zoom-trigger"');
-    expect(controls).toContain("100%");
-    // Order matters: Export is the last thing in the bar.
-    expect(controls.indexOf("zoom-trigger")).toBeLessThan(controls.indexOf("topbar-deploy-button"));
-    // The menu is closed until asked for.
-    expect(controls).not.toContain('class="zoom-menu"');
+    // Closed: the panel toggle, preview, export. Export is the last thing in
+    // the row, and the toggle the first.
+    expect(controls).toContain("topbar-panel-toggle");
+    expect(controls.indexOf("topbar-panel-toggle")).toBeLessThan(controls.indexOf("topbar-preview-button"));
+    expect(controls.indexOf("topbar-preview-button")).toBeLessThan(controls.indexOf("topbar-deploy-button"));
+
+    // The zoom readout is in the panel, under the layer list — so with the card
+    // closed it is not drawn at all. Every step still has a shortcut.
+    expect(markup).not.toContain('class="zoom-trigger"');
+    expect(markup).not.toContain('class="topbar-panel"');
+    expect(createInitialWorkspaceState("zh").layersOpen).toBe(false);
   });
 
   it("magnifies the canvas without reflowing it", () => {
@@ -894,8 +905,9 @@ describe("panel header and conversation title", () => {
 
     // It names the thing being configured, which does not stop being true when
     // the reader switches to Theme. It used to live inside the layer panel and
-    // vanish with it.
-    expect(railSource.match(/<ProjectTitle/g)).toHaveLength(2);
+    // vanish with it — and the layer panel has since moved to the other side of
+    // the window, which would have taken the name with it.
+    expect(railSource.match(/<ProjectTitle/g)).toHaveLength(1);
     expect(layersSource).not.toContain("ProjectTitle");
 
     // And it stays put rather than stretching or scrolling with the list.

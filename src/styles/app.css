@@ -224,14 +224,13 @@ p {
   box-shadow: none;
 }
 
-/* The controls, floating at the canvas's top right.
-   Not a bar: the whole window is the canvas now, so preview / zoom / export sit
-   on it as a card instead of in a strip above it. The class keeps its name —
-   it is still the thing at the top — and so do the rules that style what is
-   inside it. */
+/* The canvas's panel, floating at its top right.
+   Not a bar: the whole window is the canvas now, so preview and export sit on
+   it as a card instead of in a strip above it, and the card opens downward into
+   the layer list. The class keeps its name — it is still the thing at the top —
+   and so do the rules that style what is inside it. */
 .topbar {
-  display: flex;
-  align-items: center;
+  display: grid;
   position: absolute;
   z-index: var(--z-shell-chrome);
   top: var(--fn-float-gap);
@@ -371,6 +370,47 @@ p {
   justify-content: flex-end;
   gap: 12px;
   min-width: 0;
+}
+
+/* Open, the card is a panel: a fixed width so the layer rows have somewhere to
+   sit (closed, it is as wide as its controls), and bounded by the window with
+   the list scrolling inside it. */
+/* Open, the toggle takes the far left the way it does in the reference: the
+   control that opened the panel stays at the panel's own corner, and preview
+   and export keep the right. */
+.topbar[data-open="true"] .topbar-panel-toggle {
+  margin-right: auto;
+}
+
+.topbar[data-open="true"] {
+  width: 268px;
+  max-height: calc(100vh - var(--fn-float-gap) * 2);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.topbar-panel {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+  border-top: 1px solid #e4e4e7;
+  padding-top: 6px;
+}
+
+.topbar-panel .layers-panel {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.topbar-panel .layers-panel::-webkit-scrollbar { width: 0; height: 0; }
+
+/* The zoom readout, on its own row under the list. Right-aligned, so it lines
+   up with the controls above it rather than with the rows' text. */
+.topbar-panel-footer {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid #e4e4e7;
+  padding-top: 6px;
 }
 
 .language-picker {

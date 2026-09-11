@@ -3,7 +3,6 @@ import {
   CircleAlert,
   CircleStop,
   Cpu,
-  File,
   GitBranch,
   LayoutTemplate,
   ImagePlay,
@@ -34,22 +33,24 @@ import type { PresetGroupId, PresetOption } from "../../schema/presets";
 import { themeTokens } from "../../theme/themeTokens";
 
 /**
- * The rail's top level, modelled on Figma's left rail (File / Assets / Tools /
- * Variables): four destinations, each owning what the second column shows.
+ * The rail's top level, modelled on Figma's left rail (Assets / Tools /
+ * Variables): a destination per question, each owning what the panel shows.
  *
  * This replaces the previous top level — four quiet section labels over
  * thirteen preset groups — which put every one of the thirteen at the same
  * depth as its neighbours. `presetRailSections` is not deleted; it moves down a
  * level and becomes the structure *inside* "components".
  */
-export type NavSectionId = "file" | "structure" | "theme" | "components" | "model" | "git";
+export type NavSectionId = "structure" | "theme" | "components" | "model" | "git";
 
 export const navSections: {
   id: NavSectionId;
   icon: LucideIcon;
   label: Record<AppLocale, string>;
 }[] = [
-  { id: "file", icon: File, label: { en: "File", zh: "File", ja: "File" } },
+  // File was the first of these, and it showed the layer list. That list moved
+  // to the canvas's own panel, on the right, where what it lists is — leaving
+  // this column to answer only "what could be on the canvas".
   // Structure and Components were the two halves of one list; splitting them
   // into destinations puts the same question at the top level — am I shaping
   // the layout, or what happens inside it — instead of inside a panel.

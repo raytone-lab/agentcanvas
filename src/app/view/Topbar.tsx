@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Settings2 } from "lucide-react";
 
+import { SidebarToggleIcon } from "../../components/agent-preview/SessionSidebar";
 import { SelectMenu } from "../../components/ui";
 import type { UiCopy, AppLocale } from "../../i18n/uiCopy";
 import { previewScenarios, type PreviewScenarioId } from "../../preview-runner/PreviewRunner";
@@ -10,13 +11,20 @@ import type { SelectedComponentItem } from "../projection/selectedComponents";
 import { ZoomControl } from "./ZoomControl";
 
 /**
- * The shell's controls (pure view), floating at the top right of the canvas.
+ * The canvas's own panel (pure view), floating at the top right.
  *
- * Not a bar any more: the whole window is the canvas, so this is a card over
- * it rather than a row above it. The wordmark and language switch it used to
- * carry moved to `ShellBrand`, at the top of the rail card. Owns only its local
- * chrome state — the selected-components popover — everything else arrives as
- * props from the workspace controller.
+ * Not a bar any more: the whole window is the canvas, so this is a card over it
+ * rather than a row above it. The wordmark and language switch it used to carry
+ * moved to `ShellBrand`, at the top of the rail card.
+ *
+ * Closed, it is the controls that have to be reachable at all times — preview
+ * and export. Open, it holds what the canvas *is*: the layer list, and the zoom
+ * the list is being read at. Those two belong together and belong here, next to
+ * the canvas, rather than in the rail on the far side of the window, which
+ * answers a different question ("what could be on the canvas").
+ *
+ * Owns only its local chrome state — the selected-components popover —
+ * everything else arrives as props from the workspace controller.
  */
 export function Topbar({
   copy,
@@ -36,6 +44,9 @@ export function Topbar({
   canvasZoom,
   onCanvasZoomChange,
   onExport,
+  layersPanel,
+  panelOpen,
+  onTogglePanel,
 }: {
   copy: UiCopy;
   locale: AppLocale;
@@ -54,6 +65,10 @@ export function Topbar({
   canvasZoom: number;
   onCanvasZoomChange: (zoom: number) => void;
   onExport: () => void;
+  /** The layer list, composed by the shell so this stays a view. */
+  layersPanel: ReactNode;
+  panelOpen: boolean;
+  onTogglePanel: () => void;
 }) {
   const [selectedComponentsOpen, setSelectedComponentsOpen] = useState(false);
   const selectedComponentsRef = useRef<HTMLDivElement | null>(null);
@@ -85,8 +100,19 @@ export function Topbar({
   }, [selectedComponentsOpen]);
 
   return (
-    <header className="topbar">
+    <header className="topbar" data-open={panelOpen ? "true" : undefined}>
       <div className="topbar-controls">
+        {/* Opens the panel below. First in the row, the way the canvas
+            sidebar's own toggle sits at the start of its header. */}
+        <button
+          type="button"
+          className="rail-icon-btn topbar-panel-toggle"
+          aria-label={panelOpen ? copy.shell.presetRail.collapse : copy.shell.presetRail.expand}
+          aria-expanded={panelOpen}
+          onClick={onTogglePanel}
+        >
+          <SidebarToggleIcon size={15} />
+        </button>
         {surfaceMode === "saved-preview" ? (
           <label className="run-mode-picker">
             <SelectMenu
@@ -146,11 +172,23 @@ export function Topbar({
             <PreviewPlayIcon />
           </button>
         ) : null}
-        <ZoomControl copy={copy} zoom={canvasZoom} onZoomChange={onCanvasZoomChange} />
         <button className="primary-button topbar-deploy-button" type="button" onClick={onExport}>
           {copy.shell.topbar.exportScaffold}
         </button>
       </div>
+      {panelOpen ? (
+        <div className="topbar-panel">
+          {layersPanel}
+          {/* The zoom sits under the list rather than in the row above: it is
+              how the canvas is being looked at, which is the same subject as
+              what is on it, and the closed card is for the two controls that
+              cannot wait. Every zoom step has a shortcut, so nothing is
+              unreachable while it is closed. */}
+          <div className="topbar-panel-footer">
+            <ZoomControl copy={copy} zoom={canvasZoom} onZoomChange={onCanvasZoomChange} />
+          </div>
+        </div>
+      ) : null}
     </header>
   );
 }

@@ -36,7 +36,6 @@ import {
   stateSectionTitle,
   type NavSectionId,
 } from "../projection/presetRailData";
-import { LayersPanel } from "./LayersPanel";
 import { ProjectTitle } from "./ProjectTitle";
 import type { SelectedComponentItem } from "../projection/selectedComponents";
 
@@ -60,10 +59,6 @@ export function PresetRail({
   project,
   navSection,
   onNavSectionChange,
-  selectedLayerId,
-  onSelectLayer,
-  selectedSlotId,
-  onSelectSlot,
   onRenameProject,
   selectedComponentItems,
   pickedOptionIds,
@@ -110,10 +105,6 @@ export function PresetRail({
   project: AgentFrontendProject;
   navSection: NavSectionId;
   onNavSectionChange: (section: NavSectionId) => void;
-  selectedLayerId: string | null;
-  onSelectLayer: (layerId: string) => void;
-  selectedSlotId: string | null;
-  onSelectSlot: (slotId: string) => void;
   onRenameProject: (name: string) => void;
   selectedComponentItems: readonly SelectedComponentItem[];
   /** Clicked options, which the layer tree needs for variant-only picks. */
@@ -505,37 +496,19 @@ export function PresetRail({
         })}
       </aside>
 
-      {/* File shows the canvas structure as layers; the other three keep the
-          group panel, with App.tsx pointing `selectedGroup` at the group each
-          destination owns. Reusing the panel rather than rebuilding it per
-          destination is why theme cards and provider settings still work.
+      {/* Every destination keeps the group panel, with App.tsx pointing
+          `selectedGroup` at the group each one owns. Reusing the panel rather
+          than rebuilding it per destination is why theme cards and provider
+          settings still work.
 
-          The project's name sits above both, in every destination: it names the
-          thing being configured, which does not stop being true when the reader
-          switches to Theme. It used to live inside the layer panel and vanish
-          with it. */}
-      {navSection === "file" ? (
-        <aside className="preset-panel" data-nav-section="file" aria-label={copy.shell.presetRail.layers.title}>
-          <div className="layers-panel-head">
-            <ProjectTitle
-              name={project.name}
-              placeholder={copy.shell.presetRail.layers.title}
-              onRename={onRenameProject}
-            />
-          </div>
-          <LayersPanel
-            project={project}
-            locale={locale}
-            selectedLayerId={selectedLayerId}
-            onSelectLayer={onSelectLayer}
-            selectedSlotId={selectedSlotId}
-            onSelectSlot={onSelectSlot}
-            selectedComponentItems={selectedComponentItems}
-            pickedOptionIds={pickedOptionIds}
-            layersLabel={copy.shell.presetRail.layers.sectionTitle}
-          />
-        </aside>
-      ) : (
+          The layer list used to be a destination here — File, the first icon in
+          the column. It is on the right now, in the canvas's own panel, where
+          what it lists is: the layer list answers "what is on the canvas", and
+          the rail answers "what could be".
+
+          The project's name sits above the panel in every destination: it names
+          the thing being configured, which does not stop being true when the
+          reader switches to Theme. */}
       <aside
         className="preset-panel"
         data-preset-group={selectedPresetGroup.id}
@@ -673,7 +646,6 @@ export function PresetRail({
           </>
         )}
       </aside>
-      )}
       </div>
     </div>
   );
