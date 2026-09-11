@@ -83,11 +83,16 @@ describe("App shell controls", () => {
     // The room each card takes comes back as canvas padding, so what the canvas
     // draws still centres in the part of it nothing is covering. The exported
     // shell shares the rule and has no chrome, hence the fallbacks.
-    expect(cssRule(styles, ".builder-surface,\n.exported-shell")).toContain(
-      "padding: var(--canvas-pad-top, 24px) 24px 24px var(--canvas-pad-left, 24px);",
-    );
+    const surfaceRule = cssRule(styles, ".builder-surface,\n.exported-shell");
+    expect(surfaceRule).toContain("padding: var(--canvas-pad-top, 24px) var(--canvas-pad-right, 24px) 24px");
+    expect(surfaceRule).toContain("var(--canvas-pad-left, 24px);");
     expect(cssRule(styles, ".workspace-layout")).toContain(
       "--canvas-pad-left: calc(var(--fn-float-gap) * 2 + var(--rail-col));",
+    );
+    // Both sides: the canvas's own panel is full height when open, so it is left
+    // room the same way the rail is.
+    expect(cssRule(styles, '.workspace-layout[data-layers-open="true"]')).toContain(
+      "--canvas-pad-right: calc(var(--fn-float-gap) * 2 + var(--layers-col));",
     );
 
     // And the mark is inside the rail card rather than in a bar of its own.

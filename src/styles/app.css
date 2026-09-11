@@ -165,6 +165,9 @@ p {
      back to the canvas. */
   --iconbar-col: 56px;
   --rail-col: 292px;
+  /* The canvas's panel when it is open. Wide enough for the layer rows and
+     the zoom readout under them. */
+  --layers-col: 268px;
   /* The strip above and below the frame that the region labels sit in. Part of
      the canvas page's height, so the frame itself keeps its ratio. */
   --canvas-label-gutter: 26px;
@@ -277,8 +280,10 @@ p {
   min-width: 0;
 }
 
-.shell-brand-title .layers-panel-title,
-.shell-brand-title .layers-panel-title-input {
+/* One `:is()` rather than a comma-separated pair: a selector list that ends
+   with a bare class is indistinguishable, to anything reading this file by
+   substring — the CSS tests included — from that class's own rule. */
+.shell-brand-title :is(.layers-panel-title, .layers-panel-title-input) {
   width: auto;
   max-width: 150px;
   overflow: hidden;
@@ -396,9 +401,14 @@ p {
   margin-right: auto;
 }
 
+/* Open, the card is pinned top and bottom, so it is exactly as tall as the rail
+   card opposite it — a panel whose height followed its contents made the two
+   sides of the canvas disagree about where the bottom of the window was. Both
+   are positioned against the same box for the same reason. The list scrolls
+   inside it; the zoom readout holds the last row. */
 .topbar[data-open="true"] {
-  width: 268px;
-  max-height: calc(100vh - var(--fn-float-gap) * 2);
+  bottom: var(--fn-float-gap);
+  width: var(--layers-col);
   grid-template-rows: auto minmax(0, 1fr);
 }
 
@@ -1061,6 +1071,13 @@ textarea:focus-visible {
    back entirely. */
 .workspace-layout[data-rail-collapsed="true"] {
   --canvas-pad-left: 24px;
+}
+
+/* The canvas's panel, open, is as tall as the window — so it has to be left
+   room the same way the rail is. Closed it is a short card at the top right,
+   which the canvas's top padding already clears. */
+.workspace-layout[data-layers-open="true"] {
+  --canvas-pad-right: calc(var(--fn-float-gap) * 2 + var(--layers-col));
 }
 
 /* Left nav (tool chrome, #F5F5F7): the two columns, filling the rail.
@@ -3472,7 +3489,8 @@ textarea:focus-visible {
   /* The builder sets these to the room the floating chrome needs, so the canvas
      spans the window while its contents stay in the clear. The exported shell
      has no chrome and falls through to an even 24px. */
-  padding: var(--canvas-pad-top, 24px) 24px 24px var(--canvas-pad-left, 24px);
+  padding: var(--canvas-pad-top, 24px) var(--canvas-pad-right, 24px) 24px
+    var(--canvas-pad-left, 24px);
   border: 0;
   border-radius: 0;
   /* Set from preferences; the literal is the fallback for the exported shell,

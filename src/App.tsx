@@ -999,57 +999,63 @@ export function App() {
         }
       >
       <div className="app-shell">
-        <Topbar
-          copy={copy}
-          locale={locale}
-          surfaceMode={state.surfaceMode}
-          onReturnToBuilder={() => dispatch({ type: "patch", patch: { surfaceMode: "builder" } })}
-          runMode={state.runMode}
-          onRunModeChange={controller.updateRunMode}
-          selectedScenarioId={state.selectedScenarioId}
-          onScenarioChange={controller.updateScenario}
-          showDebugViewToggle={showDebugViewToggle}
-          workspaceView={state.workspaceView}
-          onWorkspaceViewToggle={() => dispatch({ type: "patch", patch: { workspaceView: state.workspaceView === "preview" ? "debug" : "preview" } })}
-          onEnterPreview={() => runOrAsk("preview")}
-          selectedComponentSummary={selectedComponentSummary}
-          selectedComponentItems={selectedComponentItems}
-          canvasZoom={state.canvasZoom}
-          onCanvasZoomChange={(zoom) => dispatch({ type: "patch", patch: { canvasZoom: clampZoom(zoom) } })}
-          onExport={() => runOrAsk("export")}
-          panelOpen={state.layersOpen}
-          onTogglePanel={() => dispatch({ type: "patch", patch: { layersOpen: !state.layersOpen } })}
-          // Composed here rather than inside the card: the layer list needs the
-          // project and half the workspace's selection state, and threading all
-          // of it through a view that otherwise only knows about its own
-          // controls would make the card the shell.
-          layersPanel={
-            <LayersPanel
-              project={activeProject}
-              locale={locale}
-              selectedLayerId={state.selectedLayerId}
-              onSelectLayer={(layerId) =>
-                dispatch({ type: "patch", patch: { selectedLayerId: layerId, selectedSlotId: null } })
-              }
-              selectedSlotId={state.selectedSlotId}
-              onSelectSlot={(slotId) =>
-                dispatch({ type: "patch", patch: { selectedSlotId: slotId, selectedLayerId: null } })
-              }
-              selectedComponentItems={selectedComponentItems}
-              pickedOptionIds={state.pickedOptionIds}
-              layersLabel={copy.shell.presetRail.layers.sectionTitle}
-            />
-          }
-        />
-
         <div
           className="workspace-layout"
           data-mode={state.surfaceMode}
           // One attribute for both halves of folding the rail away: the card's
           // own size, and the canvas padding that was holding room for it.
           data-rail-collapsed={state.surfaceMode === "builder" && state.railCollapsed ? "true" : undefined}
+          // Open, the canvas's panel is full height, so the canvas leaves it
+          // room the same way it does for the rail.
+          data-layers-open={state.layersOpen ? "true" : undefined}
           data-drawer-open={state.surfaceMode === "builder" ? state.presetDrawerOpen : undefined}
         >
+          {/* Positioned against this box, not against the shell: it is the
+              same box the rail card is positioned against, which is what keeps
+              the two cards exactly as tall as each other when the open one is
+              pinned top and bottom. */}
+          <Topbar
+            copy={copy}
+            locale={locale}
+            surfaceMode={state.surfaceMode}
+            onReturnToBuilder={() => dispatch({ type: "patch", patch: { surfaceMode: "builder" } })}
+            runMode={state.runMode}
+            onRunModeChange={controller.updateRunMode}
+            selectedScenarioId={state.selectedScenarioId}
+            onScenarioChange={controller.updateScenario}
+            showDebugViewToggle={showDebugViewToggle}
+            workspaceView={state.workspaceView}
+            onWorkspaceViewToggle={() => dispatch({ type: "patch", patch: { workspaceView: state.workspaceView === "preview" ? "debug" : "preview" } })}
+            onEnterPreview={() => runOrAsk("preview")}
+            selectedComponentSummary={selectedComponentSummary}
+            selectedComponentItems={selectedComponentItems}
+            canvasZoom={state.canvasZoom}
+            onCanvasZoomChange={(zoom) => dispatch({ type: "patch", patch: { canvasZoom: clampZoom(zoom) } })}
+            onExport={() => runOrAsk("export")}
+            panelOpen={state.layersOpen}
+            onTogglePanel={() => dispatch({ type: "patch", patch: { layersOpen: !state.layersOpen } })}
+            // Composed here rather than inside the card: the layer list needs the
+            // project and half the workspace's selection state, and threading all
+            // of it through a view that otherwise only knows about its own
+            // controls would make the card the shell.
+            layersPanel={
+              <LayersPanel
+                project={activeProject}
+                locale={locale}
+                selectedLayerId={state.selectedLayerId}
+                onSelectLayer={(layerId) =>
+                  dispatch({ type: "patch", patch: { selectedLayerId: layerId, selectedSlotId: null } })
+                }
+                selectedSlotId={state.selectedSlotId}
+                onSelectSlot={(slotId) =>
+                  dispatch({ type: "patch", patch: { selectedSlotId: slotId, selectedLayerId: null } })
+                }
+                selectedComponentItems={selectedComponentItems}
+                pickedOptionIds={state.pickedOptionIds}
+                layersLabel={copy.shell.presetRail.layers.sectionTitle}
+              />
+            }
+          />
           {state.surfaceMode === "builder" ? (
             <PresetRail
               copy={copy}
