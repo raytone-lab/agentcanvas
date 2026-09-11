@@ -3654,6 +3654,14 @@ textarea:focus-visible {
   box-shadow: var(--shadow-sm);
 }
 
+/* No header row — none of the title, search or collapse control was picked —
+   so nothing is holding the top of the column and the first thing in it sat
+   against the frame's edge. 40px reads as the same breathing room the header
+   used to give. */
+.session-sidebar[data-header="none"] {
+  padding-top: 40px;
+}
+
 .session-new {
   display: inline-flex;
   align-items: center;

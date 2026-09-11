@@ -144,7 +144,16 @@ export function SessionSidebar({
   }, [searchOpen]);
 
   return (
-    <aside ref={sidebarRef} className="session-sidebar" data-preview-anchor="sidebar" aria-label={c.ariaLabel}>
+    <aside
+      ref={sidebarRef}
+      className="session-sidebar"
+      data-preview-anchor="sidebar"
+      // The column's top spacing comes from the header row, so without one the
+      // first thing in it needs the space put back. CSS rather than a spacer
+      // element: a 40px empty div is a module the reader can hover and click.
+      data-header={hasHeader ? undefined : "none"}
+      aria-label={c.ariaLabel}
+    >
       {hasHeader ? (
         <header className="session-brand">
           {/* The project's own name, which the Layers panel edits — the title in

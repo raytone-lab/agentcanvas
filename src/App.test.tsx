@@ -198,6 +198,11 @@ describe("App shell controls", () => {
     expect(markup).not.toContain("session-brand-name");
     expect(markup).not.toContain("session-collapse");
     expect(markup).not.toContain("session-list");
+    // With no header row, whatever is picked next needs the top spacing that
+    // row used to provide — a list against the frame's edge reads as clipped.
+    expect(
+      cssRule(readFileSync(new URL("./styles/app.css", import.meta.url), "utf8"), '.session-sidebar[data-header="none"]'),
+    ).toContain("padding-top: 40px;");
 
     // No welcome state either. It used to be inferred from an empty timeline,
     // which is also what an unconfigured canvas looks like, so a new project

@@ -115,6 +115,9 @@ describe("SessionSidebar session data contract", () => {
     });
 
     expect(container.querySelector(".session-brand")).toBeNull();
+    // And it says so, because the column's top spacing came from that row: the
+    // list sat against the frame's top edge without it.
+    expect(container.querySelector(".session-sidebar")?.getAttribute("data-header")).toBe("none");
   });
 
   it("brings the list along with the date headings", async () => {

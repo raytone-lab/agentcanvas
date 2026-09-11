@@ -176,7 +176,7 @@ const presetOptionZh: PresetOptionTable = {
   "sidebar-visible": { label: "显示侧边栏", description: "在产品外壳中显示会话历史侧边栏。" },
   "chat-visible": { label: "显示对话流", description: "在中栏显示对话流。" },
   "composer-visible": { label: "显示输入框", description: "在对话流下方显示输入框。" },
-  "sidebar-title": { label: "标题模块", description: "在侧边栏顶部显示项目名称。" },
+  "sidebar-title": { label: "展示标题", description: "在侧边栏顶部显示项目名称。" },
   "sidebar-collapse": { label: "展开收起", description: "显示用于收起侧边栏的按钮。" },
   "sidebar-new-button": { label: "新建对话", description: "在侧边栏顶部显示新建对话操作。" },
   "sidebar-search": { label: "搜索功能", description: "显示用于筛选会话的搜索框。" },
