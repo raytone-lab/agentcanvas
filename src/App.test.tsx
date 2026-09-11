@@ -399,15 +399,24 @@ describe("App shell controls", () => {
     const zoomRule = cssRule(styles, ".canvas-zoom");
 
     expect(zoomRule).toContain("zoom: var(--canvas-zoom, 1);");
-    // The `* var(--canvas-zoom)` is the whole trick. Under `zoom`, percentages
-    // resolve against the containing block divided by the zoom factor, so a
-    // plain `width: 100%` keeps the rendered size fixed and re-lays-out the
-    // contents smaller — a reflow, which is the one thing zoom must not do.
-    // Measured in Chrome: with the multiplier, a 200% canvas lays out at 1248px
-    // and renders at 2496px; without it, it lays out at 624px and renders at
-    // 1248px.
-    expect(zoomRule).toContain("width: calc(100% * var(--canvas-zoom, 1));");
-    expect(zoomRule).toContain("height: calc(100% * var(--canvas-zoom, 1));");
+    // Sized in container units, which is what keeps the layout box the size of
+    // the free space while `zoom` magnifies only what is rendered — the reflow
+    // that zoom must not cause. A *percentage* under `zoom` resolves against the
+    // containing block divided by the zoom, which is why these two used to be
+    // multiplied back out by it; container units do not divide, so multiplying
+    // them laid the box out 1.5x too wide at 150% and pulled the ratio to 1.31.
+    // Measured in Chrome at 150%: layout 1131x848, rendered 1696x1272.
+    expect(zoomRule).toContain("width: var(--canvas-page-w);");
+    expect(zoomRule).toContain("100cqw");
+    // The page is 4:3 — the frame, not the frame plus the label gutters, which
+    // is why the height adds them back after taking the ratio.
+    expect(zoomRule).toContain("(100cqh - 2 * var(--canvas-label-gutter)) * 4 / 3");
+    expect(zoomRule).toContain(
+      "height: calc(var(--canvas-page-w) * 3 / 4 + 2 * var(--canvas-label-gutter));",
+    );
+    // And the surface has to be a size container, or `cqh` has nothing to
+    // measure against and the width silently falls back to the whole row.
+    expect(cssRule(styles, ".builder-surface")).toContain("container-type: size;");
     // Nothing scrolls, at any zoom: the wheel pans the canvas, so a scrollbar
     // would be a second way to move the same thing — and the scrollable area a
     // translated child reports moves as it travels, which made the first pan
@@ -428,8 +437,11 @@ describe("App shell controls", () => {
     // read as sitting too low because it was clipped there.
     const frameRule = cssRule(styles, ".builder-surface .preview-frame");
     expect(frameRule).toContain("height: auto;");
-    expect(frameRule).toContain("margin-top: 26px;");
-    expect(frameRule).toContain("margin-bottom: 26px;");
+    expect(frameRule).toContain("margin-top: var(--canvas-label-gutter);");
+    expect(frameRule).toContain("margin-bottom: var(--canvas-label-gutter);");
+    // The same gutter the canvas page's height accounts for, so the frame left
+    // inside it is 4:3 rather than 4:3-minus-two-labels.
+    expect(cssRule(styles, ".app-shell")).toContain("--canvas-label-gutter: 26px;");
 
     // The labels sit in that gap, as a sibling of the frame. They used to be a
     // child at `top: -26px`, which the frame's `overflow: hidden` clipped away

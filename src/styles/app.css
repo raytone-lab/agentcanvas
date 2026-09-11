@@ -168,6 +168,9 @@ p {
   /* Folded, the card is the wordmark row: the mark, its chevron, and the fold
      control. Measured from that content rather than guessed. */
   --rail-col-collapsed: 132px;
+  /* The strip above and below the frame that the region labels sit in. Part of
+     the canvas page's height, so the frame itself keeps its ratio. */
+  --canvas-label-gutter: 26px;
   /* The floating chrome's surface — the rail card, the controls card, and the
      rings drawn against them. White, so the chrome reads as paper laid on the
      canvas rather than as another shade of the canvas. */
@@ -3418,6 +3421,14 @@ textarea:focus-visible {
      which has no preferences to read. */
   background: var(--canvas-bg, #DDE1E9);
   box-shadow: none;
+}
+
+/* A size container so the 4:3 canvas can be sized against this box in both
+   axes — a width calc has no other way to ask how tall the room is. Only the
+   builder's surface: the exported shell is a real product filling a window, not
+   a canvas with a page on it. */
+.builder-surface {
+  container-type: size;
 }
 
 .resize-handle {
@@ -13293,8 +13304,8 @@ pre {
 .builder-surface .preview-frame {
   position: relative;
   height: auto;
-  margin-top: 26px;
-  margin-bottom: 26px;
+  margin-top: var(--canvas-label-gutter);
+  margin-bottom: var(--canvas-label-gutter);
 }
 
 /* Canvas magnification.
@@ -13317,8 +13328,32 @@ pre {
      percentage back out gives a layout box that is always the unzoomed
      container size, and a rendered box that scales. Measured: at 200% the frame
      lays out at 1248px and renders at 2496px. */
-  width: calc(100% * var(--canvas-zoom, 1));
-  height: calc(100% * var(--canvas-zoom, 1));
+  /* The frame is 4:3, as large as the free space allows. An agent frontend
+     drawn 1552px wide on a wide window says nothing true about how it will be
+     read; a fixed ratio makes the canvas a page of a known shape, and the same
+     shape whether the rail is folded, open, or absent on the preview surface.
+
+     `--canvas-page-w` is the frame's width: as wide as there is room for, but no
+     wider than 4:3 of the height that is left once the label gutters are taken
+     out. The box this rule sizes is the frame plus those gutters, which is why
+     the height adds them back.
+
+     Written in `cqw`/`cqh` — the surface's content box, via `container-type:
+     size` on `.builder-surface` — rather than in percentages. A width calc has
+     no other way to ask how tall the room is, and container units are also what
+     removed the `* var(--canvas-zoom)` these two declarations used to carry: a
+     *percentage* under `zoom` resolves against the containing block divided by
+     the zoom, so it had to be multiplied back out to keep the layout box the
+     size of the free space. Container units do not divide, so the length here is
+     already that size, and `zoom` magnifies the rendered box from it. Multiplied
+     out as well, the box laid out 1.5× too wide at 150% and the ratio drifted to
+     1.31 — measured. */
+  --canvas-page-w: min(
+    100cqw,
+    (100cqh - 2 * var(--canvas-label-gutter)) * 4 / 3
+  );
+  width: var(--canvas-page-w);
+  height: calc(var(--canvas-page-w) * 3 / 4 + 2 * var(--canvas-label-gutter));
   min-width: 0;
   min-height: 0;
   /* Centres the canvas when it is smaller than the surface; collapses to 0 and
