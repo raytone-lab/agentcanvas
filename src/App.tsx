@@ -46,6 +46,8 @@ import { piConversationSidebarItems } from "./pi/piConversationState";
 import { InlineApprovalDemo, demoApprovalTool, findPendingApprovalTool } from "./app/view/InlineApprovalDemo";
 import { PresetRail } from "./app/view/PresetRail";
 import { RegionLabels } from "./app/view/RegionLabels";
+import { canvasBackgroundColor } from "./app/view/canvasBackgrounds";
+import { PreferencesDialog } from "./app/view/PreferencesDialog";
 import { ShellBrand } from "./app/view/ShellBrand";
 import { Topbar } from "./app/view/Topbar";
 import { IncompleteProjectDialog } from "./app/view/IncompleteProjectDialog";
@@ -694,6 +696,7 @@ export function App() {
   const canvasPanRef = useRef<CanvasPan>(NO_CANVAS_PAN);
   const canvasPanFrameRef = useRef<number | null>(null);
   const [pointerHint, setPointerHint] = useState<PointerHintState>(null);
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [pendingRun, setPendingRun] = useState<"preview" | "export" | null>(null);
   const missingRequirements = missingRequirementsForProject(activeProject, selectedComponentItems);
   const runOrAsk = (intent: "preview" | "export") => {
@@ -1022,7 +1025,7 @@ export function App() {
               // The wordmark rides at the top of the rail card rather than in
               // a bar of its own: with the shell turned into one canvas, the
               // chrome is two floating cards and this is the top of one.
-              brand={<ShellBrand copy={copy} locale={locale} setLocale={setLocale} />}
+              brand={<ShellBrand copy={copy} onOpenPreferences={() => setPreferencesOpen(true)} />}
               project={project}
               navSection={state.navSection}
               onNavSectionChange={handleNavSectionChange}
@@ -1083,7 +1086,7 @@ export function App() {
           ) : (
             // No rail on the preview surface, so the wordmark floats on its
             // own — the language switch has to stay reachable from here too.
-            <ShellBrand copy={copy} locale={locale} setLocale={setLocale} floating />
+            <ShellBrand copy={copy} onOpenPreferences={() => setPreferencesOpen(true)} floating />
           )}
 
           <main
@@ -1098,6 +1101,7 @@ export function App() {
               "--canvas-zoom": state.canvasZoom / 100,
               "--canvas-pan-x": `${canvasPan.x}px`,
               "--canvas-pan-y": `${canvasPan.y}px`,
+              "--canvas-bg": canvasBackgroundColor(state.canvasBackground),
             } as CSSProperties}
             // Only a magnified canvas scrolls. Left at `auto` the whole time,
             // sub-pixel rounding puts a scrollbar on an unzoomed canvas.
@@ -1321,6 +1325,15 @@ export function App() {
         ) : null}
       </div>
       <PointerHint hint={pointerHint} onDismiss={() => setPointerHint(null)} />
+      <PreferencesDialog
+        copy={copy}
+        locale={locale}
+        onLocaleChange={setLocale}
+        background={state.canvasBackground}
+        onBackgroundChange={(background) => dispatch({ type: "patch", patch: { canvasBackground: background } })}
+        open={preferencesOpen}
+        onOpenChange={setPreferencesOpen}
+      />
       {state.surfaceMode === "builder" ? (
         <IncompleteProjectDialog
           copy={copy}

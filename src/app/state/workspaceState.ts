@@ -17,6 +17,7 @@ import {
   type EphemeralPiConversation,
 } from "../../pi/piConversationState";
 import type { PiRuntimeState } from "../../pi/piClient";
+import { DEFAULT_CANVAS_BACKGROUND, type CanvasBackgroundId } from "../view/canvasBackgrounds";
 import { defaultCodingAgentProject, type AgentFrontendProject } from "../../schema/agentuxConfig";
 import type { NavSectionId } from "../projection/presetRailData";
 import type { PresetGroupId } from "../../schema/presets";
@@ -53,6 +54,12 @@ export type WorkspaceState = {
    * resizing the frame is for.
    */
   canvasZoom: number;
+  /**
+   * What the canvas is painted with, from preferences. The editor's own
+   * backdrop, not the project's — the agent being designed carries its theme,
+   * and this is the room it is being looked at in.
+   */
+  canvasBackground: CanvasBackgroundId;
   /**
    * The option the rail should scroll to and flash, set by the canvas
    * toolbar's Edit. Cleared once the rail has shown it, so re-selecting the
@@ -186,6 +193,7 @@ export function createInitialWorkspaceState(locale: AppLocale): WorkspaceState {
     selectedLayerId: null,
     selectedSlotId: null,
     canvasZoom: 100,
+    canvasBackground: DEFAULT_CANVAS_BACKGROUND,
     pinnedOptionId: null,
     pickedOptionIds: [],
     pickedIconSlots: [],

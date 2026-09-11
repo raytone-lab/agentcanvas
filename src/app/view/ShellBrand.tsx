@@ -1,77 +1,87 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
-import { APP_LOCALES, type UiCopy, type AppLocale } from "../../i18n/uiCopy";
+import type { UiCopy } from "../../i18n/uiCopy";
 
 /**
- * The product's name, and the language it is read in.
+ * The product mark, and the menu behind it.
  *
- * It used to be the topbar's left half. With the shell turned into one canvas
- * and the chrome floating on top of it, there is no full-width bar to be the
- * left half of: the wordmark belongs at the top of the rail card, which is the
- * card the reader starts from. The preview surface has no rail, so there it
- * floats on its own — the language switch has to stay reachable from both.
+ * The mark sits at the top of the rail card, which is where the reader's eye
+ * starts, and it is also the way out of the editor: home, and preferences. The
+ * language switch used to live beside it as a permanent control — it is in
+ * preferences now, because it is set once a session and was the second-widest
+ * thing in the chrome.
  */
 export function ShellBrand({
   copy,
-  locale,
-  setLocale,
+  onOpenPreferences,
   /** Own floating card, for the surfaces with no rail to sit in. */
   floating = false,
 }: {
   copy: UiCopy;
-  locale: AppLocale;
-  setLocale: (locale: AppLocale) => void;
+  onOpenPreferences: () => void;
   floating?: boolean;
 }) {
-  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    // Pointer rather than blur: the menu's own buttons take focus as they are
+    // pressed, and a blur handler closes it before the click lands.
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Node && menuRef.current?.contains(target)) return;
+      setMenuOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [menuOpen]);
 
   return (
     <div className="shell-brand" data-floating={floating ? "true" : undefined}>
-      <div className="brand-block">
-        {/* The wordmark is in the image, so the h1 carries the name for
-            assistive tech and the img is decorative. */}
-        <h1 className="brand-logo">
-          <img src="/brand-logo.png" alt="AgentCanvas" />
-        </h1>
-      </div>
-      <div
-        className="language-picker"
-        onBlur={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-            setLanguageMenuOpen(false);
-          }
-        }}
-      >
+      <div className="brand-menu-anchor" ref={menuRef}>
         <button
-          className="language-trigger"
           type="button"
-          aria-label={copy.shell.topbar.languageSwitchAria}
+          className="brand-trigger"
           aria-haspopup="menu"
-          aria-expanded={languageMenuOpen}
-          onClick={() => setLanguageMenuOpen((open) => !open)}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
         >
-          <span>{copy.shell.topbar.languageLabels[locale]}</span>
+          <img className="brand-logo" src="/brand-mark.png" alt={copy.shell.brand.title} />
           <ChevronDown size={14} aria-hidden="true" />
         </button>
-        {languageMenuOpen ? (
-          <div className="language-menu" role="menu">
-            {APP_LOCALES.map((option) => (
-              <button
-                key={option}
-                className="language-option"
-                type="button"
-                role="menuitemradio"
-                aria-checked={locale === option}
-                data-active={locale === option}
-                onClick={() => {
-                  setLocale(option);
-                  setLanguageMenuOpen(false);
-                }}
-              >
-                {copy.shell.topbar.languageLabels[option]}
-              </button>
-            ))}
+        {menuOpen ? (
+          <div className="brand-menu" role="menu" aria-label={copy.shell.brandMenu.ariaLabel}>
+            {/* A placeholder until there is a home page to return to. It is here
+                so the menu's shape is settled before that exists; the row will
+                carry the link and nothing else about it changes. */}
+            <button
+              type="button"
+              className="brand-menu-item"
+              role="menuitem"
+              onClick={() => setMenuOpen(false)}
+            >
+              {copy.shell.brandMenu.home}
+            </button>
+            <button
+              type="button"
+              className="brand-menu-item"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                onOpenPreferences();
+              }}
+            >
+              {copy.shell.brandMenu.settings}
+            </button>
           </div>
         ) : null}
       </div>

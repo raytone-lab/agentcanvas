@@ -46,6 +46,16 @@ const en = {
       ja: "日本語",
     },
   },
+  brandMenu: {
+    ariaLabel: "Product menu",
+    home: "Home",
+    settings: "Settings",
+  },
+  preferences: {
+    title: "Preferences",
+    language: "Language",
+    background: "Canvas background",
+  },
   presetRail: {
     title: "UX Presets",
     defaultSection: "Options",
@@ -240,6 +250,16 @@ const zh: typeof en = {
       zh: "中文",
       ja: "日本語",
     },
+  },
+  brandMenu: {
+    ariaLabel: "产品菜单",
+    home: "返回首页",
+    settings: "设置",
+  },
+  preferences: {
+    title: "偏好设置",
+    language: "语言切换",
+    background: "背景设置",
   },
   presetRail: {
     title: "UX 预设",
@@ -436,6 +456,16 @@ const ja: typeof en = {
       zh: "中文",
       ja: "日本語",
     },
+  },
+  brandMenu: {
+    ariaLabel: "プロダクトメニュー",
+    home: "ホームへ",
+    settings: "設定",
+  },
+  preferences: {
+    title: "環境設定",
+    language: "言語切り替え",
+    background: "背景設定",
   },
   presetRail: {
     title: "UX プリセット",

@@ -235,7 +235,6 @@ p {
 }
 
 .shell-brand,
-.brand-block,
 .topbar-controls,
 .rail-title,
 .composer-actions,
@@ -248,14 +247,11 @@ p {
   align-items: center;
 }
 
-/* The wordmark row at the top of the rail card: name on the left, language on
-   the right, with the card's own width doing the work the old fixed
-   `--rail-col - 12px` used to do. */
+/* The mark's row at the top of the rail card. */
 .shell-brand {
-  justify-content: space-between;
   gap: 14px;
   min-width: 0;
-  padding: 10px 14px;
+  padding: 10px 12px;
   border-bottom: 1px solid #e4e4e7;
 }
 
@@ -266,34 +262,84 @@ p {
   z-index: var(--z-shell-chrome);
   top: var(--fn-float-gap);
   left: var(--fn-float-gap);
-  padding: 6px 14px;
+  padding: 6px 10px;
   border-bottom: 0;
   border-radius: var(--fn-r-xl);
   background: var(--fn-bg);
   box-shadow: var(--shadow-md);
 }
 
-.brand-block {
-  min-width: 150px;
-}
-
-.brand-logo {
-  display: flex;
-  align-items: center;
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 20px;
-  line-height: 1.1;
-  font-weight: 800;
-  letter-spacing: 0;
-}
-
-/* Height-driven: the source is 812x149, so a fixed height keeps the aspect
+/* Height-driven: the source is 215x149, so a fixed height keeps the aspect
    ratio without hardcoding a width that would have to change with the art. */
-.brand-logo img {
+.brand-logo {
   display: block;
   height: 26px;
   width: auto;
+}
+
+.brand-menu-anchor {
+  position: relative;
+  z-index: var(--z-dropdown);
+}
+
+/* The mark is the menu button. Same chevron and the same quiet-until-hovered
+   treatment as the language trigger it replaces, so the two controls that open
+   something from the chrome read as one kind of control. */
+.brand-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--control-md);
+  border: 1px solid transparent;
+  border-radius: var(--fn-r-sm);
+  padding: 0 4px 0 2px;
+  background: transparent;
+}
+
+.brand-trigger:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+.brand-trigger svg {
+  color: var(--text-muted);
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+
+.brand-trigger[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.brand-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  min-width: 168px;
+  padding: 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--fn-r-md);
+  background: var(--surface-panel);
+  box-shadow: 0 8px 22px rgba(13, 18, 28, 0.08), 0 2px 6px rgba(13, 18, 28, 0.04);
+}
+
+.brand-menu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 34px;
+  border: 0;
+  border-radius: var(--fn-r-sm);
+  padding: 0 10px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 560;
+  text-align: left;
+}
+
+.brand-menu-item:hover {
+  background: var(--surface-inset);
 }
 
 .frame-header p,
@@ -3329,7 +3375,9 @@ textarea:focus-visible {
   padding: var(--canvas-pad-top, 24px) 24px 24px var(--canvas-pad-left, 24px);
   border: 0;
   border-radius: 0;
-  background: #DDE1E9;
+  /* Set from preferences; the literal is the fallback for the exported shell,
+     which has no preferences to read. */
+  background: var(--canvas-bg, #DDE1E9);
   box-shadow: none;
 }
 
@@ -13539,6 +13587,70 @@ pre {
   gap: 8px;
   justify-content: flex-end;
   padding-top: 4px;
+}
+
+/* Preferences: language, and what the canvas is painted with. Two lists of
+   chips, because both are one-of-a-few and both apply on the click. */
+.pref-sections {
+  display: grid;
+  gap: 20px;
+  padding-top: 4px;
+}
+
+.pref-section-title {
+  margin-bottom: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.pref-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pref-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--fn-r-sm);
+  padding: 0 12px;
+  background: var(--surface-panel);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 560;
+  transition: border-color var(--motion-fast) var(--ease-out),
+    background var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
+}
+
+.pref-choice:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+/* The accent means "this is the one in force", which is what it means on the
+   canvas too. */
+.pref-choice[data-active="true"] {
+  border-color: var(--select-line);
+  background: var(--select-wash);
+  color: var(--select-text);
+}
+
+.pref-swatch-choice {
+  padding-left: 8px;
+}
+
+.pref-swatch {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border: 1px solid rgba(13, 18, 28, 0.1);
+  border-radius: var(--fn-r-xs);
 }
 
 /* Canvas zoom readout. Sits with the topbar's controls but reads as a field

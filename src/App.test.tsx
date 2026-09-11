@@ -8,6 +8,7 @@ import { defaultCodingAgentProject, emptyStructureProject } from "./schema/agent
 import { applyPresetOption, togglePresetOption } from "./schema/presetActions";
 import { FLOW_EXIT_GROUP_IDS, presetRailSections } from "./app/projection/presetRailData";
 import { createInitialWorkspaceState } from "./app/state/workspaceState";
+import { canvasBackgroundColor } from "./app/view/canvasBackgrounds";
 import { presetGroupsForProject } from "./schema/presets";
 import { nativeThemePresetIds, themeTokens } from "./theme/themeTokens";
 
@@ -89,9 +90,25 @@ describe("App shell controls", () => {
       "--canvas-pad-left: calc(var(--fn-float-gap) * 2 + var(--rail-col));",
     );
 
-    // And the wordmark is inside the rail card rather than in a bar of its own.
+    // And the mark is inside the rail card rather than in a bar of its own.
     expect(markup.indexOf('class="shell-brand"')).toBeGreaterThan(markup.indexOf('class="preset-nav"'));
     expect(topbarControls(markup)).not.toContain("brand-logo");
+  });
+
+  it("puts the language switch behind the product menu", () => {
+    const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
+
+    // The mark is the menu button now. The language switch was a permanent
+    // control for a once-a-session decision and the second-widest thing in the
+    // chrome; it is in preferences, which is what the menu leads to.
+    expect(markup).toContain('src="/brand-mark.png"');
+    expect(markup).toContain('class="brand-trigger"');
+    expect(markup).not.toContain('class="language-picker"');
+
+    // The canvas paints from preferences, and opens on the colour it has
+    // always been.
+    expect(markup).toContain("--canvas-bg");
+    expect(canvasBackgroundColor(createInitialWorkspaceState("zh").canvasBackground)).toBe("#DDE1E9");
   });
 
   it("keeps saved-preview pickers icon-free and matched to the zoom readout", () => {
