@@ -6,10 +6,14 @@ import { App, STYLE_AVATAR_DEFAULTS, selectedComponentItemsForProject } from "./
 import { ICON_OPTIONS, IconSetProvider } from "./agentmatrix";
 import { defaultCodingAgentProject, emptyStructureProject } from "./schema/agentuxConfig";
 import { applyPresetOption, togglePresetOption } from "./schema/presetActions";
-import { FLOW_EXIT_GROUP_IDS, presetRailSections } from "./app/projection/presetRailData";
+import {
+  FLOW_EXIT_GROUP_IDS,
+  RAIL_WITHHELD_GROUP_IDS,
+  presetRailSections,
+} from "./app/projection/presetRailData";
 import { createInitialWorkspaceState } from "./app/state/workspaceState";
 import { canvasBackgroundColor } from "./app/view/canvasBackgrounds";
-import { presetGroupsForProject } from "./schema/presets";
+import { presetGroups, presetGroupsForProject } from "./schema/presets";
 import { nativeThemePresetIds, themeTokens } from "./theme/themeTokens";
 
 vi.mock("./agentux", () => ({
@@ -848,15 +852,35 @@ describe("event flow axis", () => {
     ).toContain("display: none;");
   });
 
-  it("treats errors and interrupts as exits, not steps", () => {
-    // An error can land while thinking, mid tool call or at delivery, and the
-    // reader can stop at any of those points. Neither happens "after tools and
-    // before media", so neither is a step on the axis.
-    expect([...FLOW_EXIT_GROUP_IDS]).toEqual(["blocks", "interrupt"]);
+  it("reads the flow in the order it happens, and marks any exit as one", () => {
+    // The run opens → thinks → reports progress → calls tools → hands back to
+    // the reader → delivers. The previous reading (思考 → 审批 → 工具 → 结果报错
+    // → 中断 → 生成中 → 交付) was one linear turn, which the protocol these
+    // stages describe does not have: several run at once, and two of them end
+    // the run and continue in the next one.
     const flow = presetRailSections.find((section) => section.id === "event-flow")?.groupIds ?? [];
+    expect(flow).toEqual([
+      "blocks",
+      "ux-effects",
+      "media-generation",
+      "tool-calls",
+      "approval",
+      "delivery",
+    ]);
+
+    // No exits at the moment: failure moved into 运行状态, which is the frame
+    // around the flow rather than a stage in it. Whatever is in the set has to
+    // be on the axis, or it is marked as an exit from a sequence it is not in.
+    expect([...FLOW_EXIT_GROUP_IDS]).toEqual([]);
     for (const exit of FLOW_EXIT_GROUP_IDS) {
       expect(flow).toContain(exit);
     }
+
+    // 中断 is held back rather than deleted: its four placeholders are about
+    // stopping and resuming, which belong to 运行状态 and 人机协作 now.
+    expect([...RAIL_WITHHELD_GROUP_IDS]).toEqual(["interrupt"]);
+    expect(flow).not.toContain("interrupt");
+    expect(presetGroups.some((group) => group.id === "interrupt")).toBe(true);
   });
 });
 

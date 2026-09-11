@@ -22,12 +22,12 @@ type PresetOptionTable = Record<string, { label?: string; description?: string }
  */
 const presetGroupNameZh: PresetTextTable = {
   conversation: "对话区",
-  "media-generation": "生成中",
+  "media-generation": "进度",
   sidebar: "左栏",
   "ux-effects": "思考",
-  approval: "需要确认",
+  approval: "人机协作",
   "tool-calls": "工具调用",
-  blocks: "结果报错",
+  blocks: "运行状态",
   interrupt: "中断",
   composer: "输入框",
   provider: "模型",
@@ -41,12 +41,12 @@ const presetGroupNameZh: PresetTextTable = {
 /** PENDING NATIVE REVIEW — see the note in ./copy/shell.ts for the conventions used. */
 const presetGroupNameJa: PresetTextTable = {
   conversation: "会話エリア",
-  "media-generation": "生成中",
+  "media-generation": "進捗",
   sidebar: "左カラム",
   "ux-effects": "思考",
-  approval: "確認",
+  approval: "人の介入",
   "tool-calls": "ツール呼出",
-  blocks: "結果とエラー",
+  blocks: "実行状態",
   interrupt: "中断",
   composer: "入力欄",
   provider: "モデル",

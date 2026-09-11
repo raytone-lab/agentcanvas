@@ -434,14 +434,34 @@ const presetOptionIds = new Set(
 );
 
 /**
- * Stages that are exits rather than steps.
+ * Stages that are exits rather than steps — marked on the axis, but not claimed
+ * to be part of the sequence.
  *
- * An error can land while thinking, mid tool call or at delivery, and the
- * reader can stop at any of those points — neither happens "after tools and
- * before media". They keep their place in the list, marked differently, so the
- * axis does not claim a sequence that does not exist.
+ * Empty for now. It held 结果报错 and 中断: an error can land while thinking,
+ * mid tool call or at delivery, so neither was "after tools and before media".
+ * Failure is part of 运行状态 now, which is the frame around the whole flow
+ * rather than a stage in it, and 中断 is withheld (see below). The set stays
+ * because the distinction is real and the next failure-only group will need it.
  */
-export const FLOW_EXIT_GROUP_IDS = new Set<PresetGroupId>(["blocks", "interrupt"]);
+export const FLOW_EXIT_GROUP_IDS = new Set<PresetGroupId>([]);
+
+/**
+ * Groups held back from the rail.
+ *
+ * `interrupt` is four unbuilt placeholders about stopping and resuming a turn.
+ * In the protocol the stages now follow, stopping is part of the run's own
+ * state and picking a turn back up is the next run's job — so its contents
+ * belong in 运行状态 and 人机协作 as they get built, and until then the group
+ * has nothing to show. Nothing is deleted: the options are still in
+ * `presetGroups` with their behaviour, and putting the group back is deleting
+ * a line from this set.
+ */
+export const RAIL_WITHHELD_GROUP_IDS = new Set<PresetGroupId>(["interrupt"]);
+
+/** Whether a group belongs in the rail at all. */
+export function isGroupShownInRail(groupId: PresetGroupId): boolean {
+  return !RAIL_WITHHELD_GROUP_IDS.has(groupId);
+}
 
 /** Option id to the group that owns it. */
 export const OPTION_GROUP_IDS = new Map(
@@ -816,18 +836,26 @@ export const presetRailSections: {
     groupIds: ["sidebar", "conversation", "composer", "output"],
   },
   {
-    // Turn order, so reading the section top to bottom is reading a run:
-    // thinking → the reader is asked → tools execute → how it ended → the wait
-    // for generated media → what comes back.
+    /*
+     * The interaction, in the order it happens: the run opens → the agent
+     * thinks → it reports progress → it calls tools → it hands back to the
+     * reader and the run closes → the next run delivers.
+     *
+     * Re-ordered and re-named from the previous reading (思考 → 审批 → 工具 →
+     * 结果报错 → 中断 → 生成中 → 交付), which was one linear turn. The protocol
+     * these stages describe does not work that way: several of them run at the
+     * same time, and two of them *end the run* and continue in the next one.
+     * Ids are left alone on purpose — in this file they are stable internal
+     * names and the reader sees `presetGroupNameZh` (see the note there).
+     */
     id: "event-flow",
-    label: { zh: "事件流", en: "Event flow", ja: "イベント" },
+    label: { zh: "交互流程", en: "Interaction flow", ja: "インタラクション" },
     groupIds: [
-      "ux-effects",
-      "approval",
-      "tool-calls",
       "blocks",
-      "interrupt",
+      "ux-effects",
       "media-generation",
+      "tool-calls",
+      "approval",
       "delivery",
     ],
   },

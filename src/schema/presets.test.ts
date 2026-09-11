@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { presetRailSections } from "../app/projection/presetRailData";
+import { RAIL_WITHHELD_GROUP_IDS, presetRailSections } from "../app/projection/presetRailData";
 import { hasPresetAction } from "./presetActions";
 import { presetGroups, presetGroupsForTemplate, resolvePresetGroupSelection } from "./presets";
 
@@ -35,11 +35,16 @@ describe("template preset groups", () => {
     expect(resolvePresetGroupSelection("git", "coding")).toBe("git");
   });
 
-  it("keeps every group reachable from the rail", () => {
-    // A group absent from every rail section has no icon and so cannot be
-    // opened — which is how the renderers stayed unreachable for a while.
+  it("keeps every group reachable from the rail, or deliberately withheld", () => {
+    // A group absent from every rail section has no row and so cannot be opened
+    // — which is how the renderers stayed unreachable for a while. The only
+    // allowed absences are the ones named in `RAIL_WITHHELD_GROUP_IDS`, which
+    // says why.
     const railed = new Set(presetRailSections.flatMap((section) => section.groupIds));
-    expect(presetGroups.filter((group) => !railed.has(group.id)).map((group) => group.id)).toEqual([]);
+    const unreachable = presetGroups
+      .filter((group) => !railed.has(group.id))
+      .map((group) => group.id);
+    expect(unreachable).toEqual([...RAIL_WITHHELD_GROUP_IDS]);
   });
 
   it("gives every non-pending option a preset action, and no pending one", () => {

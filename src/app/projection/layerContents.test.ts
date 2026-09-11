@@ -6,6 +6,7 @@ import {
   isAddedContentOption,
   isEventFlowReady,
   isOptionSelectedInRail,
+  isGroupShownInRail,
   isOptionShownInRail,
   layerContentsForProject,
   mountedComponentsForProject,
@@ -269,14 +270,17 @@ describe("rail contents", () => {
     expect(isOptionShownInRail({ id: "thinking-wave" })).toBe(true);
   });
 
-  it("has one stage left with nothing to configure", () => {
-    // 中断 is four placeholders and nothing else, so hiding them empties it.
-    // Kept on the axis all the same: the flow it names is real, and a gap in
-    // the sequence would read as though stopping a run had never been
-    // considered.
+  it("holds back the one stage with nothing to configure", () => {
+    // 中断 is four placeholders and nothing else, so hiding the placeholders
+    // empties it. It used to stay on the axis anyway, on the grounds that a gap
+    // in the sequence would read as though stopping a run had never been
+    // considered — but in the protocol the stages follow now, stopping is part
+    // of the run's own state and picking a turn back up is the next run's job.
+    // So the group is withheld and its contents get rebuilt where they belong.
     const interrupt = presetGroups.find((group) => group.id === "interrupt")!;
     expect(interrupt.options.filter(isOptionShownInRail)).toEqual([]);
-    expect(presetRailSections.find((section) => section.id === "event-flow")?.groupIds).toContain(
+    expect(isGroupShownInRail("interrupt")).toBe(false);
+    expect(presetRailSections.find((section) => section.id === "event-flow")?.groupIds).not.toContain(
       "interrupt",
     );
   });

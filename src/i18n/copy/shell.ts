@@ -70,8 +70,8 @@ const en = {
         description: "Message chrome and recovery: avatars, speaker labels, copy, edit and rerun.",
       },
       "media-generation": {
-        label: "Generating",
-        description: "The wait while an image, audio clip, or video is being generated.",
+        label: "Progress",
+        description: "What the agent reports while it works: named stages, structured progress, and the wait while an image, audio clip, or video is generated.",
       },
       sidebar: {
         label: "Left column",
@@ -86,14 +86,12 @@ const en = {
         description: "Tool actions such as reading files, editing, validating, searching, and running commands.",
       },
       approval: {
-        label: "Approval",
-        description: "Where the run stops for the reader: tool approval, choice cards, sandbox permission, hook intercepts.",
+        label: "Handoff",
+        description: "Where the run hands back to the reader: tool approval, a form to fill in, a confirmation to give. The run closes and the answer comes back in the next one.",
       },
       blocks: {
-        // One word on purpose: "Results & errors" measures 66px and wraps to two
-        // lines in the 68px rail. "Outcomes" covers both halves and stays on one.
-        label: "Outcomes",
-        description: "Result and incident states such as completed, failed, cancelled, retrying, exhausted, and terminal.",
+        label: "Run state",
+        description: "The run itself, as the reader sees it: running, stopped, failed, and what it cost. The frame around every other stage rather than one of them.",
       },
       interrupt: {
         label: "Interrupt",
@@ -277,8 +275,8 @@ const zh: typeof en = {
         description: "消息外观与恢复操作：头像、名称标签、复制、修改重发。",
       },
       "media-generation": {
-        label: "生成中",
-        description: "图片、音频、视频生成时的等待动效。",
+        label: "进度",
+        description: "agent 干活时报出来的东西：命名阶段、结构化进度，以及图片／音频／视频生成时的等待。",
       },
       sidebar: {
         label: "左栏",
@@ -293,12 +291,12 @@ const zh: typeof en = {
         description: "读取文件、编辑、验证、搜索和运行命令等工具动作。",
       },
       approval: {
-        label: "需要确认",
-        description: "运行停下来等你回答的地方：工具审批、选择卡片、沙箱权限、钩子拦截。",
+        label: "人机协作",
+        description: "运行把球交回给你的地方：工具审批、要填的表单、要给的确认。这一轮 run 会关闭，答案由下一轮带回来。",
       },
       blocks: {
-        label: "结果报错",
-        description: "完成、失败、已取消、重试、耗尽和终止等结果与异常状态。",
+        label: "运行状态",
+        description: "这次运行本身在界面上的样子：正在跑、被停下、失败了、花了多少。它是所有阶段的外框，而不是其中一个阶段。",
       },
       interrupt: {
         label: "中断",
@@ -485,8 +483,8 @@ const ja: typeof en = {
         description: "メッセージの外観と復帰操作：アバター、話者ラベル、コピー、修正して再実行。",
       },
       "media-generation": {
-        label: "生成中",
-        description: "画像・音声・動画を生成している間の待ち時間の見せ方。",
+        label: "進捗",
+        description: "エージェントが作業中に報告するもの：名前付きの段階、構造化された進捗、そして画像・音声・動画の生成待ち。",
       },
       sidebar: {
         label: "左カラム",
@@ -501,12 +499,12 @@ const ja: typeof en = {
         description: "ファイルの読み取り・編集・検証・検索・コマンド実行などのツール動作。",
       },
       approval: {
-        label: "確認が必要",
-        description: "実行が止まって読み手に尋ねる場所：ツールの承認、選択カード、サンドボックス権限、フックの遮断。",
+        label: "人の介入",
+        description: "実行が読み手に判断を返す場所：ツールの承認、入力フォーム、確認。実行はいったん閉じ、答えは次の実行で戻ってきます。",
       },
       blocks: {
-        label: "結果とエラー",
-        description: "完了・失敗・キャンセル・リトライ・リトライ上限・停止といった結果と障害の状態。",
+        label: "実行状態",
+        description: "この実行そのものの見え方：実行中、停止、失敗、そしてかかったコスト。個々の段階ではなく、それらを囲む枠です。",
       },
       interrupt: {
         label: "中断",
