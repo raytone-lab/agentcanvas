@@ -17,7 +17,9 @@ import {
   Wrench,
 } from "lucide-react";
 
+import { appVersionLabel } from "../appVersion";
 import { useCopy } from "../i18n/LocaleContext";
+import { NewChatIcon, SearchIcon } from "./agent-preview/SessionSidebar";
 import {
   AudioSkeletonLoader,
   AudioWaveLoader,
@@ -160,43 +162,42 @@ export function PresetOptionPreview({ optionId }: { optionId: string }) {
     );
   }
   if (optionId === "sidebar-new-button") {
+    // The control itself, icon and words, rather than an abstraction of it.
+    // Four tiles of grey bars said the same thing as each other.
     return (
-      <Tile kind="bubble">
-        <span className="pv-actions">
-          <Plus size={9} />
-          <Line w={30} tone="accent" />
+      <Tile kind="control">
+        <span className="pv-control">
+          <NewChatIcon size={14} />
+          <span className="pv-control-label">{copy.workspace.sessionSidebar.newSession}</span>
         </span>
-        <Line w="80%" />
       </Tile>
     );
   }
   if (optionId === "sidebar-search") {
+    // Just the magnifier: in the sidebar that is all this option adds.
     return (
-      <Tile kind="bubble">
-        <span className="pv-actions">
-          <Search size={9} />
-          <Line w={30} />
+      <Tile kind="control">
+        <span className="pv-control" data-align="center">
+          <SearchIcon size={16} />
         </span>
-        <Line w="70%" />
       </Tile>
     );
   }
   if (optionId === "sidebar-grouping") {
+    // The two headings, stacked: the grouping *is* those words.
     return (
-      <Tile kind="lines">
-        <Line w={18} tone="muted" />
-        <Line w="90%" />
-        <Line w={22} tone="muted" />
-        <Line w="70%" />
+      <Tile kind="control">
+        <span className="pv-eyebrow">{copy.workspace.sessionSidebar.groupToday}</span>
+        <span className="pv-eyebrow">{copy.workspace.sessionSidebar.groupEarlier}</span>
       </Tile>
     );
   }
   if (optionId === "sidebar-footer") {
+    // The version string the sidebar actually prints, from the same constant,
+    // so the card cannot show a version the product does not.
     return (
-      <Tile kind="lines">
-        <Line w="90%" />
-        <Line w="70%" />
-        <Line w={26} tone="muted" />
+      <Tile kind="control">
+        <span className="pv-version">{appVersionLabel}</span>
       </Tile>
     );
   }

@@ -2327,6 +2327,70 @@ textarea:focus-visible {
 }
 
 /* Generic line primitive ---------------------------------------------------- */
+/* Cards that show the control itself — an icon and its words — rather than an
+   abstraction of it.
+
+   These take the full column width and only as much height as they need. Two to
+   a row leaves 33px of usable width, which fits neither an icon and four
+   characters nor anything else worth showing, and the square aspect the other
+   cards carry would then leave most of the tile empty. `:has()` rather than a
+   group name, so this follows the cards. */
+.preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
+  .preset-option-list:has(.pv[data-kind="control"]) {
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 10px;
+}
+
+/* Specificity matched to the rule that makes every option card square, which
+   carries the same three `:not([...])` clauses — a shorter selector lost
+   silently and the cards stayed 165px tall for a 38px control. */
+.preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
+  .preset-option:has(.pv[data-kind="control"]),
+.preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
+  .preset-option:has(.pv[data-kind="control"]) .pv {
+  aspect-ratio: auto;
+  height: auto;
+  min-height: 0;
+}
+
+.pv[data-kind="control"] {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+.pv-control {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  color: var(--text-primary);
+}
+
+.pv-control[data-align="center"] {
+  justify-content: center;
+}
+
+.pv-control-label {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  white-space: nowrap;
+}
+
+/* The date headings, stacked, which is what the grouping is. */
+.pv-eyebrow {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 14px;
+}
+
+.pv-version {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 14px;
+}
+
 .pv-line {
   display: block;
   height: 3px;

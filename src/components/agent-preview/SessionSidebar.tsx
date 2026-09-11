@@ -217,7 +217,8 @@ export function SessionSidebar({
   );
 }
 
-function SearchIcon({ size }: { size: number }) {
+/** Shared with the rail's option card for 搜索功能, so both show one icon. */
+export function SearchIcon({ size }: { size: number }) {
   return (
     <svg
       width={size}
@@ -253,7 +254,8 @@ function SidebarToggleIcon({ size }: { size: number }) {
   );
 }
 
-function NewChatIcon({ size }: { size: number }) {
+/** Shared with the rail's option card for 新建对话, so both show one icon. */
+export function NewChatIcon({ size }: { size: number }) {
   // A hand-drawn icon rather than a lucide one, so repointing this file's
   // lucide import did not reach it — it stayed an outline while everything
   // around it became a glyph. codicon's `new-session` is the same idea.

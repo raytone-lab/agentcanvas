@@ -99,9 +99,9 @@ export const presetGroups: PresetGroup[] = [
     label: "Left nav",
     options: [
       { id: "sidebar-visible", label: "Show sidebar", description: "Show the conversation-history sidebar in the product shell.", section: "Layout" },
-      { id: "sidebar-new-button", label: "New chat button", description: "Show the new-chat action at the top of the sidebar.", section: "Content" },
-      { id: "sidebar-search", label: "Search box", description: "Show a search field for filtering conversations.", section: "Content" },
-      { id: "sidebar-grouping", label: "Group by date", description: "Group sessions under Today and Earlier headers.", section: "Content" },
+      { id: "sidebar-new-button", label: "New chat", description: "Show the new-chat action at the top of the sidebar.", section: "Content" },
+      { id: "sidebar-search", label: "Search", description: "Show a search field for filtering conversations.", section: "Content" },
+      { id: "sidebar-grouping", label: "Date groups", description: "Group sessions under Today and Earlier headers.", section: "Content" },
       { id: "sidebar-footer", label: "Version", description: "Show the current version at the bottom of the sidebar.", section: "Content" },
       { id: "workspace-switcher", label: "Workspace switcher", description: "Switch between workspaces from the sidebar.", section: "Content", pending: true },
     ],
