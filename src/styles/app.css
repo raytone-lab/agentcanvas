@@ -2330,34 +2330,55 @@ textarea:focus-visible {
 /* Cards that show the control itself — an icon and its words — rather than an
    abstraction of it.
 
-   These take the full column width and only as much height as they need. Two to
-   a row leaves 33px of usable width, which fits neither an icon and four
-   characters nor anything else worth showing, and the square aspect the other
-   cards carry would then leave most of the tile empty. `:has()` rather than a
-   group name, so this follows the cards. */
+   Two to a row like every other card, and only as tall as they need. At that
+   width the box has to give up padding to the content: the default 12px of cell,
+   12px of card and 12px of tile leave 33px of usable width, and an icon with
+   four characters needs about 55px, so 新建对话 broke onto two lines. Trimming
+   all three paddings and dropping the label a point buys the room.
+
+   Scoped with `:has()` rather than by group name, so it follows the cards. */
 .preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
-  .preset-option-list:has(.pv[data-kind="control"]) {
-  grid-template-columns: minmax(0, 1fr);
-  row-gap: 10px;
+  .preset-option-cell:has(.pv[data-kind="control"]) {
+  padding: 8px;
 }
 
 /* Specificity matched to the rule that makes every option card square, which
    carries the same three `:not([...])` clauses — a shorter selector lost
    silently and the cards stayed 165px tall for a 38px control. */
 .preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
-  .preset-option:has(.pv[data-kind="control"]),
-.preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
-  .preset-option:has(.pv[data-kind="control"]) .pv {
+  .preset-option:has(.pv[data-kind="control"]) {
   aspect-ratio: auto;
   height: auto;
   min-height: 0;
+  padding: 6px;
+}
+
+/* One height for the whole set. The contents are different shapes — a lone
+   magnifier, two stacked date headings — and side by side, tiles that differ by
+   a few pixels read as a mistake rather than as content. 42px is the tallest of
+   them (two 14px date headings, the 4px gap, padding and border), so nothing is
+   squeezed. */
+.preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
+  .preset-option:has(.pv[data-kind="control"]) .pv {
+  min-height: 42px;
 }
 
 .pv[data-kind="control"] {
   display: flex;
   align-items: center;
-  min-height: 38px;
-  padding: 8px 10px;
+  padding: 4px;
+}
+
+.pv[data-kind="control"] .pv-control {
+  gap: 2px;
+  justify-content: center;
+}
+
+/* Wraps rather than clips: if a locale's wording outgrows the card, two short
+   lines still say what it is, where a cut-off first line does not. */
+.pv-control-label {
+  font-size: 10px;
+  white-space: normal;
 }
 .pv-control {
   display: flex;
@@ -2372,10 +2393,9 @@ textarea:focus-visible {
 }
 
 .pv-control-label {
-  font-size: 11px;
   font-weight: 600;
-  line-height: 14px;
-  white-space: nowrap;
+  line-height: 13px;
+  text-align: center;
 }
 
 /* The date headings, stacked, which is what the grouping is. */

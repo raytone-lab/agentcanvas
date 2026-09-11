@@ -167,7 +167,7 @@ export function PresetOptionPreview({ optionId }: { optionId: string }) {
     return (
       <Tile kind="control">
         <span className="pv-control">
-          <NewChatIcon size={14} />
+          <NewChatIcon size={11} />
           <span className="pv-control-label">{copy.workspace.sessionSidebar.newSession}</span>
         </span>
       </Tile>
@@ -178,7 +178,7 @@ export function PresetOptionPreview({ optionId }: { optionId: string }) {
     return (
       <Tile kind="control">
         <span className="pv-control" data-align="center">
-          <SearchIcon size={16} />
+          <SearchIcon size={14} />
         </span>
       </Tile>
     );
