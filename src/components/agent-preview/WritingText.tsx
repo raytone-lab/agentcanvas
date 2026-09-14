@@ -8,8 +8,28 @@ import type { AgentFrontendProject } from "../../schema/agentuxConfig";
  * character-by-character (typewriter), word-by-word (smooth stream), or
  * chunk-by-chunk (chunked) — flowing naturally line by line.
  */
-export function WritingText({ project, text, replayKey = 0 }: { project: AgentFrontendProject; text: string; replayKey?: number }) {
-  const { writing, writingParams } = project.theme.motion;
+export function WritingText({
+  project,
+  text,
+  replayKey = 0,
+  mode,
+}: {
+  project: AgentFrontendProject;
+  text: string;
+  replayKey?: number;
+  /**
+   * Which rhythm to reveal at. Defaults to the answer's
+   * (`theme.motion.writing`); the reasoning body passes its own
+   * (`reasoning.writing`), because the thinking and the answer are two
+   * surfaces the reader can want written out differently.
+   *
+   * The *speeds* stay shared (`writingParams`) — how fast text appears is one
+   * reading pace for the product, not a per-surface setting.
+   */
+  mode?: AgentFrontendProject["theme"]["motion"]["writing"];
+}) {
+  const { writingParams } = project.theme.motion;
+  const writing = mode ?? project.theme.motion.writing;
   const tokens = splitWordTokens(text);
   const total = writing === "typewriter" ? text.length : tokens.length;
 
@@ -113,8 +133,41 @@ export function resumePoint(
   return Math.min(previous.count, next.total);
 }
 
+/**
+ * Han, kana, CJK punctuation and full-width forms: the scripts that put no
+ * spaces between words.
+ */
+const CJK_RANGES =
+  "\\u3000-\\u303f\\u3040-\\u30ff\\u31f0-\\u31ff\\u3400-\\u4dbf\\u4e00-\\u9fff\\uf900-\\ufaff\\ufe30-\\ufe4f\\uff00-\\uff60\\uffe0-\\uffe6";
+const HAS_CJK = new RegExp(`[${CJK_RANGES}]`);
+/** One CJK character, one run of everything else, or one run of whitespace. */
+const CJK_TOKEN = new RegExp(`[${CJK_RANGES}]|[^${CJK_RANGES}\\s]+|\\s+`, "g");
+
+/**
+ * The units a stream reveals one at a time.
+ *
+ * Splitting on whitespace is right for English and useless for Chinese: 正在理解你的需求
+ * has no spaces, so a whole line came out as a single token and 平滑流式 / 分块 finished
+ * in one step — on screen, text that simply appeared. Inside a CJK run each character
+ * is its own unit; Latin words and numbers embedded in the line stay whole.
+ */
 function splitWordTokens(text: string): string[] {
-  return text.match(/\S+\s*/g) ?? [];
+  const words = text.match(/\S+\s*/g) ?? [];
+  if (!HAS_CJK.test(text)) return words;
+
+  const tokens: string[] = [];
+  for (const word of words) {
+    for (const part of word.match(CJK_TOKEN) ?? [word]) {
+      // Trailing whitespace rides along with the character before it, so a
+      // newline never costs a tick that reveals nothing.
+      if (/^\s+$/.test(part) && tokens.length > 0) {
+        tokens[tokens.length - 1] += part;
+      } else {
+        tokens.push(part);
+      }
+    }
+  }
+  return tokens;
 }
 
 function clampRate(value: number, min: number, max: number): number {

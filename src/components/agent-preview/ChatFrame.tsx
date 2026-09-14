@@ -318,7 +318,14 @@ function TimelineItem({
       );
     }
     case "reasoning":
-      return <ReasoningBlock project={project} reasoning={item} showDebugBadges={showDebugBadges} />;
+      return (
+        <ReasoningBlock
+          project={project}
+          reasoning={item}
+          showDebugBadges={showDebugBadges}
+          writingReplayKey={writingReplayKey}
+        />
+      );
     case "tool":
       if (isMediaGenerationTool(item)) {
         return null;

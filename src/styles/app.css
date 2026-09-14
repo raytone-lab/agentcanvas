@@ -2097,6 +2097,28 @@ textarea:focus-visible {
   display: grid;
 }
 
+/* A card with its sliders open takes the whole row. Half a 236px panel is
+   ~104px, which put the slider, its value and 打字速度 in the same line box and
+   stacked the label one character per line. The card itself stays square. */
+.preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
+  .preset-option-cell:has(> .writing-params) {
+  grid-column: 1 / -1;
+}
+
+/* The card keeps the width it has in the two-up row — half the panel minus the
+   column gap — so opening the sliders does not resize the thumbnail. */
+.preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
+  .preset-option-cell:has(> .writing-params) > .preset-option {
+  width: calc(50% - 7px);
+}
+
+/* Name back under its own card; the sliders sit below both. Addressed by the
+   anchor attribute rather than the class, so a `.writing-params {` lookup in a
+   CSS test still lands on the rule that carries the panel's own box. */
+.preset-option-cell > [data-preview-anchor="writing-params"] {
+  order: 1;
+}
+
 /* Parameter sliders revealed under the active writing option. */
 .writing-params {
   display: grid;
@@ -5723,36 +5745,12 @@ textarea:focus-visible {
   white-space: pre-line;
 }
 
-.reasoning-body[data-writing-motion="smooth-stream"] {
-  animation: reasoning-stream-fade 520ms var(--ease-out) both;
-}
-.reasoning-body[data-writing-motion="typewriter"] > p {
-  overflow: hidden;
-  white-space: pre-wrap;
-  animation: reasoning-stream-type 900ms steps(48, end) both;
-}
-.reasoning-body[data-writing-motion="chunked"] {
-  animation: reasoning-stream-chunk 680ms var(--ease-out) both;
-}
-@keyframes reasoning-stream-fade {
-  from { opacity: 0; transform: translateY(2px); }
-}
-@keyframes reasoning-stream-type {
-  from { max-height: 0; }
-  to { max-height: 40em; }
-}
-@keyframes reasoning-stream-chunk {
-  0%   { opacity: 0; }
-  40%  { opacity: 0.55; }
-  100% { opacity: 1; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .reasoning-body[data-writing-motion],
-  .reasoning-body[data-writing-motion] > p {
-    animation: none;
-  }
-}
+/* How the reasoning text arrives is `WritingText`'s job now — a real
+   progressive reveal, the same component that writes the answer out. Three CSS
+   stand-ins used to live here (a fade, a `max-height` "typewriter", an opacity
+   ramp); they animated the block rather than the text, wiping it in one go and
+   unable to follow wrapped lines, which is the reason that component exists.
+   `data-writing-motion` stays on the body as a styling hook. */
 
 .reasoning-block[data-motion="shimmer"] .reasoning-title {
   overflow: visible;

@@ -8,6 +8,12 @@ type ParamKey = keyof WritingParams;
 
 type ParamSpec = { key: ParamKey; min: number; max: number; step: number; unit: string; label: Record<AppLocale, string> };
 
+/*
+ * The reasoning's three modes share the answer's specs, and its params: how
+ * fast text appears is one reading pace for the product rather than a
+ * per-surface setting, so a slider moved under 文字加载方式 is the same slider
+ * as the one under 消息输出模式.
+ */
 const WRITING_PARAM_SPECS: Record<string, ParamSpec[]> = {
   "writing-smooth": [
     { key: "streamWps", min: 10, max: 120, step: 1, unit: "wps", label: { en: "Stream speed", zh: "流速", ja: "ストリーム速度" } },
@@ -20,6 +26,10 @@ const WRITING_PARAM_SPECS: Record<string, ParamSpec[]> = {
     { key: "chunkIntervalMs", min: 80, max: 600, step: 10, unit: "ms", label: { en: "Chunk interval", zh: "块间隔", ja: "チャンク間隔" } },
   ],
 };
+
+WRITING_PARAM_SPECS["reasoning-writing-smooth"] = WRITING_PARAM_SPECS["writing-smooth"];
+WRITING_PARAM_SPECS["reasoning-writing-typewriter"] = WRITING_PARAM_SPECS["writing-typewriter"];
+WRITING_PARAM_SPECS["reasoning-writing-chunked"] = WRITING_PARAM_SPECS["writing-chunked"];
 
 export function hasWritingParams(optionId: string): boolean {
   return optionId in WRITING_PARAM_SPECS;

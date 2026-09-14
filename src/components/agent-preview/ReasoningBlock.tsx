@@ -9,16 +9,20 @@ import type { UiCopy } from "../../i18n/uiCopy";
 import type { AgentFrontendProject } from "../../schema/agentuxConfig";
 import { AgentActivitySpinner } from "../activity/AgentActivitySpinner";
 import { ShimmerText } from "../ShimmerText";
+import { WritingText } from "./WritingText";
 import { deriveDisclosureOpen } from "./disclosureState";
 
 export function ReasoningBlock({
   project,
   reasoning,
   showDebugBadges = false,
+  writingReplayKey = 0,
 }: {
   project: AgentFrontendProject;
   reasoning: AgentUXReasoningTimelineItem;
   showDebugBadges?: boolean;
+  /** Bumped when a writing option is picked, so the same text plays again. */
+  writingReplayKey?: number;
 }) {
   const copy = useCopy();
   const running = reasoning.status !== "done";
@@ -158,7 +162,17 @@ export function ReasoningBlock({
             initial={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.16 }}
           >
-            <p>{reasoning.summary}</p>
+            {/* The real reveal, not a CSS stand-in: the same component that
+                writes the answer out, at the rhythm 文字加载方式 picked. A
+                `max-height` animation wiped the block in one go and could not
+                follow wrapped lines, which is exactly what this was built to
+                avoid. */}
+            <WritingText
+              project={project}
+              text={reasoning.summary ?? ""}
+              mode={project.reasoning.writing}
+              replayKey={writingReplayKey}
+            />
           </motion.div>
         ) : null}
       </AnimatePresence>
