@@ -82,6 +82,21 @@ describe("canvas module actions", () => {
     expect(appSource).toContain("const rightColumnDeleted =");
     expect(appSource).toContain('togglePresetOption(current, "output-visible")');
   });
+
+  it("keeps the product's breakpoints off the design canvas", () => {
+    // They belong to the running product: a narrow window hides the right
+    // panel. The canvas page is a fixed 4:3 of whatever the chrome leaves, so a
+    // smallish editor window put it under those breakpoints and a configured
+    // column vanished from the canvas *and* the region labels while the layer
+    // tree went on listing it — measured at an 845px window, which gives a
+    // 513px page against a 860px breakpoint.
+    expect(appSource).toContain(
+      'state.surfaceMode === "builder" ? { left: false, right: false } : state.autoHiddenRails',
+    );
+    // And nothing reads the raw value except that one line, or the canvas would
+    // disagree with itself again.
+    expect(appSource.match(/state\.autoHiddenRails/g)).toHaveLength(1);
+  });
 });
 
 describe("preview and export completeness", () => {

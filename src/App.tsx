@@ -309,10 +309,27 @@ export function App() {
   );
   const hasSidebar = configuredLayerIds.has("left");
   const hasRightPanel = configuredLayerIds.has("right");
+  /**
+   * The product's responsive breakpoints, applied only where they are real.
+   *
+   * They belong to the *running* product: a narrow window hides the right
+   * panel, a narrower one hides the sidebar. The builder canvas is a drawing of
+   * the product rather than a window onto it — and since the page is now a fixed
+   * 4:3 of whatever space the chrome leaves, a smallish editor window puts it
+   * under those breakpoints. A column the reader configured then vanished from
+   * the canvas *and* from the region labels while the layer tree went on listing
+   * it, with nothing on screen saying why. Measured: an 845px editor window
+   * gives a 513px page, and 513 < 860.
+   *
+   * So: the canvas shows what is configured, and the breakpoints keep working on
+   * the preview surface, which is where the product actually runs.
+   */
+  const autoHiddenRails =
+    state.surfaceMode === "builder" ? { left: false, right: false } : state.autoHiddenRails;
   const loaderCanvasPreviewActive = state.surfaceMode === "builder" && state.selectedGroup === "media-generation";
   // Mounted whenever the layout has one; `leftCollapsed` is a visual state the CSS drawer
   // owns, so gating the mount on it would remove the element the transition animates.
-  const leftSidebarMounted = hasSidebar && !state.autoHiddenRails.left;
+  const leftSidebarMounted = hasSidebar && !autoHiddenRails.left;
   const leftSidebarVisible = leftSidebarMounted && !state.leftCollapsed;
   /**
    * The panel *could* be shown — the slot exists, the window is wide enough, there is a
@@ -324,11 +341,10 @@ export function App() {
    * meant a collapsed panel sent every artifact to a modal.
    */
   // `!isWelcome` is gone: the right column is part of the structure, so it shows
-  // before the first turn too. Auto-hide (narrow window) and the loader canvas
-  // still take precedence — those are about whether it fits, not whether it is
-  // configured.
+  // before the first turn too. The loader canvas still takes precedence, and so
+  // does auto-hide — but only on the preview surface (see `autoHiddenRails`).
   const rightPanelAvailable =
-    hasRightPanel && !state.autoHiddenRails.right && !loaderCanvasPreviewActive;
+    hasRightPanel && !autoHiddenRails.right && !loaderCanvasPreviewActive;
   const rightPanelVisible = rightPanelAvailable && !state.rightCollapsed;
   /**
    * Whether to offer the right column back, and how.
@@ -346,7 +362,7 @@ export function App() {
   const rightColumnDeleted =
     state.surfaceMode === "builder" &&
     !hasRightPanel &&
-    !state.autoHiddenRails.right &&
+    !autoHiddenRails.right &&
     !loaderCanvasPreviewActive;
   const reopenRightColumn = () => {
     if (!hasRightPanel) {
@@ -1344,7 +1360,7 @@ export function App() {
                       {renderRegion("composer")}
                     </section>
                   )}
-                  {hasSidebar && state.leftCollapsed && !state.autoHiddenRails.left ? (
+                  {hasSidebar && state.leftCollapsed && !autoHiddenRails.left ? (
                     <button
                       type="button"
                       className="rail-icon-btn preview-rail-float"
