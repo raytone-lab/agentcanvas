@@ -79,7 +79,11 @@ const en = {
       },
       "ux-effects": {
         label: "Thinking",
-        description: "Reasoning motion and collapse behaviour.",
+        description: "The window while the span is open: what the wait looks like, and whether the reasoning streams or only reports a status.",
+      },
+      "thinking-done": {
+        label: "Thought process",
+        description: "The same block once the span has closed: whether it folds itself away, and how much of it the reader can still open.",
       },
       "tool-calls": {
         label: "Tool calls",
@@ -284,8 +288,12 @@ const zh: typeof en = {
         description: "左侧导航栏：显示与否、新建对话、搜索、按日期分组、版本号。",
       },
       "ux-effects": {
-        label: "思考",
-        description: "推理动效和折叠行为。",
+        label: "思考中",
+        description: "思维段开着的那段时间：这段等待长什么样，以及推理是流式吐字还是只报一个状态。",
+      },
+      "thinking-done": {
+        label: "思考完成",
+        description: "思维段关闭之后的同一块：它自己收不收起来，以及还留多少能让人点开看。",
       },
       "tool-calls": {
         label: "工具调用",
@@ -493,8 +501,12 @@ const ja: typeof en = {
         description: "左のナビゲーション：表示の有無、新規チャット、検索、日付でのグループ化、バージョン表記。",
       },
       "ux-effects": {
-        label: "思考",
-        description: "推論のモーションと折りたたみの挙動。",
+        label: "思考中",
+        description: "スパンが開いている間の見せ方：待ち時間の表現と、推論を流すのか状態だけ出すのか。",
+      },
+      "thinking-done": {
+        label: "思考完了",
+        description: "スパンが閉じたあとの同じブロック：自動でたたむか、どこまで開けるようにするか。",
       },
       "tool-calls": {
         label: "ツール呼出",

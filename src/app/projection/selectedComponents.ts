@@ -28,6 +28,7 @@ const selectedComponentGroupIds = new Set<PresetGroupId>([
   "conversation",
   "sidebar",
   "ux-effects",
+  "thinking-done",
   "approval",
   "tool-calls",
   "blocks",

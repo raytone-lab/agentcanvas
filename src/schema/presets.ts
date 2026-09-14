@@ -12,6 +12,7 @@ export type PresetGroupId =
   | "media-generation"
   | "sidebar"
   | "ux-effects"
+  | "thinking-done"
   | "approval"
   | "tool-calls"
   | "blocks"
@@ -163,13 +164,29 @@ export const presetGroups: PresetGroup[] = [
       { id: "thinking-orb-s1", label: "Lattice wave", description: "A 3 by 3 lattice that radiates from the center.", section: "Motion" },
       { id: "thinking-orb-b5", label: "Focus handoff", description: "Layered dots crossing the focal plane in a soft handoff.", section: "Motion" },
       { id: "thinking-orb-m2", label: "Expanding ring", description: "Eight dots expanding and collapsing through a rotating ring.", section: "Motion" },
-      { id: "summary-first", label: "Summary before details", description: "Show a safe public reasoning summary before tool and code details. This is not raw chain-of-thought.", section: "Disclosure" },
-      { id: "reasoning-auto-collapse", label: "Auto collapse", description: "Keep reasoning compact after the run while preserving expansion controls.", section: "Disclosure" },
-      { id: "reasoning-expanded", label: "Expanded by default", description: "Open the reasoning block when the workflow benefits from inspection.", section: "Disclosure" },
       { id: "reasoning-status-only", label: "Status only", description: "Show only the current reasoning state for the lowest-noise scaffold.", section: "Visibility" },
       { id: "reasoning-public-summary", label: "Public summary", description: "Show developer-safe summary text without exposing hidden reasoning.", section: "Visibility" },
       { id: "reasoning-model-thinking", label: "Model's own thinking", description: "Show the reasoning the model actually streamed, for providers that send it.", section: "Visibility" },
       { id: "plan-card", label: "Plan card", description: "In plan mode, list the steps for the reader to confirm or amend before the run starts.", section: "Plan mode", pending: true },
+    ],
+  },
+  {
+    /*
+     * The same block after the span has closed — a different thing to design.
+     *
+     * Split out of Thinking because the two states have nothing in common: one
+     * is a motion inside a window that is open (`REASONING_START` →
+     * `REASONING_END`), the other is a settled record of it — the reader stops
+     * asking whether it is working and starts asking what it did, and whether
+     * to read it. Keeping both under one group meant the motion cards and the
+     * fold cards sat side by side as if they were alternatives.
+     */
+    id: "thinking-done",
+    label: "Thought process",
+    options: [
+      { id: "reasoning-auto-collapse", label: "Auto collapse", description: "Keep reasoning compact after the run while preserving expansion controls.", section: "Disclosure" },
+      { id: "reasoning-expanded", label: "Expanded by default", description: "Open the reasoning block when the workflow benefits from inspection.", section: "Disclosure" },
+      { id: "summary-first", label: "Summary before details", description: "Show a safe public reasoning summary before tool and code details. This is not raw chain-of-thought.", section: "Disclosure" },
     ],
   },
   {

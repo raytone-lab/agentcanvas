@@ -182,6 +182,7 @@ export function previewAnchorForPresetGroup(groupId: PresetGroupId): PreviewAnch
     case "media-generation":
       return "chat";
     case "ux-effects":
+    case "thinking-done":
       return "reasoning";
     case "tool-calls":
       return "tool-call";

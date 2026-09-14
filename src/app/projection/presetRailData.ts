@@ -1,5 +1,6 @@
 import {
   Blocks,
+  CheckCheck,
   CircleAlert,
   CircleStop,
   Cpu,
@@ -319,6 +320,7 @@ export const PRESET_GROUP_REGIONS: Partial<Record<PresetGroupId, AgentCanvasRegi
   output: "right-panel",
   git: "right-panel",
   "ux-effects": "main",
+  "thinking-done": "main",
   approval: "main",
   "tool-calls": "main",
   blocks: "main",
@@ -472,6 +474,7 @@ export const PRESET_GROUP_COMPONENTS: Partial<Record<PresetGroupId, SlotConfig["
   sidebar: "SessionSidebar",
   conversation: "ChatFrame",
   "ux-effects": "ChatFrame",
+  "thinking-done": "ChatFrame",
   approval: "ChatFrame",
   "tool-calls": "ChatFrame",
   blocks: "ChatFrame",
@@ -788,6 +791,7 @@ export const presetGroupIcons: Record<PresetGroupId, LucideIcon> = {
   "media-generation": ImagePlay,
   sidebar: PanelLeft,
   "ux-effects": Sparkles,
+  "thinking-done": CheckCheck,
   approval: ShieldQuestionMark,
   "tool-calls": Wrench,
   blocks: CircleAlert,
@@ -853,6 +857,7 @@ export const presetRailSections: {
     groupIds: [
       "blocks",
       "ux-effects",
+      "thinking-done",
       "media-generation",
       "tool-calls",
       "approval",

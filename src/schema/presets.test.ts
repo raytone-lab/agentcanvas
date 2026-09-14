@@ -11,6 +11,7 @@ const RAIL_ORDER = [
   "composer",
   "output",
   "ux-effects",
+  "thinking-done",
   "approval",
   "tool-calls",
   "blocks",

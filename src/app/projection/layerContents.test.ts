@@ -305,14 +305,23 @@ describe("thinking group scope", () => {
       expect(isOptionShownInRail(option!), id).toBe(false);
     }
 
-    // What is left is the motion and how it collapses.
-    const shown = presetGroups
+    // 思考中 is left with the motion — what the wait looks like while the span
+    // is open.
+    const live = presetGroups
       .find((group) => group.id === "ux-effects")!
       .options.filter(isOptionShownInRail)
       .map((option) => option.id);
-    expect(shown).toContain("thinking-wave");
-    expect(shown).toContain("reasoning-auto-collapse");
-    expect(shown).toContain("reasoning-expanded");
-    expect(shown).not.toContain("summary-first");
+    expect(live).toContain("thinking-wave");
+    expect(live).not.toContain("reasoning-auto-collapse");
+
+    // 思考完成 is the same block after the span closes, which is a different
+    // thing to design: not a motion but a settled record, and the question is
+    // whether it folds itself away.
+    const settled = presetGroups
+      .find((group) => group.id === "thinking-done")!
+      .options.filter(isOptionShownInRail)
+      .map((option) => option.id);
+    expect(settled).toEqual(["reasoning-auto-collapse", "reasoning-expanded"]);
+    expect(settled).not.toContain("summary-first");
   });
 });

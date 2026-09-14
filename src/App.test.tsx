@@ -874,6 +874,7 @@ describe("event flow axis", () => {
     expect(flow).toEqual([
       "blocks",
       "ux-effects",
+      "thinking-done",
       "media-generation",
       "tool-calls",
       "approval",

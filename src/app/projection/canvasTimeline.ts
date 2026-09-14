@@ -73,6 +73,7 @@ const USER_SIDE_GROUPS = new Set<PresetGroupId>(["composer"]);
 /** Groups that only ever produce something on the agent's side. */
 const AGENT_SIDE_GROUPS = new Set<PresetGroupId>([
   "ux-effects",
+  "thinking-done",
   "tool-calls",
   "blocks",
   "approval",
@@ -202,7 +203,9 @@ export function canvasTimelineParts({
   return {
     userTurn: userTurn || plainExchange,
     agentTurn: agentTurn || plainExchange,
-    reasoning: clickedIn("ux-effects"),
+    // Either group puts the block on the canvas: 思考中 configures it while the
+    // span is open, 思考完成 configures the same block after it closes.
+    reasoning: clickedIn("ux-effects") || clickedIn("thinking-done"),
     tools: clickedIn("tool-calls"),
     artifact: clickedIn("delivery"),
     /**
