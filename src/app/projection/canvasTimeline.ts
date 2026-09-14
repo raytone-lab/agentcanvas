@@ -222,12 +222,47 @@ export function canvasTimelineParts({
     (slot) => slot.component === "ChatFrame" && slot.enabled,
   );
 
+  /**
+   * Nothing asked for but the wait itself.
+   *
+   * Then the canvas is one turn that has not finished: the question, and the
+   * agent thinking about it. Composed the general way it came out as a whole
+   * completed exchange above the thing being configured — a closed 思考过程
+   * block, the answer, and a follow-up question invented to carry the live turn
+   * — so picking a thinking animation showed three blocks nobody picked, and
+   * the animation last. An agent that is still thinking has not answered yet:
+   * that is the frame this pick is asking about.
+   *
+   * The plain exchange does not count against it. 对话区 has to be on for any
+   * of this to be visible, so counting it would mean the rule never applied.
+   * Anything that needs a turn that *ended* does count, and brings the finished
+   * turn back with it: a tool card, an artifact, an error, the agent's avatar —
+   * or a pick from the same group that describes the block after it closes.
+   */
+  const finishedTurnAsked =
+    project.conversation.agentAvatar ||
+    clickedIn("tool-calls") ||
+    clickedIn("delivery") ||
+    clickedIn("blocks") ||
+    clickedIn("approval") ||
+    clickedIn("thinking-done") ||
+    has((_groupId, id) => id === "state:author.agent" || id.startsWith("message-action:agent") || BOTH_SIDES_OPTION_IDS.has(id)) ||
+    // The moved 思考完成 cards: 自动折叠, 默认展开, 已思考（用时 xx 秒）, and the
+    // three 文字加载方式. They live in 思考中 now, so the group cannot tell them
+    // apart from the motions — the id prefix can.
+    has((_groupId, id) => id.startsWith("reasoning-") || id === "summary-first");
+  const onlyTheWaitAsked =
+    asked.some((item) => item.id.startsWith("thinking-")) && !finishedTurnAsked;
+
   return {
-    userTurn: userTurn || plainExchange,
-    agentTurn: agentTurn || plainExchange,
-    // Either group puts the block on the canvas: 思考中 configures it while the
-    // span is open, 思考完成 configures the same block after it closes.
-    reasoning: clickedIn("ux-effects") || clickedIn("thinking-done"),
+    // The wait keeps the question: something has to be being thought about,
+    // and dropping the answer must not leave the block floating on its own.
+    userTurn: userTurn || plainExchange || onlyTheWaitAsked,
+    agentTurn: (agentTurn || plainExchange) && !onlyTheWaitAsked,
+    // The picks that configure the block after its span closes — the fold, the
+    // title, the writing rhythm — put a finished one on the canvas. A motion
+    // alone does not: it is what the reader sees before there is one.
+    reasoning: (clickedIn("ux-effects") || clickedIn("thinking-done")) && !onlyTheWaitAsked,
     tools: clickedIn("tool-calls"),
     artifact: clickedIn("delivery"),
     /**
@@ -237,6 +272,8 @@ export function canvasTimelineParts({
      */
     liveTurn: asked.some((item) => isTransientOption(item.id)),
     liveReasoning: asked.some((item) => item.id.startsWith("thinking-")),
+    /** One running turn rather than a finished one plus a running one. */
+    singleRunningTurn: onlyTheWaitAsked,
     /** A failed turn, from 结果报错. Rendered by `run.error`. */
     error: clickedIn("blocks"),
     /**
@@ -355,15 +392,21 @@ export function canvasTimelineEvents({
   // A second turn, left running. The reader's follow-up, then whatever was
   // picked that only shows mid-turn — and no `run.finished`, because the point
   // is that this turn has not ended.
-  events.push(
-    event("text.started", { textId: "txt_user2", role: "user", format: "markdown" }, { messageId: "msg_user2" }),
-    event(
-      "text.delta",
-      { textId: "txt_user2", delta: SAMPLE.followUp[locale] },
-      { messageId: "msg_user2" },
-    ),
-    event("text.finished", { textId: "txt_user2" }, { messageId: "msg_user2" }),
-  );
+  //
+  // Skipped when the running turn is the only turn: there is nothing above it
+  // to follow up on, and a second question with no answer between them reads
+  // as a transcript with a hole in it.
+  if (!parts.singleRunningTurn) {
+    events.push(
+      event("text.started", { textId: "txt_user2", role: "user", format: "markdown" }, { messageId: "msg_user2" }),
+      event(
+        "text.delta",
+        { textId: "txt_user2", delta: SAMPLE.followUp[locale] },
+        { messageId: "msg_user2" },
+      ),
+      event("text.finished", { textId: "txt_user2" }, { messageId: "msg_user2" }),
+    );
+  }
   if (parts.liveReasoning) {
     events.push(
       event("reasoning.status", { reasoningId: "rsn_live", status: "thinking", label: "Thinking" }),

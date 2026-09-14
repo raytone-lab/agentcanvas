@@ -63,6 +63,8 @@ const en = {
     defaultSection: "Options",
     activeBadge: "active",
     pendingBadge: "pending",
+    /** Shown instead of the cards for a stage whose components are all still to come. */
+    emptyGroup: "Nothing to configure here yet — the components for this stage are still to come.",
     layers: { title: "Untitled", sectionTitle: "Layers" },
     groups: {
       conversation: {
@@ -273,6 +275,7 @@ const zh: typeof en = {
     defaultSection: "选项",
     activeBadge: "已启用",
     pendingBadge: "待建",
+    emptyGroup: "这一段还没有可配置的组件，先占个位。",
     layers: { title: "未命名", sectionTitle: "图层" },
     groups: {
       conversation: {
@@ -486,6 +489,7 @@ const ja: typeof en = {
     defaultSection: "オプション",
     activeBadge: "有効",
     pendingBadge: "未実装",
+    emptyGroup: "この段階に設定できるコンポーネントはまだありません（プレースホルダー）。",
     layers: { title: "無題", sectionTitle: "レイヤー" },
     groups: {
       conversation: {

@@ -305,23 +305,24 @@ describe("thinking group scope", () => {
       expect(isOptionShownInRail(option!), id).toBe(false);
     }
 
-    // 思考中 is left with the motion — what the wait looks like while the span
-    // is open.
+    // 思考中 configures the whole block: the wait, then how it folds, what the
+    // closed row is called, and how its text arrives. Those three used to be a
+    // group of their own, and splitting them meant configuring one component
+    // in two places — the reader picks a motion and immediately wants to know
+    // how the text comes in.
     const live = presetGroups
       .find((group) => group.id === "ux-effects")!
       .options.filter(isOptionShownInRail)
       .map((option) => option.id);
-    expect(live).toContain("thinking-wave");
-    expect(live).not.toContain("reasoning-auto-collapse");
-
-    // 思考完成 is the same block after the span closes, which is a different
-    // thing to design: not a motion but a settled record, and the question is
-    // whether it folds itself away.
-    const settled = presetGroups
-      .find((group) => group.id === "thinking-done")!
-      .options.filter(isOptionShownInRail)
-      .map((option) => option.id);
-    expect(settled).toEqual([
+    expect(live).toEqual([
+      "thinking-wave",
+      "thinking-pulse",
+      "thinking-shimmer",
+      "thinking-bars",
+      "thinking-orbit",
+      "thinking-orb-s1",
+      "thinking-orb-b5",
+      "thinking-orb-m2",
       "reasoning-auto-collapse",
       "reasoning-expanded",
       "reasoning-done-timed",
@@ -329,6 +330,29 @@ describe("thinking group scope", () => {
       "reasoning-writing-typewriter",
       "reasoning-writing-chunked",
     ]);
-    expect(settled).not.toContain("summary-first");
+    // Motion first and unlabelled, then the sections that need telling apart.
+    expect(
+      presetGroups
+        .find((group) => group.id === "ux-effects")!
+        .options.filter(isOptionShownInRail)
+        .map((option) => option.section),
+    ).toEqual([
+      ...Array(8).fill("Motion"),
+      "Disclosure",
+      "Disclosure",
+      "Done style",
+      "Text loading",
+      "Text loading",
+      "Text loading",
+    ]);
+
+    // 思考完成 keeps its place in the flow — `REASONING_END` is its own event —
+    // with nothing shown in it yet. What is specific to the settled block (the
+    // summary row, the kept history, the per-段 timing) is still to design, and
+    // the panel says so rather than opening blank.
+    const settled = presetGroups
+      .find((group) => group.id === "thinking-done")!
+      .options.filter(isOptionShownInRail);
+    expect(settled).toEqual([]);
   });
 });

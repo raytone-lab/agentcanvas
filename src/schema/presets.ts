@@ -167,26 +167,15 @@ export const presetGroups: PresetGroup[] = [
       { id: "thinking-orb-s1", label: "Lattice wave", description: "A 3 by 3 lattice that radiates from the center.", section: "Motion" },
       { id: "thinking-orb-b5", label: "Focus handoff", description: "Layered dots crossing the focal plane in a soft handoff.", section: "Motion" },
       { id: "thinking-orb-m2", label: "Expanding ring", description: "Eight dots expanding and collapsing through a rotating ring.", section: "Motion" },
-      { id: "reasoning-status-only", label: "Status only", description: "Show only the current reasoning state for the lowest-noise scaffold.", section: "Visibility" },
-      { id: "reasoning-public-summary", label: "Public summary", description: "Show developer-safe summary text without exposing hidden reasoning.", section: "Visibility" },
-      { id: "reasoning-model-thinking", label: "Model's own thinking", description: "Show the reasoning the model actually streamed, for providers that send it.", section: "Visibility" },
-      { id: "plan-card", label: "Plan card", description: "In plan mode, list the steps for the reader to confirm or amend before the run starts.", section: "Plan mode", pending: true },
-    ],
-  },
-  {
-    /*
-     * The same block after the span has closed — a different thing to design.
-     *
-     * Split out of Thinking because the two states have nothing in common: one
-     * is a motion inside a window that is open (`REASONING_START` →
-     * `REASONING_END`), the other is a settled record of it — the reader stops
-     * asking whether it is working and starts asking what it did, and whether
-     * to read it. Keeping both under one group meant the motion cards and the
-     * fold cards sat side by side as if they were alternatives.
-     */
-    id: "thinking-done",
-    label: "Thought process",
-    options: [
+      /*
+       * How the block behaves once the span closes, and how its text arrives.
+       *
+       * These configure the same component and the reader configures it once,
+       * so they sit with the motions rather than in a group of their own —
+       * 思考中 needs the fold, the title and the writing rhythm as much as the
+       * closed state does. 思考完成 keeps its place in the flow as a
+       * placeholder for what is specific to the settled block.
+       */
       { id: "reasoning-auto-collapse", label: "Auto collapse", description: "Keep reasoning compact after the run while preserving expansion controls.", section: "Disclosure" },
       { id: "reasoning-expanded", label: "Expanded by default", description: "Open the reasoning block when the workflow benefits from inspection.", section: "Disclosure" },
       { id: "summary-first", label: "Summary before details", description: "Show a safe public reasoning summary before tool and code details. This is not raw chain-of-thought.", section: "Disclosure" },
@@ -199,6 +188,28 @@ export const presetGroups: PresetGroup[] = [
       { id: "reasoning-writing-smooth", label: "Smooth stream", description: "Fade the reasoning in as one steady stream.", section: "Text loading" },
       { id: "reasoning-writing-typewriter", label: "Typewriter", description: "Write the reasoning out character by character.", section: "Text loading" },
       { id: "reasoning-writing-chunked", label: "Chunked", description: "Reveal the reasoning in readable phrase chunks.", section: "Text loading" },
+      { id: "reasoning-status-only", label: "Status only", description: "Show only the current reasoning state for the lowest-noise scaffold.", section: "Visibility" },
+      { id: "reasoning-public-summary", label: "Public summary", description: "Show developer-safe summary text without exposing hidden reasoning.", section: "Visibility" },
+      { id: "reasoning-model-thinking", label: "Model's own thinking", description: "Show the reasoning the model actually streamed, for providers that send it.", section: "Visibility" },
+      { id: "plan-card", label: "Plan card", description: "In plan mode, list the steps for the reader to confirm or amend before the run starts.", section: "Plan mode", pending: true },
+    ],
+  },
+  {
+    /*
+     * The same block after the span has closed, held open as a placeholder.
+     *
+     * Everything it used to carry — the fold, the title, the writing rhythm —
+     * turned out to belong to the component as a whole rather than to its
+     * settled state, so it all moved to 思考中 and the reader configures the
+     * block in one place. The stage keeps its place in the flow because the
+     * protocol has it (`REASONING_END` is its own event) and there is work
+     * specific to it still to design: the summary row, the kept history, the
+     * per-段 timing.
+     */
+    id: "thinking-done",
+    label: "Thought process",
+    options: [
+      { id: "reasoning-done-summary-row", label: "Summary row", description: "One line the reader can scan without opening the block: what the thinking concluded.", section: "Done style", pending: true },
     ],
   },
   {

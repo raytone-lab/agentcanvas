@@ -288,9 +288,18 @@ export function PresetRail({
             />
           ) : (
             <>
+            {renderedPresetSections.length === 0 ? (
+              // A stage that is in the flow but has nothing to configure yet.
+              // Silence here reads as a bug — the reader clicked a group and
+              // got a blank panel — so the group says so itself.
+              <p className="preset-panel-placeholder">{copy.shell.presetRail.emptyGroup}</p>
+            ) : null}
             {renderedPresetSections.map((section) => (
               <section className="preset-option-section" key={section.label}>
-                {showPresetSectionLabels && section.label !== "Scaffold theme" ? (
+                {/* 动效 over 思考中's eight motions repeats the group's own name;
+                    it stays unlabelled now that the group has other sections
+                    which do need telling apart. */}
+                {showPresetSectionLabels && section.label !== "Scaffold theme" && section.label !== "Motion" ? (
                   <h3>{translatePresetSection(section.label, locale)}</h3>
                 ) : null}
                 <div className="preset-option-list">

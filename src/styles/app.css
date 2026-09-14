@@ -1911,6 +1911,18 @@ textarea:focus-visible {
   text-transform: none;
 }
 
+/* What a stage with no components yet says for itself. Dashed, because the
+   space is reserved rather than empty. */
+.preset-panel-placeholder {
+  margin: 0;
+  border: 1px dashed #dfe3ec;
+  border-radius: var(--fn-r-lg);
+  padding: 14px 12px;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
 .preset-option-list {
   display: grid;
   gap: 14px;

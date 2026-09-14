@@ -48,16 +48,52 @@ describe("canvas timeline", () => {
     // "status" | "summary" | "thinking" with no off value, so one is always set
     // and the project cannot say whether a thinking block was asked for.
     const withThinking = togglePresetOption(emptyStructureProject, "thinking-wave");
+    // A motion on its own is the wait, so what it puts on the canvas is a turn
+    // that has not finished — not a closed block with an answer under it.
     expect(
       canvasTimelineParts({
         project: withThinking,
         items: items(["thinking-wave", "ux-effects"]),
         picked: ["thinking-wave"],
-      }).reasoning,
-    ).toBe(true);
+      }),
+    ).toMatchObject({ reasoning: false, liveReasoning: true, singleRunningTurn: true, agentTurn: false });
     expect(
-      canvasTimelineParts({ project: withThinking, items: items(["thinking-wave", "ux-effects"]) }).reasoning,
-    ).toBe(false);
+      canvasTimelineParts({ project: withThinking, items: items(["thinking-wave", "ux-effects"]) }),
+    ).toMatchObject({ reasoning: false, liveReasoning: false });
+  });
+
+  it("shows a finished block for the picks that configure one", () => {
+    // 自动折叠 / 已思考（用时 11 秒）/ 打字机 all describe the block once its span
+    // has closed, so they need a closed one on the canvas — and an answer under
+    // it, because the turn they describe is over. They moved into 思考中, so the
+    // group can no longer be what tells the two cases apart.
+    const project = togglePresetOption(emptyStructureProject, "reasoning-done-timed");
+    const parts = canvasTimelineParts({
+      project,
+      items: items(["reasoning-done-timed", "ux-effects"]),
+      picked: ["reasoning-done-timed"],
+    });
+    expect(parts).toMatchObject({ reasoning: true, agentTurn: true, singleRunningTurn: false });
+    // And a motion picked alongside one still gets its running turn.
+    const both = canvasTimelineParts({
+      project,
+      items: [],
+      picked: ["reasoning-done-timed", "thinking-wave"],
+    });
+    expect(both).toMatchObject({ reasoning: true, liveReasoning: true, singleRunningTurn: false });
+  });
+
+  it("leaves the running turn without a follow-up question of its own", () => {
+    // The follow-up exists to carry a live turn *after* a finished one. With
+    // nothing above it, it read as a transcript with a hole in it: two
+    // questions, one answer missing.
+    const project = togglePresetOption(emptyStructureProject, "thinking-wave");
+    const events = canvasTimelineEvents({ project, items: [], picked: ["thinking-wave"], locale: "zh" });
+    const deltas = events.filter((entry) => entry.type === "text.delta");
+    expect(deltas).toHaveLength(1);
+    expect(events.some((entry) => entry.type === "run.finished")).toBe(false);
+    expect(events.filter((entry) => entry.type === "reasoning.status")).toHaveLength(1);
+    expect(events.some((entry) => entry.type === "reasoning.finished")).toBe(false);
   });
 
   it("captions both speakers when name labels are on", () => {
