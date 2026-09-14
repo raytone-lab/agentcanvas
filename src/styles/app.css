@@ -3642,14 +3642,19 @@ textarea:focus-visible {
   gap: 2px;
 }
 
-/* Reopen affordance shown only while a rail is collapsed. */
+/* Brings a column back — shown while a rail is collapsed, and (on the right)
+   while the column has been deleted from the canvas.
+
+   16px, which is where the sidebar's own collapse control sits inside its
+   header: the two read as one line of controls across the top of the frame.
+   Measured — the sidebar's toggle lands 16px below the frame's top edge, and
+   this was 14px, so the pair sat 2px out of line. */
 .preview-rail-float {
   position: absolute;
-  top: 14px;
+  top: 16px;
   z-index: 6;
 }
 .preview-rail-float[data-side="left"] {
-  top: 16px;
   left: 12px;
 }
 .preview-rail-float[data-side="right"] {

@@ -330,6 +330,35 @@ export function App() {
   const rightPanelAvailable =
     hasRightPanel && !state.autoHiddenRails.right && !loaderCanvasPreviewActive;
   const rightPanelVisible = rightPanelAvailable && !state.rightCollapsed;
+  /**
+   * Whether to offer the right column back, and how.
+   *
+   * Two ways it can be absent — collapsed by its own control, or deleted from
+   * the canvas — and to the reader they look the same: the column is not there.
+   * So one affordance, at the centre column's top right (where the reader last
+   * saw the column's own edge), doing whichever is needed. Deleting it from the
+   * canvas used to leave no way back except the rail.
+   *
+   * Auto-hide is excluded on purpose: there the column is missing because it
+   * does not fit, and offering to bring it back would be a button that cannot
+   * keep its promise.
+   */
+  const rightColumnDeleted =
+    state.surfaceMode === "builder" &&
+    !hasRightPanel &&
+    !state.autoHiddenRails.right &&
+    !loaderCanvasPreviewActive;
+  const reopenRightColumn = () => {
+    if (!hasRightPanel) {
+      // Tick the option the canvas toolbar's delete unticked.
+      setProject((current) =>
+        isPresetOptionActive(current, "output-visible")
+          ? current
+          : togglePresetOption(current, "output-visible"),
+      );
+    }
+    dispatch({ type: "patch", patch: { rightCollapsed: false } });
+  };
   useEffect(() => {
     if (defaultOutputPanelItems.length === 0) {
       refs.outputPanelSignatureRef.current = "";
@@ -500,9 +529,11 @@ export function App() {
     if (!frame) return;
 
     const suppress = (event: Event) => {
-      // Column resizing stays live. It edits the layout, which is the kind of
-      // thing this surface is for, rather than driving the mock agent.
-      if (event.target instanceof Element && event.target.closest(".resize-handle")) return;
+      // Resizing a column and bringing one back stay live. They edit the
+      // *layout*, which is the kind of thing this surface is for; what the
+      // suppression is for is the product's own controls — a send button, a
+      // session row — which would otherwise drive the mock agent.
+      if (event.target instanceof Element && event.target.closest(LIVE_LAYOUT_CONTROLS)) return;
       event.stopPropagation();
       // Not on pointerdown: preventing its default would also cancel the
       // synthetic click, and the click is what carries the selection.
@@ -510,7 +541,7 @@ export function App() {
     };
 
     const select = (event: Event) => {
-      if (event.target instanceof Element && event.target.closest(".resize-handle")) return;
+      if (event.target instanceof Element && event.target.closest(LIVE_LAYOUT_CONTROLS)) return;
       const moduleId = moduleIdAtTarget(event.target);
       dispatch({
         type: "patch",
@@ -1325,13 +1356,13 @@ export function App() {
                       <span className="legacy-rail-icon"><PanelLeft size={15} /></span>
                     </button>
                   ) : null}
-                  {hasRightPanel && state.rightCollapsed && !state.autoHiddenRails.right && !isWelcome ? (
+                  {(rightPanelAvailable && state.rightCollapsed && !isWelcome) || rightColumnDeleted ? (
                     <button
                       type="button"
                       className="rail-icon-btn preview-rail-float"
                       data-side="right"
                       aria-label={copy.shell.editor.expandPanel}
-                      onClick={() => dispatch({ type: "patch", patch: { rightCollapsed: false } })}
+                      onClick={reopenRightColumn}
                     >
                       <span className="native-rail-icon"><RightSidebarRailIcon size={15} /></span>
                       <span className="legacy-rail-icon"><PanelRight size={15} /></span>
@@ -1456,6 +1487,15 @@ function moduleIdAtTarget(target: EventTarget | null): string | null {
   }
   return best?.id ?? null;
 }
+
+/**
+ * Controls inside the canvas that the click suppression lets through.
+ *
+ * Both edit the layout rather than the mock agent: the handle changes a column's
+ * width, the float brings a column back. Everything else in the frame is a
+ * drawing of the product and answers a click with the module toolbar instead.
+ */
+const LIVE_LAYOUT_CONTROLS = ".resize-handle, .preview-rail-float";
 
 /** The column under an element, as a layer id. */
 function layerIdAtTarget(target: EventTarget | null): string | null {

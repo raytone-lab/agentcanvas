@@ -70,8 +70,17 @@ describe("canvas module actions", () => {
     for (const type of ["pointerdown", "mousedown", "click", "keydown", "input"]) {
       expect(appSource).toContain(`"${type}"`);
     }
-    // Column resizing is a layout edit, not a component interaction.
-    expect(appSource).toContain('closest(".resize-handle")');
+    // Resizing a column and bringing one back are layout edits, not component
+    // interactions — they are what this surface is for, so they stay live while
+    // the product's own controls are suppressed.
+    expect(appSource).toContain('closest(LIVE_LAYOUT_CONTROLS)');
+    expect(appSource).toContain('const LIVE_LAYOUT_CONTROLS = ".resize-handle, .preview-rail-float";');
+
+    // And the right column can be brought back after it has been deleted, not
+    // only after it has been collapsed: from the reader's side those look the
+    // same, and deleting it used to leave no way back except the rail.
+    expect(appSource).toContain("const rightColumnDeleted =");
+    expect(appSource).toContain('togglePresetOption(current, "output-visible")');
   });
 });
 
