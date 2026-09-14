@@ -186,6 +186,25 @@ const presetPatches: Record<string, PresetPatch> = {
   "sidebar-visible": (project) => toggleSlotEnabled(project, "SessionSidebar"),
   "chat-visible": (project) => toggleSlotEnabled(project, "ChatFrame"),
   "composer-visible": (project) => toggleSlotEnabled(project, "ComposerFrame"),
+  "reasoning-done-timed": (project) => ({
+    ...project,
+    reasoning: {
+      ...project.reasoning,
+      doneStyle: project.reasoning.doneStyle === "timed" ? "label" : "timed",
+    },
+  }),
+  "reasoning-writing-smooth": (project) => ({
+    ...project,
+    reasoning: { ...project.reasoning, writing: "smooth-stream" },
+  }),
+  "reasoning-writing-typewriter": (project) => ({
+    ...project,
+    reasoning: { ...project.reasoning, writing: "typewriter" },
+  }),
+  "reasoning-writing-chunked": (project) => ({
+    ...project,
+    reasoning: { ...project.reasoning, writing: "chunked" },
+  }),
   "sidebar-title": (project) => ({
     ...project,
     sidebar: { ...project.sidebar, title: !project.sidebar.title },
@@ -496,7 +515,7 @@ export function hasPresetAction(optionId: string): boolean {
 const base = defaultCodingAgentProject;
 const revertMotion = (key: "writing" | "reasoning" | "toolCall"): PresetPatch =>
   (project) => ({ ...project, theme: { ...project.theme, motion: { ...project.theme.motion, [key]: base.theme.motion[key] } } });
-const revertReasoning = (key: "show" | "collapse"): PresetPatch =>
+const revertReasoning = (key: "show" | "collapse" | "writing" | "doneStyle"): PresetPatch =>
   (project) => ({ ...project, reasoning: { ...project.reasoning, [key]: base.reasoning[key] } });
 const revertToolCalls = (key: "detail" | "progress" | "approval" | "timelineRail"): PresetPatch =>
   (project) => ({ ...project, toolCalls: { ...project.toolCalls, [key]: base.toolCalls[key] } });
@@ -525,6 +544,9 @@ const presetDeactivators: Record<string, PresetPatch> = {
   "thinking-orb-s1": revertMotion("reasoning"),
   "thinking-orb-b5": revertMotion("reasoning"),
   "thinking-orb-m2": revertMotion("reasoning"),
+  "reasoning-writing-smooth": revertReasoning("writing"),
+  "reasoning-writing-typewriter": revertReasoning("writing"),
+  "reasoning-writing-chunked": revertReasoning("writing"),
   "summary-first": revertReasoning("collapse"),
   "reasoning-auto-collapse": revertReasoning("collapse"),
   "reasoning-expanded": revertReasoning("collapse"),
@@ -606,6 +628,14 @@ export function isPresetOptionActive(project: AgentFrontendProject, optionId: st
       return slotEnabled(project, "OutputFrame");
     case "git-visible":
       return slotEnabled(project, "GitFrame");
+    case "reasoning-done-timed":
+      return project.reasoning.doneStyle === "timed";
+    case "reasoning-writing-smooth":
+      return project.reasoning.writing === "smooth-stream";
+    case "reasoning-writing-typewriter":
+      return project.reasoning.writing === "typewriter";
+    case "reasoning-writing-chunked":
+      return project.reasoning.writing === "chunked";
     case "sidebar-title":
       return project.sidebar.title;
     case "sidebar-collapse":

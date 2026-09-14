@@ -371,6 +371,63 @@ export function PresetOptionPreview({
     );
   }
 
+  /*
+   * Thinking · the closed block's presentation.
+   *
+   * A full row, so the card spans both columns (see `[data-kind="reasoning-done"]`
+   * in app.css): 已思考（用时 11 秒） does not fit in half of a 236px panel, and
+   * a card that clipped the title would be showing something the canvas never
+   * draws. The 11 is a sample, the way the session rows and v0.1.0 are — the
+   * canvas shows the wait it actually measured.
+   */
+  if (optionId === "reasoning-done-timed") {
+    return (
+      <Tile kind="reasoning-done">
+        <span className="pv-reasoning-done">
+          <ReasoningIndicator motion="orbit" />
+          <span className="pv-reasoning-done-title">
+            {copy.chat.reasoning.reasonedFor.replace("{seconds}", "11")}
+          </span>
+          <ChevronRight size={11} className="pv-reasoning-done-chevron" />
+        </span>
+      </Tile>
+    );
+  }
+  if (optionId === "reasoning-writing-smooth") {
+    return (
+      <Tile kind="lines">
+        <Line w="80%" />
+        <Line w="100%" />
+        <Line w="60%" />
+      </Tile>
+    );
+  }
+  if (optionId === "reasoning-writing-typewriter") {
+    return (
+      <Tile kind="lines">
+        <Line w="100%" />
+        <span className="pv-typing">
+          <Line w={26} />
+          <span className="pv-caret" />
+        </span>
+      </Tile>
+    );
+  }
+  if (optionId === "reasoning-writing-chunked") {
+    return (
+      <Tile kind="chunks">
+        <span className="pv-chunk">
+          <Line w={14} />
+          <Line w={20} />
+        </span>
+        <span className="pv-chunk">
+          <Line w={22} />
+          <Line w={12} />
+        </span>
+      </Tile>
+    );
+  }
+
   // ---- Thinking · disclosure -----------------------------------------------
   if (optionId === "summary-first" || optionId === "reasoning-public-summary" || optionId === "reasoning-model-thinking") {
     return (

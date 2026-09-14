@@ -42,6 +42,19 @@ const SAMPLE = {
     ja: "依頼内容を確認しています。",
   },
   /**
+   * What the closed block is called, for the presentations that name the wait.
+   *
+   * Sample data, like the prompts and the session rows: the canvas never ran
+   * anything, so it has no duration to report. A producer's own `label` is what
+   * the protocol carries here, and the block prefers it over the wait it
+   * measured — so this is the honest way to draw a sample of it.
+   */
+  thinkingDone: {
+    en: "Thought for 11s",
+    zh: "已思考（用时 11 秒）",
+    ja: "11 秒 考えました",
+  },
+  /**
    * The conversation's title, which the chat header shows.
    *
    * Named for what was asked rather than for the product: the exchange opens
@@ -257,7 +270,11 @@ export function canvasTimelineEvents({
         delta: SAMPLE.thinking[locale],
         format: "markdown",
       }),
-      event("reasoning.finished", { reasoningId: "rsn_canvas", collapsedByDefault: true }),
+      event("reasoning.finished", {
+        reasoningId: "rsn_canvas",
+        collapsedByDefault: true,
+        label: SAMPLE.thinkingDone[locale],
+      }),
     );
   }
 

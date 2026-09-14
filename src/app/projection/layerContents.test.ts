@@ -321,7 +321,14 @@ describe("thinking group scope", () => {
       .find((group) => group.id === "thinking-done")!
       .options.filter(isOptionShownInRail)
       .map((option) => option.id);
-    expect(settled).toEqual(["reasoning-auto-collapse", "reasoning-expanded"]);
+    expect(settled).toEqual([
+      "reasoning-auto-collapse",
+      "reasoning-expanded",
+      "reasoning-done-timed",
+      "reasoning-writing-smooth",
+      "reasoning-writing-typewriter",
+      "reasoning-writing-chunked",
+    ]);
     expect(settled).not.toContain("summary-first");
   });
 });

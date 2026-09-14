@@ -397,6 +397,15 @@ export type AgentFrontendProject = {
     show: "status" | "summary" | "thinking";
     collapse: "auto" | "manual" | "summary-first" | "expanded";
     expandable: boolean;
+    /**
+     * How the block presents itself once the span has closed. `label` is the
+     * plain title; `timed` names the wait it replaced — 已思考（用时 11 秒）—
+     * and rules the body off down its left edge. More to come; this is the
+     * first of the set.
+     */
+    doneStyle: "label" | "timed";
+    /** How the reasoning text arrives, the way `theme.motion.writing` does for the answer. */
+    writing: "smooth-stream" | "typewriter" | "chunked";
   };
   blocks: {
     codeDiff: boolean;
@@ -548,6 +557,8 @@ export const defaultCodingAgentProject: AgentFrontendProject = {
     show: "summary",
     collapse: "summary-first",
     expandable: true,
+    doneStyle: "label",
+    writing: "smooth-stream",
   },
   blocks: {
     codeDiff: true,

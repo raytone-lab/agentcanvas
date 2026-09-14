@@ -187,6 +187,15 @@ export const presetGroups: PresetGroup[] = [
       { id: "reasoning-auto-collapse", label: "Auto collapse", description: "Keep reasoning compact after the run while preserving expansion controls.", section: "Disclosure" },
       { id: "reasoning-expanded", label: "Expanded by default", description: "Open the reasoning block when the workflow benefits from inspection.", section: "Disclosure" },
       { id: "summary-first", label: "Summary before details", description: "Show a safe public reasoning summary before tool and code details. This is not raw chain-of-thought.", section: "Disclosure" },
+      // The first of a set: one presentation for the closed block, with room
+      // for more. It names the wait it replaced rather than the activity that
+      // is over — 已思考（用时 11 秒）, not 思考中.
+      { id: "reasoning-done-timed", label: "Thought for N seconds", description: "Title the closed block with how long the thinking took, and rule the body off down its left edge.", section: "Done style" },
+      // How the reasoning text arrives. The answer's own rhythm is in Delivery;
+      // this is the same choice for the thinking, which had none.
+      { id: "reasoning-writing-smooth", label: "Smooth stream", description: "Fade the reasoning in as one steady stream.", section: "Text loading" },
+      { id: "reasoning-writing-typewriter", label: "Typewriter", description: "Write the reasoning out character by character.", section: "Text loading" },
+      { id: "reasoning-writing-chunked", label: "Chunked", description: "Reveal the reasoning in readable phrase chunks.", section: "Text loading" },
     ],
   },
   {

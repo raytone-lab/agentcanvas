@@ -2686,6 +2686,59 @@ textarea:focus-visible {
   color: var(--text-primary);
 }
 
+/* The closed reasoning block, as a row. Spans both columns because that is what
+   it is — a full-width row — and 已思考（用时 11 秒） has no half-panel to fit
+   in. Same `:has()` scoping as the control cards, so it follows the card. */
+.preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
+  .preset-option-cell:has(.pv[data-kind="reasoning-done"]) {
+  grid-column: 1 / -1;
+  padding: 8px;
+}
+
+.preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
+  .preset-option:has(.pv[data-kind="reasoning-done"]) {
+  aspect-ratio: auto;
+  height: auto;
+  min-height: 0;
+  padding: 6px;
+}
+
+.pv[data-kind="reasoning-done"] {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 4px 8px;
+}
+
+.pv-reasoning-done {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+}
+
+.pv-reasoning-done .reasoning-indicator-slot {
+  flex: none;
+  zoom: 0.6;
+}
+
+.pv-reasoning-done-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pv-reasoning-done-chevron {
+  flex: none;
+  color: var(--text-muted);
+}
+
 /* The date headings, stacked, which is what the grouping is. */
 .pv-eyebrow {
   color: var(--text-muted);
@@ -5652,6 +5705,48 @@ textarea:focus-visible {
 /* Per-character shimmer (Codex-style): each glyph carries the same diagonal
    light sweep, delayed by its index so a single soft highlight travels
    left→right across the word. No vertical float — the text must not bob. */
+/* The timed presentation rules the body off down its left edge — the title
+   names a wait that is over, and the rule is what marks the recount of it as
+   quoted rather than said. */
+.reasoning-block[data-done-style="timed"][data-status="done"] .reasoning-body {
+  border-left: 1.5px solid var(--border-subtle);
+  padding-left: 12px;
+}
+
+/* How the reasoning text arrives. Ported from the exported scaffold's
+   stylesheet, which had these three for the answer text and nothing for the
+   thinking — so the configurator's canvas showed no difference at all. */
+.reasoning-body[data-writing-motion="smooth-stream"] {
+  animation: reasoning-stream-fade 520ms var(--ease-out) both;
+}
+.reasoning-body[data-writing-motion="typewriter"] > p {
+  overflow: hidden;
+  white-space: pre-wrap;
+  animation: reasoning-stream-type 900ms steps(48, end) both;
+}
+.reasoning-body[data-writing-motion="chunked"] {
+  animation: reasoning-stream-chunk 680ms var(--ease-out) both;
+}
+@keyframes reasoning-stream-fade {
+  from { opacity: 0; transform: translateY(2px); }
+}
+@keyframes reasoning-stream-type {
+  from { max-height: 0; }
+  to { max-height: 40em; }
+}
+@keyframes reasoning-stream-chunk {
+  0%   { opacity: 0; }
+  40%  { opacity: 0.55; }
+  100% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reasoning-body[data-writing-motion],
+  .reasoning-body[data-writing-motion] > p {
+    animation: none;
+  }
+}
+
 .reasoning-block[data-motion="shimmer"] .reasoning-title {
   overflow: visible;
 }

@@ -36,6 +36,47 @@ export function ReasoningBlock({
   const visibilityLabel = reasoningVisibilityLabel(project.reasoning.show, copy);
   const disclosureLabel = reasoningDisclosureLabel(project.reasoning.collapse, copy);
   const showTextMotion = project.theme.motion.reasoning === "shimmer";
+  /*
+   * How long the thinking took, measured here rather than read off the item.
+   *
+   * The protocol carries no duration — the reasoning events only open, append
+   * and close — so the only honest source is the wait this component itself
+   * watched: the clock starts when the block first arrives running and stops
+   * when it turns done. A block that was never seen running (history restored
+   * from a snapshot, say) has no duration, and the title says 已思考 with no
+   * parenthetical rather than inventing one.
+   */
+  const startedAtRef = useRef<number | null>(null);
+  const [thinkingMs, setThinkingMs] = useState<number | null>(null);
+  useEffect(() => {
+    if (running) {
+      if (startedAtRef.current === null) startedAtRef.current = Date.now();
+      setThinkingMs(null);
+      return;
+    }
+    if (startedAtRef.current !== null) {
+      setThinkingMs(Date.now() - startedAtRef.current);
+      startedAtRef.current = null;
+    }
+  }, [running, reasoning.id]);
+  const timedStyle = project.reasoning.doneStyle === "timed";
+  /*
+   * The producer's own name for the block wins over the wait this component
+   * measured: `label` is what the protocol carries, and a producer that reports
+   * one knows more about the run than a clock started when the element mounted.
+   * Then the measurement, then 已思考 with no parenthetical — never a number
+   * nobody counted.
+   */
+  const doneTitle = !timedStyle
+    ? copy.chat.reasoning.reasoned
+    : typeof reasoning.label === "string" && reasoning.label.trim().length > 0
+      ? reasoning.label
+      : thinkingMs !== null
+        ? copy.chat.reasoning.reasonedFor.replace(
+            "{seconds}",
+            String(Math.max(1, Math.round(thinkingMs / 1000))),
+          )
+        : copy.chat.reasoning.reasonedPlain;
   const isSummaryFirst = project.reasoning.collapse === "summary-first";
   const canToggleSummary = project.reasoning.expandable && canShowSummary && !isSummaryFirst;
 
@@ -74,6 +115,7 @@ export function ReasoningBlock({
       data-motion={project.theme.motion.reasoning}
       data-open={open ? "true" : "false"}
       data-status={reasoning.status}
+      data-done-style={project.reasoning.doneStyle}
     >
       <button
         className="reasoning-header"
@@ -87,7 +129,7 @@ export function ReasoningBlock({
         {showTextMotion ? (
           <ShimmerText className="reasoning-title" text={copy.reasoning.thinking} />
         ) : (
-          <span className="reasoning-title">{running ? copy.chat.reasoning.thinking : copy.chat.reasoning.reasoned}</span>
+          <span className="reasoning-title">{running ? copy.chat.reasoning.thinking : doneTitle}</span>
         )}
         {showDebugBadges ? (
           <span className="reasoning-meta">
@@ -103,6 +145,9 @@ export function ReasoningBlock({
           <motion.div
             key="reasoning-body"
             className="reasoning-body"
+            // The same choice the answer text has in Delivery, for the thinking
+            // text, which had none.
+            data-writing-motion={project.reasoning.writing}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             initial={{ height: 0, opacity: 0 }}

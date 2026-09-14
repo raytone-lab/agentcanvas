@@ -8,6 +8,8 @@ const en = {
   reasoning: {
     thinking: "Thinking",
     reasoned: "Thinking",
+    reasonedPlain: "Thought",
+    reasonedFor: "Thought for {seconds}s",
     visibility: {
       statusOnly: "status only",
       thinkingSummary: "thinking summary",
@@ -142,6 +144,8 @@ const zh: typeof en = {
   reasoning: {
     thinking: "思考中",
     reasoned: "思考过程",
+    reasonedPlain: "已思考",
+    reasonedFor: "已思考（用时 {seconds} 秒）",
     visibility: {
       statusOnly: "仅状态",
       thinkingSummary: "思考摘要",
@@ -268,6 +272,8 @@ const ja: typeof en = {
   reasoning: {
     thinking: "思考中",
     reasoned: "思考プロセス",
+    reasonedPlain: "考えました",
+    reasonedFor: "{seconds} 秒 考えました",
     visibility: {
       statusOnly: "ステータスのみ",
       thinkingSummary: "思考の要約",

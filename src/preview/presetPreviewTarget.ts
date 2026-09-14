@@ -65,6 +65,10 @@ const reasoningOptions = new Set([
   "reasoning-status-only",
   "reasoning-public-summary",
   "reasoning-model-thinking",
+  "reasoning-done-timed",
+  "reasoning-writing-smooth",
+  "reasoning-writing-typewriter",
+  "reasoning-writing-chunked",
 ]);
 
 const toolCallOptions = new Set([

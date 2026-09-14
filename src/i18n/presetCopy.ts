@@ -73,6 +73,8 @@ const presetSectionZh: PresetTextTable = {
   Recovery: "消息操作",
   Motion: "动效",
   Disclosure: "展开方式",
+  "Done style": "展示样式",
+  "Text loading": "文字加载方式",
   Visibility: "可见性",
   Layout: "布局",
   "Tool display": "工具展示",
@@ -118,6 +120,8 @@ const presetSectionJa: PresetTextTable = {
   Recovery: "メッセージの操作",
   Motion: "モーション",
   Disclosure: "開き方",
+  "Done style": "完了時の見せ方",
+  "Text loading": "テキストの出し方",
   Visibility: "表示",
   Layout: "レイアウト",
   "Tool display": "ツールの表示",
@@ -191,6 +195,12 @@ const presetOptionZh: PresetOptionTable = {
     label: "消息操作",
     description: "在消息级别提供按角色区分的复制、重新生成和编辑重跑控件。",
   },
+
+  // Thinking · the closed block
+  "reasoning-done-timed": { label: "已思考（用时 11 秒）", description: "已完成的思考块用「已思考（用时 xx 秒）」做标题，正文左侧加一条竖线。" },
+  "reasoning-writing-smooth": { label: "平滑流式", description: "思考内容整段淡入，稳定成流。" },
+  "reasoning-writing-typewriter": { label: "打字机", description: "思考内容逐字写出来。" },
+  "reasoning-writing-chunked": { label: "分块", description: "思考内容按短语块逐步显示。" },
 
   // Media generation
   "media-image-grid": { label: "网格扫光", description: "稳定网格占位，配合扫光动效展示图片生成中。" },
