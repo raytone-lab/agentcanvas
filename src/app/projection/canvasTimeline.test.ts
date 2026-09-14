@@ -48,39 +48,65 @@ describe("canvas timeline", () => {
     // "status" | "summary" | "thinking" with no off value, so one is always set
     // and the project cannot say whether a thinking block was asked for.
     const withThinking = togglePresetOption(emptyStructureProject, "thinking-wave");
-    // A motion on its own is the wait, so what it puts on the canvas is a turn
-    // that has not finished — not a closed block with an answer under it.
+    // Any card in 思考中, on its own, makes the canvas one turn: the question
+    // and the block. Not a finished exchange with the picked thing under it.
     expect(
       canvasTimelineParts({
         project: withThinking,
         items: items(["thinking-wave", "ux-effects"]),
         picked: ["thinking-wave"],
       }),
-    ).toMatchObject({ reasoning: false, liveReasoning: true, singleRunningTurn: true, agentTurn: false });
+    ).toMatchObject({ reasoning: false, thinkingTurnOnly: true, reasoningDone: false, agentTurn: false });
     expect(
       canvasTimelineParts({ project: withThinking, items: items(["thinking-wave", "ux-effects"]) }),
-    ).toMatchObject({ reasoning: false, liveReasoning: false });
+    ).toMatchObject({ reasoning: false, thinkingTurnOnly: false, liveReasoning: false });
   });
 
-  it("shows a finished block for the picks that configure one", () => {
-    // 自动折叠 / 已思考（用时 11 秒）/ 打字机 all describe the block once its span
-    // has closed, so they need a closed one on the canvas — and an answer under
-    // it, because the turn they describe is over. They moved into 思考中, so the
-    // group can no longer be what tells the two cases apart.
+  it("closes that block for the cards that describe it closed", () => {
+    // 自动折叠 and 已思考（用时 11 秒）have nothing to show while the thinking is
+    // still going, so the one block on the canvas is a closed one. 文字加载方式
+    // is the other way round — text arrives while the agent thinks — so those
+    // cards leave it open.
     const project = togglePresetOption(emptyStructureProject, "reasoning-done-timed");
-    const parts = canvasTimelineParts({
-      project,
-      items: items(["reasoning-done-timed", "ux-effects"]),
-      picked: ["reasoning-done-timed"],
-    });
-    expect(parts).toMatchObject({ reasoning: true, agentTurn: true, singleRunningTurn: false });
-    // And a motion picked alongside one still gets its running turn.
-    const both = canvasTimelineParts({
-      project,
-      items: [],
-      picked: ["reasoning-done-timed", "thinking-wave"],
-    });
-    expect(both).toMatchObject({ reasoning: true, liveReasoning: true, singleRunningTurn: false });
+    expect(
+      canvasTimelineParts({ project, items: [], picked: ["reasoning-done-timed"] }),
+    ).toMatchObject({ thinkingTurnOnly: true, reasoningDone: true, agentTurn: false });
+    expect(
+      canvasTimelineParts({ project, items: [], picked: ["reasoning-writing-typewriter"] }),
+    ).toMatchObject({ thinkingTurnOnly: true, reasoningDone: false });
+
+    // The last card clicked is the moment shown: picking a fold and then a
+    // motion goes back to a block that is thinking. Latching on the first fold
+    // would mean never seeing a motion again.
+    expect(
+      canvasTimelineParts({ project, items: [], picked: ["reasoning-done-timed", "thinking-wave"] }).reasoningDone,
+    ).toBe(false);
+    expect(
+      canvasTimelineParts({ project, items: [], picked: ["thinking-wave", "reasoning-auto-collapse"] }).reasoningDone,
+    ).toBe(true);
+
+    // And the closed block is emitted as a real `reasoning.finished`, on the
+    // same turn as the question, with nothing after it.
+    const events = canvasTimelineEvents({ project, items: [], picked: ["reasoning-done-timed"], locale: "zh" });
+    expect(events.map((entry) => entry.type)).toEqual([
+      "run.started",
+      "text.started",
+      "text.delta",
+      "text.finished",
+      "reasoning.status",
+      "reasoning.delta",
+      "reasoning.finished",
+    ]);
+  });
+
+  it("brings the finished turn back as soon as something needs one", () => {
+    // A tool card, an artifact, an error or the agent's avatar only exist on a
+    // turn that ended, so the transcript goes back to two turns and the
+    // thinking keeps its own running one.
+    const project = togglePresetOption(emptyStructureProject, "thinking-wave");
+    expect(
+      canvasTimelineParts({ project, items: [], picked: ["thinking-wave", "renderer-markdown"] }),
+    ).toMatchObject({ thinkingTurnOnly: false, reasoning: true, liveReasoning: true, artifact: true });
   });
 
   it("leaves the running turn without a follow-up question of its own", () => {

@@ -131,6 +131,33 @@ function isTransientOption(optionId: string): boolean {
   return TRANSIENT_ID_PREFIXES.some((prefix) => optionId.startsWith(prefix));
 }
 
+/**
+ * Cards that describe the thinking block after its span has closed: 展开方式 and
+ * 展示样式. Picking one shows a closed block, because that is the moment they
+ * are about — a fold and a 已思考（用时 11 秒）title have nothing to show while
+ * the thinking is still going.
+ *
+ * 文字加载方式 is deliberately not here. Text arrives *while* the agent thinks,
+ * so those cards belong with the motions, on a block that is still open.
+ */
+function isSettledReasoningPick(optionId: string): boolean {
+  return (
+    optionId === "reasoning-auto-collapse" ||
+    optionId === "reasoning-expanded" ||
+    optionId === "summary-first" ||
+    optionId.startsWith("reasoning-done-")
+  );
+}
+
+/** Every card in 思考中, whichever moment of the block it describes. */
+function isReasoningPick(optionId: string): boolean {
+  return (
+    optionId.startsWith("thinking-") ||
+    optionId.startsWith("reasoning-") ||
+    optionId === "summary-first"
+  );
+}
+
 /** Option id to the group it belongs to, for reading clicks by group. */
 const optionGroupIds = new Map(
   presetGroups.flatMap((group) => group.options.map((option) => [option.id, group.id] as const)),
@@ -223,21 +250,18 @@ export function canvasTimelineParts({
   );
 
   /**
-   * Nothing asked for but the wait itself.
+   * Nothing asked for but the thinking.
    *
-   * Then the canvas is one turn that has not finished: the question, and the
-   * agent thinking about it. Composed the general way it came out as a whole
-   * completed exchange above the thing being configured — a closed 思考过程
-   * block, the answer, and a follow-up question invented to carry the live turn
-   * — so picking a thinking animation showed three blocks nobody picked, and
-   * the animation last. An agent that is still thinking has not answered yet:
-   * that is the frame this pick is asking about.
+   * Then the canvas is one turn: the question, and the block being configured.
+   * Composed the general way it came out as a whole completed exchange above
+   * the thing being configured — a closed 已思考 block, the answer, and a
+   * follow-up question invented to carry the live turn — so picking a card in
+   * 思考中 showed three blocks nobody picked, and the picked one last.
    *
    * The plain exchange does not count against it. 对话区 has to be on for any
    * of this to be visible, so counting it would mean the rule never applied.
    * Anything that needs a turn that *ended* does count, and brings the finished
-   * turn back with it: a tool card, an artifact, an error, the agent's avatar —
-   * or a pick from the same group that describes the block after it closes.
+   * turn back with it: a tool card, an artifact, an error, the agent's avatar.
    */
   const finishedTurnAsked =
     project.conversation.agentAvatar ||
@@ -246,23 +270,29 @@ export function canvasTimelineParts({
     clickedIn("blocks") ||
     clickedIn("approval") ||
     clickedIn("thinking-done") ||
-    has((_groupId, id) => id === "state:author.agent" || id.startsWith("message-action:agent") || BOTH_SIDES_OPTION_IDS.has(id)) ||
-    // The moved 思考完成 cards: 自动折叠, 默认展开, 已思考（用时 xx 秒）, and the
-    // three 文字加载方式. They live in 思考中 now, so the group cannot tell them
-    // apart from the motions — the id prefix can.
-    has((_groupId, id) => id.startsWith("reasoning-") || id === "summary-first");
-  const onlyTheWaitAsked =
-    asked.some((item) => item.id.startsWith("thinking-")) && !finishedTurnAsked;
+    has((_groupId, id) => id === "state:author.agent" || id.startsWith("message-action:agent") || BOTH_SIDES_OPTION_IDS.has(id));
+  const thinkingTurnOnly = asked.some((item) => isReasoningPick(item.id)) && !finishedTurnAsked;
+  /**
+   * Whether that single block is shown closed, decided by the *last* card
+   * clicked rather than by everything ever clicked.
+   *
+   * One turn can only be at one instant, and the group now spans both: a
+   * motion is the wait, 已思考（用时 11 秒）is what replaces it. Taking the most
+   * recent pick means the canvas stops where the reader's hand is — click a
+   * motion and the block is thinking, click 自动折叠 and it has folded — rather
+   * than latching into the closed state the first time a fold is picked and
+   * never showing a motion again.
+   */
+  const reasoningDone = picked.filter(isReasoningPick).slice(-1).some(isSettledReasoningPick);
 
   return {
-    // The wait keeps the question: something has to be being thought about,
-    // and dropping the answer must not leave the block floating on its own.
-    userTurn: userTurn || plainExchange || onlyTheWaitAsked,
-    agentTurn: (agentTurn || plainExchange) && !onlyTheWaitAsked,
-    // The picks that configure the block after its span closes — the fold, the
-    // title, the writing rhythm — put a finished one on the canvas. A motion
-    // alone does not: it is what the reader sees before there is one.
-    reasoning: (clickedIn("ux-effects") || clickedIn("thinking-done")) && !onlyTheWaitAsked,
+    // The thinking keeps the question: something has to be being thought
+    // about, and dropping the answer must not leave the block on its own.
+    userTurn: userTurn || plainExchange || thinkingTurnOnly,
+    agentTurn: (agentTurn || plainExchange) && !thinkingTurnOnly,
+    // The block that belongs to a finished turn, with the answer under it. The
+    // single-turn composition emits its own instead, running or closed.
+    reasoning: (clickedIn("ux-effects") || clickedIn("thinking-done")) && !thinkingTurnOnly,
     tools: clickedIn("tool-calls"),
     artifact: clickedIn("delivery"),
     /**
@@ -270,10 +300,12 @@ export function canvasTimelineParts({
      * turn runs. Without it, picking a thinking animation and then an artifact
      * renderer made the animation invisible — the turn was over.
      */
-    liveTurn: asked.some((item) => isTransientOption(item.id)),
-    liveReasoning: asked.some((item) => item.id.startsWith("thinking-")),
-    /** One running turn rather than a finished one plus a running one. */
-    singleRunningTurn: onlyTheWaitAsked,
+    liveTurn: !thinkingTurnOnly && asked.some((item) => isTransientOption(item.id)),
+    liveReasoning: !thinkingTurnOnly && asked.some((item) => item.id.startsWith("thinking-")),
+    /** One turn holding the question and the block, and nothing else. */
+    thinkingTurnOnly,
+    /** In that turn, whether the block has closed. */
+    reasoningDone,
     /** A failed turn, from 结果报错. Rendered by `run.error`. */
     error: clickedIn("blocks"),
     /**
@@ -305,6 +337,39 @@ export function canvasTimelineEvents({
       event("text.delta", { textId: "txt_user", delta: SAMPLE.question[locale] }, { messageId: "msg_user" }),
       event("text.finished", { textId: "txt_user" }, { messageId: "msg_user" }),
     );
+  }
+
+  /*
+   * The whole canvas is the question and one thinking block: nothing else was
+   * asked for. Closed or still open, decided by the card last clicked — and
+   * then it returns, so there is no answer, no follow-up question and no
+   * `run.finished`. The turn is genuinely mid-flight: the agent has thought,
+   * or is thinking, and has not spoken yet.
+   */
+  if (parts.thinkingTurnOnly) {
+    events.push(
+      event("reasoning.status", {
+        reasoningId: "rsn_only",
+        status: parts.reasoningDone ? "planning" : "thinking",
+        label: "Thinking",
+      }),
+      event("reasoning.delta", {
+        reasoningId: "rsn_only",
+        kind: "summary",
+        delta: SAMPLE.thinking[locale],
+        format: "markdown",
+      }),
+    );
+    if (parts.reasoningDone) {
+      events.push(
+        event("reasoning.finished", {
+          reasoningId: "rsn_only",
+          collapsedByDefault: true,
+          label: SAMPLE.thinkingDone[locale],
+        }),
+      );
+    }
+    return events;
   }
 
   if (parts.reasoning) {
@@ -391,22 +456,17 @@ export function canvasTimelineEvents({
 
   // A second turn, left running. The reader's follow-up, then whatever was
   // picked that only shows mid-turn — and no `run.finished`, because the point
-  // is that this turn has not ended.
-  //
-  // Skipped when the running turn is the only turn: there is nothing above it
-  // to follow up on, and a second question with no answer between them reads
-  // as a transcript with a hole in it.
-  if (!parts.singleRunningTurn) {
-    events.push(
-      event("text.started", { textId: "txt_user2", role: "user", format: "markdown" }, { messageId: "msg_user2" }),
-      event(
-        "text.delta",
-        { textId: "txt_user2", delta: SAMPLE.followUp[locale] },
-        { messageId: "msg_user2" },
-      ),
-      event("text.finished", { textId: "txt_user2" }, { messageId: "msg_user2" }),
-    );
-  }
+  // is that this turn has not ended. (The thinking-only canvas never reaches
+  // here; it is one turn and returns above.)
+  events.push(
+    event("text.started", { textId: "txt_user2", role: "user", format: "markdown" }, { messageId: "msg_user2" }),
+    event(
+      "text.delta",
+      { textId: "txt_user2", delta: SAMPLE.followUp[locale] },
+      { messageId: "msg_user2" },
+    ),
+    event("text.finished", { textId: "txt_user2" }, { messageId: "msg_user2" }),
+  );
   if (parts.liveReasoning) {
     events.push(
       event("reasoning.status", { reasoningId: "rsn_live", status: "thinking", label: "Thinking" }),
