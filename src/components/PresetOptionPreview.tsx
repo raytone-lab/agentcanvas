@@ -33,6 +33,7 @@ import {
 import { ReasoningIndicator } from "./agent-preview/ReasoningBlock";
 import { ShimmerText } from "./ShimmerText";
 import { themeTokens, type ThemePresetId } from "../theme/themeTokens";
+import type { AgentFrontendProject } from "../schema/agentuxConfig";
 
 /**
  * A small framed thumbnail that depicts what each preset option does.
@@ -40,6 +41,21 @@ import { themeTokens, type ThemePresetId } from "../theme/themeTokens";
  * mini UI swatches rather than stray marks. Motion variants animate to show
  * the actual effect; everything else is a literal mini mockup.
  */
+/**
+ * Option id → the motion it picks, so the eight cards are one branch rather
+ * than eight copies of it.
+ */
+const THINKING_MOTIONS: Record<string, AgentFrontendProject["theme"]["motion"]["reasoning"]> = {
+  "thinking-wave": "wave",
+  "thinking-pulse": "pulse",
+  "thinking-shimmer": "shimmer",
+  "thinking-bars": "bars",
+  "thinking-orbit": "orbit",
+  "thinking-orb-s1": "orb-s1",
+  "thinking-orb-b5": "orb-b5",
+  "thinking-orb-m2": "orb-m2",
+};
+
 function Tile({ kind, children }: { kind: string; children?: ReactNode }) {
   return (
     <span className="pv" data-kind={kind} aria-hidden="true">
@@ -325,35 +341,34 @@ export function PresetOptionPreview({
     );
   }
 
-  // ---- Thinking · motion demos — reuse the SAME indicator as the transcript
-  // so the sidebar thumbnail always matches the live reasoning animation. -----
-  if (optionId === "thinking-wave") {
-    return <Tile kind="motion"><ReasoningIndicator motion="wave" /></Tile>;
-  }
-  if (optionId === "thinking-pulse") {
-    return <Tile kind="motion"><ReasoningIndicator motion="pulse" /></Tile>;
-  }
-  if (optionId === "thinking-shimmer") {
+  /*
+   * Thinking · the motions.
+   *
+   * The whole row, not just the glyph: the transcript draws the indicator and
+   * the word 思考中 together, so a card showing the glyph alone was a picture of
+   * half the thing being picked. Same indicator component as the transcript, so
+   * the card cannot drift from the animation it is choosing.
+   *
+   * Shimmer is the one that carries no glyph — the canvas hides the indicator
+   * for it and sweeps the words instead (see `[data-motion="shimmer"]
+   * .reasoning-indicator-slot` in app.css), so the card is the words alone.
+   */
+  const thinkingMotion = THINKING_MOTIONS[optionId];
+  if (thinkingMotion) {
     return (
-      <Tile kind="shimmer">
-        <ShimmerText className="pv-shimmer-text" text={copy.chat.reasoning.thinking} />
+      <Tile kind="thinking">
+        <span className="pv-thinking">
+          {thinkingMotion === "shimmer" ? (
+            <ShimmerText className="pv-thinking-label" text={copy.chat.reasoning.thinking} />
+          ) : (
+            <>
+              <ReasoningIndicator motion={thinkingMotion} />
+              <span className="pv-thinking-label">{copy.chat.reasoning.thinking}</span>
+            </>
+          )}
+        </span>
       </Tile>
     );
-  }
-  if (optionId === "thinking-bars") {
-    return <Tile kind="motion"><ReasoningIndicator motion="bars" /></Tile>;
-  }
-  if (optionId === "thinking-orbit") {
-    return <Tile kind="motion"><ReasoningIndicator motion="orbit" /></Tile>;
-  }
-  if (optionId === "thinking-orb-s1") {
-    return <Tile kind="motion"><ReasoningIndicator motion="orb-s1" /></Tile>;
-  }
-  if (optionId === "thinking-orb-b5") {
-    return <Tile kind="motion"><ReasoningIndicator motion="orb-b5" /></Tile>;
-  }
-  if (optionId === "thinking-orb-m2") {
-    return <Tile kind="motion"><ReasoningIndicator motion="orb-m2" /></Tile>;
   }
 
   // ---- Thinking · disclosure -----------------------------------------------

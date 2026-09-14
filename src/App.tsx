@@ -478,7 +478,6 @@ export function App() {
       ),
     [selectedPresetGroup, copy.shell.presetRail.defaultSection],
   );
-  const showPresetSectionLabels = selectedPresetGroup.options.some((option) => option.section);
   // Output group: the sub-sections (data source, …) only make sense when the
   // output panel is on, so hide everything but the Layout toggle when it's off.
   /**
@@ -497,6 +496,16 @@ export function App() {
   const renderedPresetSections = selectedPresetSections
     .map((section) => ({ ...section, items: section.items.filter(isOptionShownInRail) }))
     .filter((section) => section.items.length > 0);
+  /**
+   * Section labels earn their place only when there is something to tell apart.
+   *
+   * One section is a heading over everything in the group, which says nothing
+   * the group's own name has not already said — "动效" over 思考中's eight
+   * motions, "内容" over 左栏's seven modules. Two or more and the labels are
+   * doing their job again.
+   */
+  const showPresetSectionLabels =
+    renderedPresetSections.length > 1 && selectedPresetGroup.options.some((option) => option.section);
   const showDebugViewToggle = import.meta.env.DEV && state.surfaceMode === "builder";
   const builderUI = {
     showDebugBadges: showDebugViewToggle && state.workspaceView === "debug",

@@ -22,7 +22,12 @@ describe("preset UI coverage", () => {
       !optionId.startsWith("media-video-") &&
       !sharedPreviewIds.has(optionId) &&
       !isThemePresetId(optionId) &&
-      !previewSource.includes(`optionId === "${optionId}"`)
+      // Named in the preview source at all, rather than specifically as an
+      // `optionId === "…"` branch: the eight thinking motions are a lookup
+      // table now (one branch instead of eight copies of it), and the ids are
+      // its keys. What this test is for is that no option falls through to the
+      // generic tile, and a mention is what rules that out.
+      !previewSource.includes(`"${optionId}"`)
     );
 
     expect(missing).toEqual([]);

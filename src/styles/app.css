@@ -2553,7 +2553,9 @@ textarea:focus-visible {
 
    Scoped with `:has()` rather than by group name, so it follows the cards. */
 .preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
-  .preset-option-cell:has(.pv[data-kind="control"]) {
+  .preset-option-cell:has(.pv[data-kind="control"]),
+.preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
+  .preset-option-cell:has(.pv[data-kind="thinking"]) {
   padding: 8px;
 }
 
@@ -2561,7 +2563,9 @@ textarea:focus-visible {
    carries the same three `:not([...])` clauses — a shorter selector lost
    silently and the cards stayed 165px tall for a 38px control. */
 .preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
-  .preset-option:has(.pv[data-kind="control"]) {
+  .preset-option:has(.pv[data-kind="control"]),
+.preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
+  .preset-option:has(.pv[data-kind="thinking"]) {
   aspect-ratio: auto;
   height: auto;
   min-height: 0;
@@ -2574,14 +2578,47 @@ textarea:focus-visible {
    them (two 14px date headings, the 4px gap, padding and border), so nothing is
    squeezed. */
 .preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
-  .preset-option:has(.pv[data-kind="control"]) .pv {
+  .preset-option:has(.pv[data-kind="control"]) .pv,
+.preset-panel:not([data-preset-group="conversation"]):not([data-preset-group="provider"]):not([data-preset-group="git"])
+  .preset-option:has(.pv[data-kind="thinking"]) .pv {
   min-height: 42px;
 }
 
-.pv[data-kind="control"] {
+.pv[data-kind="control"],
+.pv[data-kind="thinking"] {
   display: flex;
   align-items: center;
   padding: 4px;
+}
+
+/* The transcript's reasoning row, at card scale: the indicator and the word it
+   sits next to. The indicator is scaled rather than re-sized — it is the real
+   component, and its inner geometry (the lattice, the orbit) is built in px. */
+.pv-thinking {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* `zoom`, not `transform: scale` — the transform shrank the picture and left
+   the layout box its full size, so the widest indicator (波形条, 28px against
+   the others' 19px) pushed 思考中 out of a 54px card and the words were clipped
+   to 思考屮. Zoom scales the box too, which is the whole point here. */
+.pv-thinking .reasoning-indicator-slot {
+  flex: none;
+  zoom: 0.72;
+}
+
+.pv-thinking-label {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 13px;
+  white-space: nowrap;
 }
 
 .pv[data-kind="control"] .pv-control {
