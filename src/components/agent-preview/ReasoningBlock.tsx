@@ -36,6 +36,11 @@ export function ReasoningBlock({
   const visibilityLabel = reasoningVisibilityLabel(project.reasoning.show, copy);
   const disclosureLabel = reasoningDisclosureLabel(project.reasoning.collapse, copy);
   const showTextMotion = project.theme.motion.reasoning === "shimmer";
+  // The one motion whose whole indicator is the words. Its glyph is hidden in
+  // CSS next to shimmer's, and the label is a sequence rather than one status.
+  const cyclesStages = project.theme.motion.reasoning === "bars";
+  const stageLabel = useThinkingStage(running && cyclesStages);
+  const runningTitle = cyclesStages ? stageLabel : copy.chat.reasoning.thinking;
   /*
    * How long the thinking took, measured here rather than read off the item.
    *
@@ -129,7 +134,7 @@ export function ReasoningBlock({
         {showTextMotion ? (
           <ShimmerText className="reasoning-title" text={copy.reasoning.thinking} />
         ) : (
-          <span className="reasoning-title">{running ? copy.chat.reasoning.thinking : doneTitle}</span>
+          <span className="reasoning-title">{running ? runningTitle : doneTitle}</span>
         )}
         {showDebugBadges ? (
           <span className="reasoning-meta">
@@ -215,6 +220,42 @@ const ORB_STATE_FOR_MOTION: Record<string, OrbState> = {
   "orb-b5": "solving",
   "orb-m2": "shaping",
 };
+
+/**
+ * The words the indicator cycles through while the span is open.
+ *
+ * One shared source for the canvas and for the rail's card, so the card cannot
+ * show a sequence the canvas does not run. Sequence, not spinner: the point is
+ * to say what the wait is *for* — 思考中 → 推理需求 → 规划回复 — which a glyph
+ * cannot. Front-end only for now; the protocol carries no stage names (the
+ * reasoning events open, append and close, nothing else), so when a producer
+ * starts naming steps this becomes the fallback.
+ */
+const THINKING_STAGE_MS = 1800;
+
+export function useThinkingStage(active: boolean): string {
+  const copy = useCopy();
+  const stages = copy.chat.reasoning.thinkingStages;
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (!active) {
+      setIndex(0);
+      return;
+    }
+    // Reduced motion keeps the first word rather than swapping text on a timer,
+    // which is motion whether or not anything slides.
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setIndex((current) => (current + 1) % stages.length);
+    }, THINKING_STAGE_MS);
+    return () => window.clearInterval(timer);
+  }, [active, stages.length]);
+
+  return stages[Math.min(index, stages.length - 1)] ?? stages[0];
+}
 
 export function ReasoningIndicator({ motion, active = true }: { motion: AgentFrontendProject["theme"]["motion"]["reasoning"]; active?: boolean }) {
   // Both indicators are always rendered inside one grid slot; CSS shows exactly

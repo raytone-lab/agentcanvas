@@ -218,7 +218,7 @@ const presetOptionZh: PresetOptionTable = {
   "thinking-wave": { label: "圆点", description: "对话流中的动画思考圆点。" },
   "thinking-pulse": { label: "无限轨迹", description: "用于活跃推理的无限路径动效。" },
   "thinking-shimmer": { label: "微光文字", description: "在“思考中”文字上扫过一道柔光。" },
-  "thinking-bars": { label: "波形条", description: "用于活跃推理的小型均衡器条。" },
+  "thinking-bars": { label: "文字切换", description: "不要图标：状态文字自己在「思考中 → 推理需求 → 规划回复」之间切换。" },
   "thinking-orbit": { label: "环绕圆点", description: "受环形加载器启发的紧凑圆点轨道。" },
   "thinking-orb-s1": { label: "格点波", description: "3×3 格点从中心向外扩散的思考动效。" },
   "thinking-orb-b5": { label: "焦点传递", description: "多层圆点在焦平面间柔和交接。" },

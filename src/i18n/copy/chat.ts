@@ -10,6 +10,15 @@ const en = {
     reasoned: "Thinking",
     reasonedPlain: "Thought",
     reasonedFor: "Thought for {seconds}s",
+    /**
+     * What the indicator says while the span is open, in order.
+     *
+     * A front-end sequence for now: the protocol carries no stage names, and
+     * the reasoning events only open, append and close. When the producer
+     * starts sending steps (`STEP_STARTED`) these become the fallback for a
+     * run that names none.
+     */
+    thinkingStages: ["Thinking", "Reading the request", "Planning the reply"],
     visibility: {
       statusOnly: "status only",
       thinkingSummary: "thinking summary",
@@ -146,6 +155,7 @@ const zh: typeof en = {
     reasoned: "思考过程",
     reasonedPlain: "已思考",
     reasonedFor: "已思考（用时 {seconds} 秒）",
+    thinkingStages: ["思考中", "推理需求", "规划回复"],
     visibility: {
       statusOnly: "仅状态",
       thinkingSummary: "思考摘要",
@@ -274,6 +284,7 @@ const ja: typeof en = {
     reasoned: "思考プロセス",
     reasonedPlain: "考えました",
     reasonedFor: "{seconds} 秒 考えました",
+    thinkingStages: ["思考中", "要望を読み解く", "返答を組み立てる"],
     visibility: {
       statusOnly: "ステータスのみ",
       thinkingSummary: "思考の要約",

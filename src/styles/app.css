@@ -5716,6 +5716,13 @@ textarea:focus-visible {
 /* How the reasoning text arrives. Ported from the exported scaffold's
    stylesheet, which had these three for the answer text and nothing for the
    thinking — so the configurator's canvas showed no difference at all. */
+/* The summary arrives as a couple of lines of plain text, and the newlines are
+   the author's: one thought per line reads as reasoning, one long wrapped
+   paragraph reads as prose. */
+.reasoning-body p {
+  white-space: pre-line;
+}
+
 .reasoning-body[data-writing-motion="smooth-stream"] {
   animation: reasoning-stream-fade 520ms var(--ease-out) both;
 }
@@ -5771,13 +5778,29 @@ textarea:focus-visible {
 
 /* Shimmer thinking has no leading glyph (only the illustrated style swaps in an
    orb), so drop the empty indicator column and keep the chevron next to text. */
-.preview-frame:not([data-style-preset="illustrated"]) .reasoning-block[data-motion="shimmer"] .reasoning-header {
+/* Two motions whose whole indicator is the words: shimmer sweeps them, bars
+   cycles through the stages. Neither draws a glyph beside the text — a glyph
+   would be a second thing saying "working" next to the words already saying it. */
+.preview-frame:not([data-style-preset="illustrated"]) .reasoning-block[data-motion="shimmer"] .reasoning-header,
+.preview-frame:not([data-style-preset="illustrated"]) .reasoning-block[data-motion="bars"] .reasoning-header {
   grid-template-columns: auto auto;
   justify-content: start;
   padding-left: 2px;
 }
-.preview-frame:not([data-style-preset="illustrated"]) .reasoning-block[data-motion="shimmer"] .reasoning-indicator-slot {
+.preview-frame:not([data-style-preset="illustrated"]) .reasoning-block[data-motion="shimmer"] .reasoning-indicator-slot,
+.preview-frame:not([data-style-preset="illustrated"]) .reasoning-block[data-motion="bars"] .reasoning-indicator-slot {
   display: none;
+}
+
+/* The stage label fades as it swaps, so the words read as one line changing its
+   mind rather than three labels taking turns. Keyed on the text, so the
+   animation restarts on every change. */
+.reasoning-block[data-motion="bars"] .reasoning-title,
+.pv-thinking-label[data-cycling="true"] {
+  animation: thinking-stage-in var(--motion-base) var(--ease-out);
+}
+@keyframes thinking-stage-in {
+  from { opacity: 0; transform: translateY(2px); }
 }
 
 /* Reasoning finished ("已完成思考"): remove the leading indicator entirely and

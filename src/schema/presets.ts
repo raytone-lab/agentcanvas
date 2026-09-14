@@ -159,7 +159,10 @@ export const presetGroups: PresetGroup[] = [
       { id: "thinking-wave", label: "Dots", description: "Animated thinking dots in the chat flow.", section: "Motion" },
       { id: "thinking-pulse", label: "Infinity trail", description: "An infinity-path motion for active reasoning.", section: "Motion" },
       { id: "thinking-shimmer", label: "Shimmer text", description: "A light sweep across the Thinking text.", section: "Motion" },
-      { id: "thinking-bars", label: "Wave bars", description: "Small equalizer bars for active reasoning.", section: "Motion" },
+      // Renamed with its glyph: the indicator is the words now, cycling through
+      // the stages of the wait. The id stays — in this codebase ids are stable
+      // internal names and the reader sees `presetGroupNameZh`'s neighbours.
+      { id: "thinking-bars", label: "Text cycle", description: "No glyph: the status text itself cycles through the stages of the wait.", section: "Motion" },
       { id: "thinking-orbit", label: "Orbit dot", description: "A compact dot orbit inspired by ring loaders.", section: "Motion" },
       { id: "thinking-orb-s1", label: "Lattice wave", description: "A 3 by 3 lattice that radiates from the center.", section: "Motion" },
       { id: "thinking-orb-b5", label: "Focus handoff", description: "Layered dots crossing the focal plane in a soft handoff.", section: "Motion" },

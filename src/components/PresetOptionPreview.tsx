@@ -30,7 +30,7 @@ import {
   MediaLoadingVisual,
   mediaLoaderVisualStyle,
 } from "./agent-preview/ImageGeneration";
-import { ReasoningIndicator } from "./agent-preview/ReasoningBlock";
+import { ReasoningIndicator, useThinkingStage } from "./agent-preview/ReasoningBlock";
 import { ShimmerText } from "./ShimmerText";
 import { themeTokens, type ThemePresetId } from "../theme/themeTokens";
 import type { AgentFrontendProject } from "../schema/agentuxConfig";
@@ -55,6 +55,39 @@ const THINKING_MOTIONS: Record<string, AgentFrontendProject["theme"]["motion"]["
   "thinking-orb-b5": "orb-b5",
   "thinking-orb-m2": "orb-m2",
 };
+
+/**
+ * One motion's card: the transcript's reasoning row at card scale.
+ *
+ * A component rather than inline JSX because two of the three shapes need a
+ * hook — the cycling label — and `PresetOptionPreview` is one long branch that
+ * returns before reaching it.
+ *
+ * Three shapes, matching what the canvas draws for each:
+ *   shimmer — the words alone, sweeping (the canvas hides its glyph)
+ *   bars    — the words alone, cycling through the stages (same)
+ *   rest    — glyph then words
+ */
+function ThinkingMotionTile({ motion }: { motion: AgentFrontendProject["theme"]["motion"]["reasoning"] }) {
+  const copy = useCopy();
+  const stage = useThinkingStage(motion === "bars");
+  return (
+    <Tile kind="thinking">
+      <span className="pv-thinking">
+        {motion === "shimmer" ? (
+          <ShimmerText className="pv-thinking-label" text={copy.chat.reasoning.thinking} />
+        ) : motion === "bars" ? (
+          <span className="pv-thinking-label" data-cycling="true">{stage}</span>
+        ) : (
+          <>
+            <ReasoningIndicator motion={motion} />
+            <span className="pv-thinking-label">{copy.chat.reasoning.thinking}</span>
+          </>
+        )}
+      </span>
+    </Tile>
+  );
+}
 
 function Tile({ kind, children }: { kind: string; children?: ReactNode }) {
   return (
@@ -355,20 +388,7 @@ export function PresetOptionPreview({
    */
   const thinkingMotion = THINKING_MOTIONS[optionId];
   if (thinkingMotion) {
-    return (
-      <Tile kind="thinking">
-        <span className="pv-thinking">
-          {thinkingMotion === "shimmer" ? (
-            <ShimmerText className="pv-thinking-label" text={copy.chat.reasoning.thinking} />
-          ) : (
-            <>
-              <ReasoningIndicator motion={thinkingMotion} />
-              <span className="pv-thinking-label">{copy.chat.reasoning.thinking}</span>
-            </>
-          )}
-        </span>
-      </Tile>
-    );
+    return <ThinkingMotionTile motion={thinkingMotion} />;
   }
 
   /*

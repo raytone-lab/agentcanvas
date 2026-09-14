@@ -36,10 +36,19 @@ const SAMPLE = {
     zh: "我可以读你的项目、调用工具，并说明我改了什么。",
     ja: "プロジェクトを読み、ツールを実行し、変更点を説明できます。",
   },
+  /**
+   * Two or three lines, not one.
+   *
+   * A single line reads as a status ("正在理解你的需求") — the same thing the
+   * title already says. Reasoning is the reader's evidence that the agent
+   * thought, so the sample shows the shape of it: what was asked, what to leave
+   * out, what to answer with. The newlines are load-bearing (see
+   * `.reasoning-body p { white-space: pre-line }`).
+   */
   thinking: {
-    en: "Looking at what you asked for.",
-    zh: "正在理解你的需求。",
-    ja: "依頼内容を確認しています。",
+    en: "The question is what I can do, so the answer should name the range rather than list features.\nTwo things carry it: I can read the project, and I can call tools.\nKeep it to two sentences and offer to go deeper.",
+    zh: "用户问的是我能做什么，所以要先说清能力范围，别一上来就罗列功能。\n两件事最能说明问题：能读你的项目，能调用工具。\n控制在两句话，再问一句要不要往下展开。",
+    ja: "聞かれているのは「何ができるか」なので、機能の羅列ではなく範囲を示す。\n要点は二つ：プロジェクトを読める、ツールを呼べる。\n二文にまとめて、掘り下げるか尋ねる。",
   },
   /**
    * What the closed block is called, for the presentations that name the wait.
