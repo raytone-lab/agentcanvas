@@ -17,6 +17,7 @@ export type WorkspaceRefs = {
   pendingLiveEventsRef: { current: readonly AgentUXEvent[] | undefined };
   liveFlushHandleRef: { current: number | undefined };
   previewRefreshTimerRef: { current: number | undefined };
+  writingReplayTimerRef: { current: number | undefined };
   outputPanelSignatureRef: { current: string };
 };
 
@@ -36,6 +37,7 @@ export function useWorkspaceState(locale: AppLocale) {
   const pendingLiveEventsRef = useRef<readonly AgentUXEvent[] | undefined>(undefined);
   const liveFlushHandleRef = useRef<number | undefined>(undefined);
   const previewRefreshTimerRef = useRef<number | undefined>(undefined);
+  const writingReplayTimerRef = useRef<number | undefined>(undefined);
   const outputPanelSignatureRef = useRef("");
   const previousLocaleRef = useRef(locale);
 
@@ -51,6 +53,9 @@ export function useWorkspaceState(locale: AppLocale) {
     if (previewRefreshTimerRef.current) {
       window.clearTimeout(previewRefreshTimerRef.current);
     }
+    if (writingReplayTimerRef.current) {
+      window.clearTimeout(writingReplayTimerRef.current);
+    }
   }, []);
 
   const refs: WorkspaceRefs = {
@@ -60,6 +65,7 @@ export function useWorkspaceState(locale: AppLocale) {
     pendingLiveEventsRef,
     liveFlushHandleRef,
     previewRefreshTimerRef,
+    writingReplayTimerRef,
     outputPanelSignatureRef,
   };
 

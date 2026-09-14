@@ -35,7 +35,7 @@ import {
   scrollPreviewToToolActionAfterPreviewUpdate,
 } from "../projection/previewScroll";
 import type { ControllerContext } from "./controllerShared";
-import { bumpPreviewRefresh } from "./controllerShared";
+import { bumpPreviewRefresh, replayWritingSoon } from "./controllerShared";
 
 /**
  * Builder-side preview intents: preset selection, state cards, writing modes,
@@ -575,6 +575,7 @@ export function createPreviewActions(ctx: ControllerContext) {
         },
       },
     }));
+    replayWritingSoon(refs, dispatch);
   }
 
   function selectPresetGroup(groupId: PresetGroupId) {
