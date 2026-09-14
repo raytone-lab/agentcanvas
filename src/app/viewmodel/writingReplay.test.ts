@@ -56,6 +56,27 @@ describe("replayWritingSoon", () => {
     expect(refs.writingReplayTimerRef.current).toBeUndefined();
   });
 
+  it("replays the block for every card in 思考中, not just the motions", () => {
+    // The group configures something that happens over time, so a card that
+    // only changed a settled frame said nothing. One path for all of them —
+    // keyed on the group, so a card added later is covered without being
+    // named — and the block is re-mounted rather than re-rendered, or the
+    // stage text stays mid-cycle and a finished reveal stays finished.
+    const source = readFileSync(resolve(process.cwd(), "src/app/viewmodel/previewActions.ts"), "utf8");
+    expect(source).toContain('selectedPresetGroup.id === "ux-effects" || isThinkingPreviewPreset(optionId)');
+    const branch = source.slice(source.indexOf('selectedPresetGroup.id === "ux-effects"'));
+    const body = branch.slice(0, branch.indexOf("} else if"));
+    expect(body).toContain('dispatch({ type: "bump", key: "writingReplayKey" })');
+    expect(body).toContain("bumpPreviewRefresh(refs, dispatch)");
+    expect(body).toContain('scrollPreviewToAnchorAfterPreviewUpdate("reasoning")');
+
+    const chatFrame = readFileSync(
+      resolve(process.cwd(), "src/components/agent-preview/ChatFrame.tsx"),
+      "utf8",
+    );
+    expect(chatFrame).toContain("key={`reasoning:${item.id}:${writingReplayKey}`}");
+  });
+
   it("is what the speed sliders call", () => {
     // The wiring is the point: the control lives in the rail, the animation on
     // the canvas, and only this call connects them.

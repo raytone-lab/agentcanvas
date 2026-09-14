@@ -149,7 +149,11 @@ export function ReasoningBlock({
         ) : null}
         {canToggleSummary ? <ChevronDown size={14} className="chevron" data-open={open} /> : null}
       </button>
-      <AnimatePresence initial={false}>
+      {/* `initial` off for the first paint — a replayed transcript should not
+          unfold itself on arrival — and on for a replay, where the block is
+          re-mounted deliberately and the reader is being shown the interaction
+          rather than the end state. */}
+      <AnimatePresence initial={writingReplayKey > 0}>
         {open && canShowSummary ? (
           <motion.div
             key="reasoning-body"

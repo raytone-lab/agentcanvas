@@ -172,7 +172,6 @@ export type WorkspaceAction =
   | { type: "replayConversationFixture" }
   | { type: "replayStandardScenario"; scenarioId: ScenarioId; events: AgentUXEvent[] }
   | { type: "conversationWritingPreview"; events: AgentUXEvent[] }
-  | { type: "thinkingPreview"; events: AgentUXEvent[] }
   | { type: "mediaPreviewStarted"; events: AgentUXEvent[]; scenarioId: PreviewScenarioId; prompt: string }
   | { type: "replayCurrent"; fallback: AgentUXEvent[] }
   | { type: "presetGroupSelected"; groupId: PresetGroupId }
@@ -456,18 +455,6 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         gitPreviewStateOverride: undefined,
         forcePreviewToolsOpen: false,
         writingReplayKey: state.writingReplayKey + 1,
-      };
-    case "thinkingPreview":
-      return {
-        ...state,
-        showStandard: true,
-        runEventSource: "replay",
-        liveMessages: [],
-        externalApprovalOverlayActive: false,
-        dismissedApprovalId: null,
-        gitPreviewStateOverride: undefined,
-        forcePreviewToolsOpen: false,
-        runEvents: action.events,
       };
     case "mediaPreviewStarted":
       return {

@@ -320,6 +320,16 @@ function TimelineItem({
     case "reasoning":
       return (
         <ReasoningBlock
+          /*
+           * Keyed by the replay counter, so a replay re-mounts the block rather
+           * than re-rendering it. Configuring the thinking is configuring
+           * something that happens over time: the stage text cycles from 思考中,
+           * the indicator runs, the body writes itself out. Only a mount plays
+           * that from the start — a re-render leaves an animation mid-cycle and
+           * a finished reveal finished, which is what made picking a card in
+           * 思考中 look like it had changed nothing.
+           */
+          key={`reasoning:${item.id}:${writingReplayKey}`}
           project={project}
           reasoning={item}
           showDebugBadges={showDebugBadges}

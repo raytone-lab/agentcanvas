@@ -27,7 +27,7 @@ import {
   visibleStateCards,
 } from "../projection/presetRailData";
 import { defaultPreviewPromptForLocale, standardScenarioTitle } from "../projection/previewDefaults";
-import { toolActionsOverviewEvents, conversationWritingPreviewEvents, thinkingPreviewEvents } from "../projection/previewEventBuilders";
+import { toolActionsOverviewEvents, conversationWritingPreviewEvents } from "../projection/previewEventBuilders";
 import {
   scrollPreviewToAnchor,
   scrollPreviewToAnchorAfterPreviewUpdate,
@@ -543,10 +543,25 @@ export function createPreviewActions(ctx: ControllerContext) {
       if (forceOpenToolDetailPresetIds.has(optionId)) {
         scrollPreviewToToolActionAfterPreviewUpdate("validate");
       }
-    } else if (isThinkingPreviewPreset(optionId)) {
-      // Thinking motion: show only the reasoning preview, not the surrounding
-      // tool/message/artifact content from the coding fixture.
-      dispatch({ type: "thinkingPreview", events: thinkingPreviewEvents(locale) });
+    } else if (selectedPresetGroup.id === "ux-effects" || isThinkingPreviewPreset(optionId)) {
+      /*
+       * Every card in 思考中 plays its block again.
+       *
+       * What this group configures only exists while it runs — the stage text,
+       * the indicator, the way the text arrives — so a card that quietly
+       * changed a settled frame said nothing. One path for all of them: put the
+       * canvas back on the composed timeline, bump the replay counter (which
+       * re-mounts the block, see the `key` in ChatFrame), pulse the surface,
+       * and scroll to it.
+       *
+       * This replaces a scripted 普通回合 fixture that was dispatched here. The
+       * canvas composes its own conversation now, so those events were never
+       * rendered — all the dispatch still did was rename the conversation in
+       * the chat header to the fixture's title.
+       */
+      dispatch({ type: "patch", patch: { showStandard: false } });
+      resetRunState();
+      dispatch({ type: "bump", key: "writingReplayKey" });
       bumpPreviewRefresh(refs, dispatch);
       scrollPreviewToAnchorAfterPreviewUpdate("reasoning");
       return;
