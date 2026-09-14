@@ -142,6 +142,7 @@ const en = {
     underConstruction: "Under construction…",
     expandSidebar: "Expand sidebar",
     expandPanel: "Expand panel",
+    collapsePanel: "Collapse panel",
     // Dev-only event-stream picker in the exported shell.
     eventStreamLabel: "Event stream (dev)",
     eventStreamAria: "Select event stream",
@@ -344,6 +345,7 @@ const zh: typeof en = {
     underConstruction: "正在搭建中…",
     expandSidebar: "展开侧边栏",
     expandPanel: "展开右侧面板",
+    collapsePanel: "收起右侧面板",
     eventStreamLabel: "事件流(仅开发)",
     eventStreamAria: "选择事件流",
     eventStreamWelcome: "欢迎页(无事件)",
@@ -552,6 +554,7 @@ const ja: typeof en = {
     underConstruction: "準備中…",
     expandSidebar: "サイドバーを開く",
     expandPanel: "右パネルを開く",
+    collapsePanel: "右パネルを閉じる",
     eventStreamLabel: "イベントストリーム（開発用）",
     eventStreamAria: "イベントストリームを選択",
     eventStreamWelcome: "ウェルカム（イベントなし）",

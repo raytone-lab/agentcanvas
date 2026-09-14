@@ -246,16 +246,28 @@ describe("App shell controls", () => {
     expect(thumbRule).toContain("background: color-mix(in srgb, var(--text-muted) 34%, transparent);");
   });
 
-  it("opens on three columns, each present but with its contents unpicked", () => {
+  it("opens on two columns and a fold, with their contents unpicked", () => {
     const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
 
     expect(markup).toContain('class="builder-surface" data-output-zone="generated-scaffold"');
     // Every column's presence toggle is on, so all three are there to be
     // configured; what goes *in* them is the reader's to pick.
-    expect(markup.match(/class="region-label"/g)?.length).toBe(3);
-    for (const layer of ["左栏", "中栏", "右栏"]) {
+    //
+    // Two labels, not three: the right column opens folded. It is configured,
+    // and nothing has been put in it yet — an empty column taking a third of the
+    // page says less than a wider centre plus a control saying there is a column
+    // here. That control is the float below, at the centre column's top right.
+    expect(markup.match(/class="region-label"/g)?.length).toBe(2);
+    for (const layer of ["左栏", "中栏"]) {
       expect(markup).toContain(layer);
     }
+    expect(createInitialWorkspaceState("zh").rightCollapsed).toBe(true);
+    expect(markup).toContain('class="rail-icon-btn preview-rail-float" data-side="right"');
+    // Inside the centre column, not the frame: the frame's right edge is the
+    // *right* column's edge whenever that column is open.
+    expect(markup.indexOf('class="preview-stack')).toBeLessThan(
+      markup.indexOf('data-side="right"'),
+    );
     // The side columns' presence toggles, which create columns without
     // mounting anything, plus the composer — an agent frontend without a way to
     // type is not one, so it is there from the start in its plainest form.

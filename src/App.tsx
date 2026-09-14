@@ -364,17 +364,55 @@ export function App() {
     !hasRightPanel &&
     !autoHiddenRails.right &&
     !loaderCanvasPreviewActive;
-  const reopenRightColumn = () => {
+  /*
+   * One control for all three states the right column can be in — open, folded,
+   * deleted — because from the reader's side they are one question: is the right
+   * column showing? So it is always there while the canvas is being designed,
+   * and it does whichever of the three things is needed.
+   *
+   * The preview surface keeps the narrower rule it had: there the column is the
+   * product's, and a control that folds it belongs to the product, not to us.
+   */
+  const showRightColumnToggle =
+    state.surfaceMode === "builder"
+      ? !loaderCanvasPreviewActive
+      : rightPanelAvailable && state.rightCollapsed && !isWelcome;
+  const toggleRightColumn = () => {
     if (!hasRightPanel) {
-      // Tick the option the canvas toolbar's delete unticked.
+      // Deleted: tick back the option the canvas toolbar's delete unticked.
       setProject((current) =>
         isPresetOptionActive(current, "output-visible")
           ? current
           : togglePresetOption(current, "output-visible"),
       );
+      dispatch({ type: "patch", patch: { rightCollapsed: false } });
+      return;
     }
-    dispatch({ type: "patch", patch: { rightCollapsed: false } });
+    dispatch({ type: "patch", patch: { rightCollapsed: !state.rightCollapsed } });
   };
+  /*
+   * The control itself, built once and placed in the centre column in both of
+   * the layouts below — the split and the solo stack. Inside the stack rather
+   * than the frame on purpose: the frame's right edge is the *right* column's
+   * edge whenever that column is open, and this belongs at the centre's.
+   */
+  const rightColumnToggle = showRightColumnToggle ? (
+    <button
+      type="button"
+      className="rail-icon-btn preview-rail-float"
+      data-side="right"
+      aria-label={
+        hasRightPanel && !state.rightCollapsed
+          ? copy.shell.editor.collapsePanel
+          : copy.shell.editor.expandPanel
+      }
+      aria-expanded={hasRightPanel && !state.rightCollapsed}
+      onClick={toggleRightColumn}
+    >
+      <span className="native-rail-icon"><RightSidebarRailIcon size={15} /></span>
+      <span className="legacy-rail-icon"><PanelRight size={15} /></span>
+    </button>
+  ) : null;
   useEffect(() => {
     if (defaultOutputPanelItems.length === 0) {
       refs.outputPanelSignatureRef.current = "";
@@ -1261,6 +1299,9 @@ export function App() {
                   data-has-right-panel={rightPanelVisible}
                   data-left-collapsed={state.leftCollapsed}
                   data-right-collapsed={state.rightCollapsed}
+                  // The chat header gives up its right corner while the fold
+                  // control is sitting in it (see the padding rules in app.css).
+                  data-right-toggle={showRightColumnToggle ? "true" : undefined}
                   data-style-preset={selectedPresetStyle}
                   data-appearance={themeTokens[activeProject.theme.preset].appearance}
                   data-theme-preset={activeProject.theme.preset}
@@ -1335,6 +1376,7 @@ export function App() {
                     >
                       <Panel id="main" className="preview-panel" defaultSize={`${activeProject.layout.mainSize}%`} minSize="52%">
                         <section className="preview-stack" data-welcome={isWelcome ? "true" : undefined}>
+                          {rightColumnToggle}
                           {renderRegion("main")}
                           {/* Approvals before the composer: the question is answered above the field it
                               would otherwise cover, and every approval surface shares one placement. */}
@@ -1353,6 +1395,7 @@ export function App() {
                     </PanelGroup>
                   ) : (
                     <section className="preview-stack preview-stack-solo" data-welcome={isWelcome ? "true" : undefined}>
+                      {rightColumnToggle}
                       {renderRegion("main")}
                       {inlineRuntimeApprovalOverlay}
                       {externalApprovalOverlay}
@@ -1370,18 +1413,6 @@ export function App() {
                     >
                       <span className="native-rail-icon"><SidebarRailIcon size={15} /></span>
                       <span className="legacy-rail-icon"><PanelLeft size={15} /></span>
-                    </button>
-                  ) : null}
-                  {(rightPanelAvailable && state.rightCollapsed && !isWelcome) || rightColumnDeleted ? (
-                    <button
-                      type="button"
-                      className="rail-icon-btn preview-rail-float"
-                      data-side="right"
-                      aria-label={copy.shell.editor.expandPanel}
-                      onClick={reopenRightColumn}
-                    >
-                      <span className="native-rail-icon"><RightSidebarRailIcon size={15} /></span>
-                      <span className="legacy-rail-icon"><PanelRight size={15} /></span>
                     </button>
                   ) : null}
                   {state.outputModalOpen ? (

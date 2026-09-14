@@ -19,7 +19,7 @@ import {
 import type { PiRuntimeState } from "../../pi/piClient";
 import { DEFAULT_CANVAS_BACKGROUND, type CanvasBackgroundId } from "../view/canvasBackgrounds";
 import { defaultCodingAgentProject, type AgentFrontendProject } from "../../schema/agentuxConfig";
-import type { NavSectionId } from "../projection/presetRailData";
+import { OPTION_GROUP_IDS, PRESET_GROUP_REGIONS, type NavSectionId } from "../projection/presetRailData";
 import type { PresetGroupId } from "../../schema/presets";
 import { mergeOutputPanelItems } from "../projection/outputPanelProjection";
 import { defaultPreviewPromptForLocale } from "../projection/previewDefaults";
@@ -245,9 +245,16 @@ export function createInitialWorkspaceState(locale: AppLocale): WorkspaceState {
     selectedScenarioId: resolveDefaultPreviewScenario(defaultCodingAgentProject),
     sentPrompts: [],
     leftCollapsed: false,
-    // Open, not folded: the right column is part of the canvas structure now, so
-    // the editor should show all three on first paint rather than two.
-    rightCollapsed: false,
+    /*
+     * Folded on first entry. The right column is part of the structure — it is
+     * there to be configured — but nothing has been put in it yet, and an empty
+     * column taking a third of the page says less than a wider centre plus a
+     * control that says "there is a column here". That control sits at the
+     * centre column's top right, which is where the column's own edge is; it
+     * used to open unfolded, on the grounds that the editor should show all
+     * three on first paint.
+     */
+    rightCollapsed: true,
     autoHiddenRails: { left: false, right: false },
     piConversations: [initialConversation],
     activePiConversationId: initialConversation.id,
@@ -322,15 +329,24 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return state.pickedIconSlots.includes(action.slot)
         ? state
         : { ...state, pickedIconSlots: [...state.pickedIconSlots, action.slot] };
-    case "optionPicked":
+    case "optionPicked": {
+      const picking = !state.pickedOptionIds.includes(action.optionId);
+      const groupId = OPTION_GROUP_IDS.get(action.optionId);
+      const livesInRightColumn = groupId ? PRESET_GROUP_REGIONS[groupId] === "right-panel" : false;
       return {
         ...state,
         // Toggled, not appended: clicking the same option again un-picks it,
         // and the canvas has to follow that back down.
-        pickedOptionIds: state.pickedOptionIds.includes(action.optionId)
-          ? state.pickedOptionIds.filter((id) => id !== action.optionId)
-          : [...state.pickedOptionIds, action.optionId],
+        pickedOptionIds: picking
+          ? [...state.pickedOptionIds, action.optionId]
+          : state.pickedOptionIds.filter((id) => id !== action.optionId),
+        // Picking something that lives in the right column unfolds it. The
+        // column starts folded, so otherwise the pick would put the thing on a
+        // surface nobody can see — and a pick that changes nothing is the one
+        // thing this canvas must never do.
+        rightCollapsed: picking && livesInRightColumn ? false : state.rightCollapsed,
       };
+    }
     case "presetFixtureSelected":
       return {
         ...state,

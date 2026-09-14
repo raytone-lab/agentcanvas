@@ -22,15 +22,52 @@ function fakeEvent(id: string): AgentUXEvent {
   };
 }
 
+describe("picking an option that lives in the right column", () => {
+  it("unfolds the column, because the pick has to be visible", () => {
+    // The column opens folded, so a pick that renders into it would otherwise
+    // land on a surface nobody can see — a pick that changes nothing is the one
+    // thing this canvas must never do.
+    const start = createInitialWorkspaceState(locale);
+    expect(start.rightCollapsed).toBe(true);
+
+    // `renderer-code` belongs to 交付, which `PRESET_GROUP_REGIONS` puts in the
+    // right column.
+    const picked = workspaceReducer(start, { type: "optionPicked", optionId: "renderer-code" });
+    expect(picked.rightCollapsed).toBe(false);
+    expect(picked.pickedOptionIds).toContain("renderer-code");
+  });
+
+  it("leaves the fold alone for anything else", () => {
+    const start = createInitialWorkspaceState(locale);
+    const picked = workspaceReducer(start, { type: "optionPicked", optionId: "sidebar-search" });
+    expect(picked.rightCollapsed).toBe(true);
+  });
+
+  it("does not unfold on the un-pick", () => {
+    // Clicking the same card again takes the thing away; that is not a reason to
+    // open the column the reader had folded.
+    const start = createInitialWorkspaceState(locale);
+    const picked = workspaceReducer(start, { type: "optionPicked", optionId: "renderer-code" });
+    const folded = workspaceReducer({ ...picked, rightCollapsed: true }, {
+      type: "optionPicked",
+      optionId: "renderer-code",
+    });
+    expect(folded.pickedOptionIds).not.toContain("renderer-code");
+    expect(folded.rightCollapsed).toBe(true);
+  });
+});
+
 describe("workspaceReducer transitions", () => {
   it("starts in builder mode with the default fixture and an empty replay run", () => {
     const state = createInitialWorkspaceState(locale);
     expect(state.surfaceMode).toBe("builder");
     expect(state.runEvents).toEqual([]);
     expect(state.runMode).toBe("replay");
-    // Open: the right column is part of the canvas structure, so the editor
-    // opens showing all three columns rather than two.
-    expect(state.rightCollapsed).toBe(false);
+    // Folded: the right column is part of the structure and is there to be
+    // configured, but nothing has been put in it yet — an empty column taking a
+    // third of the page says less than a wider centre plus the fold control at
+    // its top right. It used to open unfolded.
+    expect(state.rightCollapsed).toBe(true);
     expect(state.piConversations).toHaveLength(1);
     expect(state.activePiConversationId).toBe(state.piConversations[0].id);
   });
