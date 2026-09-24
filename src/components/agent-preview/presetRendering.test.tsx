@@ -115,6 +115,11 @@ describe("preset-driven preview rendering", () => {
     expect(events.map((event) => event.type)).toContain("artifact.created");
     expect(markup).toContain(outputClass);
     expect(markup).toContain(artifactTitle);
+    if (presetId === "renderer-diff") {
+      expect(markup).toContain("+export const savedPreview");
+      expect(markup).toContain("diff-line-add");
+      expect(markup).not.toContain("previous implementation");
+    }
   });
 
   it.each([
@@ -379,6 +384,45 @@ describe("preset-driven preview rendering", () => {
     expect(markup).toContain("SearchInput.types.ts");
   });
 
+  it("renders a close control when a single output item is open", () => {
+    const markup = render(
+      <OutputFrame
+        project={defaultCodingAgentProject}
+        viewModel={viewModelWithTimeline([])}
+        openItems={[{ id: "file:SearchInput.tsx", kind: "file", title: "SearchInput.tsx", body: "const a = 1;" }]}
+        activeOpenItemId="file:SearchInput.tsx"
+        onCloseOpenItem={() => undefined}
+      />,
+    );
+
+    expect(markup).toContain("output-tab-close");
+    expect(markup).toContain("Close SearchInput.tsx");
+  });
+
+  it("renders an opened .diff panel item with add/delete coloring", () => {
+    const body = [
+      "--- a/src/App.tsx",
+      "+++ b/src/App.tsx",
+      "@@ -1,2 +1,2 @@",
+      "-const a = 1;",
+      "+const a = 2;",
+    ].join("\n");
+    const markup = render(
+      <OutputFrame
+        project={defaultCodingAgentProject}
+        viewModel={viewModelWithTimeline([])}
+        openItems={[{ id: "file:fix.patch", kind: "file", title: "fix.patch", language: "diff", body }]}
+        activeOpenItemId="file:fix.patch"
+      />,
+    );
+
+    expect(markup).toContain('data-render-kind="diff"');
+    expect(markup).toContain("diff-line-add");
+    expect(markup).toContain("diff-line-del");
+    expect(markup).toContain("+const a = 2;");
+    expect(markup).not.toContain("previous implementation");
+  });
+
   it("renders opened output by file type", () => {
     const imageMarkup = render(
       <OutputFrame
@@ -504,6 +548,63 @@ describe("preset-driven preview rendering", () => {
     // The file's own type, so the preview knows it can render it. Hardcoding "diff" for every
     // non-read both mislabelled a newly created file and hid that it was renderable.
     expect(item.language).toBe("html");
+  });
+
+  it("opens an edit_file tool as a unified diff, not an empty tab", () => {
+    const tool = {
+      kind: "tool",
+      id: "tool_edit_app",
+      name: "edit_file",
+      title: "Edit src/App.tsx",
+      status: "success",
+      args: { path: "src/App.tsx", old_string: "const a = 1;", new_string: "const a = 2;" },
+      open: true,
+    } as never;
+
+    const [item, ...rest] = outputPanelItemsFromTool(tool, "zh");
+
+    expect(rest).toHaveLength(0);
+    expect(item.title).toBe("App.tsx");
+    expect(item.language).toBe("diff");
+    expect(item.body).toContain("--- a/src/App.tsx");
+    expect(item.body).toContain("+++ b/src/App.tsx");
+    expect(item.body).toContain("-const a = 1;");
+    expect(item.body).toContain("+const a = 2;");
+  });
+
+  it("opens an apply_patch tool as a unified diff from old/new snippets", () => {
+    const tool = {
+      kind: "tool",
+      id: "tool_apply_patch",
+      name: "apply_patch",
+      title: "Patch src/App.tsx",
+      status: "success",
+      args: { path: "src/App.tsx", old_string: "const a = 1;", new_string: "const a = 2;" },
+      open: true,
+    } as never;
+
+    const [item] = outputPanelItemsFromTool(tool, "zh");
+
+    expect(item.language).toBe("diff");
+    expect(item.body).toContain("-const a = 1;");
+    expect(item.body).toContain("+const a = 2;");
+  });
+
+  it("does not label an empty edit_file as a diff", () => {
+    const tool = {
+      kind: "tool",
+      id: "tool_edit_empty",
+      name: "edit_file",
+      title: "Edit src/App.tsx",
+      status: "success",
+      args: { path: "src/App.tsx" },
+      open: true,
+    } as never;
+
+    const [item] = outputPanelItemsFromTool(tool, "zh");
+
+    expect(item.language).toBe("typescript");
+    expect(item.body).toBeUndefined();
   });
 
   it("renders file tool actions with clickable references in the expanded body", () => {

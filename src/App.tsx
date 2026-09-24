@@ -26,8 +26,7 @@ import {
   hasAdmissionFindings,
 } from "./runtime/admissionReport";
 import { renderSlots, slotsForTemplate, type SlotRenderContext } from "./slots/slotRegistry";
-import { applyTheme } from "./theme/applyTheme";
-import { themeTokens } from "./theme/themeTokens";
+import { applyWorkspaceSkins, resolveSkin } from "./theme/skinEngine";
 import {
   defaultCodingAgentProject,
   modelOptionsForProject,
@@ -51,7 +50,6 @@ import {
 import {
   NATIVE_HIDDEN_USER_AVATAR_IDS,
   PREVIEW_RESPONSIVE_WIDTHS,
-  STYLE_AVATAR_DEFAULTS,
   groupPresetOptions,
   rawStateCardToStateCard,
   visibleStateCards,
@@ -81,9 +79,8 @@ export function App() {
   const { iconSet, setSlot } = useIconSet();
   const [project, setProject] = useState<AgentFrontendProject>(defaultCodingAgentProject);
   const { state, dispatch, refs } = useWorkspaceState(locale);
-  // Single source of truth: the style preset lives on the project so it travels with
-  // the export (168 rules in app.css branch on `data-style-preset`). Derived rather
-  // than mirrored in local state so the two can never diverge.
+  // Single source of truth: `theme.skinId` is the canonical identity; stylePreset is
+  // derived so 168 `data-style-preset` rules in app.css stay in lockstep with export.
   const selectedPresetStyle = project.theme.stylePreset;
   const [commandOpen, setCommandOpen] = useState(false);
 
@@ -300,11 +297,11 @@ export function App() {
   useEffect(() => {
     // Configurator chrome (topbar/left rail/preset panel) uses a neutral scheme
     // so its icons/controls stay neutral — never tinted by a preview accent.
-    applyTheme(themeTokens["polar-mono"]);
-    if (builderSurfaceRef.current) {
-      applyTheme(themeTokens[activeProject.theme.preset], builderSurfaceRef.current);
-    }
-  }, [activeProject.theme.preset]);
+    applyWorkspaceSkins({
+      previewSkinId: activeProject.theme.skinId,
+      previewRoot: builderSurfaceRef.current,
+    });
+  }, [activeProject.theme.skinId]);
 
   useEffect(() => {
     if (!showDebugViewToggle && state.workspaceView === "debug") {
@@ -342,9 +339,9 @@ export function App() {
 
   useEffect(() => {
     if (selectedPresetStyle === "native" && NATIVE_HIDDEN_USER_AVATAR_IDS.has(iconSet["author.user"] ?? "")) {
-      setSlot("author.user", STYLE_AVATAR_DEFAULTS.native["author.user"]);
+      setSlot("author.user", resolveSkin(activeProject.theme.skinId).recipe.avatars["author.user"]);
     }
-  }, [iconSet, selectedPresetStyle, setSlot]);
+  }, [activeProject.theme.skinId, iconSet, selectedPresetStyle, setSlot]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -600,8 +597,9 @@ export function App() {
                   data-has-right-panel={rightPanelVisible}
                   data-left-collapsed={state.leftCollapsed}
                   data-right-collapsed={state.rightCollapsed}
+                  data-skin={activeProject.theme.skinId}
                   data-style-preset={selectedPresetStyle}
-                  data-appearance={themeTokens[activeProject.theme.preset].appearance}
+                  data-appearance={resolveSkin(activeProject.theme.skinId).tokens.appearance}
                   data-theme-preset={activeProject.theme.preset}
                   data-preview-refreshing={state.previewRefreshing}
                 >

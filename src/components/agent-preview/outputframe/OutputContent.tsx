@@ -5,6 +5,7 @@ import type { AgentFrontendProject, OutputSource } from "../../../schema/agentux
 import type { ConsoleLogEntry } from "../../../runtime/toolDisplaySpec";
 import type { ConcreteArtifactRenderer, OutputFrameCopy } from "./types";
 import type { OutputPanelItem } from "./panelItem";
+import { renderDiffPreview } from "./diffPreview";
 import { languageFromTitle, outputItemRenderKind } from "./renderKind";
 import { renderMarkdownPreview } from "./openedItemBody";
 import { renderOpenedOutputBody } from "./openedItemBody";
@@ -49,14 +50,12 @@ export function OutputContent({
     const active = openItems.find((item) => item.id === activeOpenItemId) ?? openItems[openItems.length - 1];
     return (
       <div className="artifact-content opened-output">
-        {openItems.length > 1 ? (
-          <OutputTabs
-            items={openItems}
-            activeId={active.id}
-            onSelectOpenItem={onSelectOpenItem}
-            onCloseOpenItem={onCloseOpenItem}
-          />
-        ) : null}
+        <OutputTabs
+          items={openItems}
+          activeId={active.id}
+          onSelectOpenItem={onSelectOpenItem}
+          onCloseOpenItem={onCloseOpenItem}
+        />
         <OpenedOutputItem item={active} copy={copy} />
       </div>
     );
@@ -139,6 +138,7 @@ export function OutputContent({
     );
   }
 
+  const diffPreview = artifactDiffPreview(artifact);
   return (
     <div className="artifact-content diff-output">
       <div className="artifact-title">
@@ -146,7 +146,7 @@ export function OutputContent({
         <span>{artifact.title ?? artifact.id}{copy.diffSuffix}</span>
         <code>{copy.rendererLabels.diff}</code>
       </div>
-      <pre>{artifactDiffPreview(artifact, copy)}</pre>
+      {diffPreview ? renderDiffPreview(diffPreview) : <div className="empty-state">{copy.noDiffPreviewContent}</div>}
     </div>
   );
 }

@@ -21,7 +21,7 @@ import type {
   ProviderConnection,
   ProviderConnectionId,
 } from "../../schema/agentuxConfig";
-import { themeTokens } from "../../theme/themeTokens";
+import { resolveSkin } from "../../theme/skinEngine";
 import type { MessageActionKey } from "../appTypes";
 import { presetGroupIcons, presetRailSections, presetStyleOptions, stateSectionTitle } from "../projection/presetRailData";
 
@@ -213,8 +213,9 @@ export function PresetRail({
       <aside
         className="preset-panel"
         data-preset-group={selectedPresetGroup.id}
+        data-skin={project.theme.skinId}
         data-style-preset={selectedPresetStyle}
-        data-appearance={themeTokens[project.theme.preset].appearance}
+        data-appearance={resolveSkin(project.theme.skinId).tokens.appearance}
         data-theme-preset={project.theme.preset}
         aria-label={translatePresetGroupName(selectedPresetGroup.id, copy.shell.presetRail.groups[selectedPresetGroup.id].label, locale)}
       >

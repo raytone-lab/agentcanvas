@@ -6662,6 +6662,29 @@ pre {
   border-radius: var(--radius-md);
 }
 
+.diff-preview .diff-line {
+  display: block;
+  white-space: pre-wrap;
+}
+
+.diff-preview .diff-line-add {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+
+.diff-preview .diff-line-del {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.diff-preview .diff-line-hunk {
+  color: var(--info);
+}
+
+.diff-preview .diff-line-meta {
+  color: var(--text-muted);
+}
+
 .markdown-preview {
   display: grid;
   gap: 6px;
