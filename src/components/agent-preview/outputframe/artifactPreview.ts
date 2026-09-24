@@ -1,5 +1,6 @@
 import type { AgentUXArtifactTimelineItem } from "@agent-ux/render-core";
 
+import { looksLikeUnifiedDiff } from "../../../runtime/unifiedDiff";
 import type { AgentFrontendProject, ArtifactRenderer } from "../../../schema/agentuxConfig";
 import type { ConcreteArtifactRenderer, OutputFrameCopy } from "./types";
 import { languageFromFileName } from "./panelItem";
@@ -56,8 +57,15 @@ export function artifactText(artifact: AgentUXArtifactTimelineItem, copy: Output
   return copy.artifactMetadataEmpty;
 }
 
-export function artifactDiffPreview(artifact: AgentUXArtifactTimelineItem, copy: OutputFrameCopy): string {
-  return `--- ${artifact.title ?? artifact.id}\n+++ ${artifact.title ?? artifact.id}\n+ ${artifact.content ?? "artifact content"}\n- ${copy.previousImplementation}`;
+export function artifactDiffPreview(artifact: AgentUXArtifactTimelineItem): string | undefined {
+  const content = artifact.content;
+  if (!content || content.trim() === "") {
+    return undefined;
+  }
+  // The content is the diff. Wrapping it in a synthetic ---/+++ pair and a fabricated
+  // "- previous implementation" line turned a real patch into a one-line addition
+  // plus a deletion that was never in the data.
+  return looksLikeUnifiedDiff(content) ? content : undefined;
 }
 
 export function artifactDataPreview(artifact: AgentUXArtifactTimelineItem): string {

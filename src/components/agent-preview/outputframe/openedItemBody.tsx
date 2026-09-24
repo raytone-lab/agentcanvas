@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { OutputFrameCopy } from "./types";
 import type { OutputPanelItem } from "./panelItem";
 import type { OpenedOutputRenderKind } from "./renderKind";
+import { renderDiffPreview } from "./diffPreview";
 import { AudioOutputPreview, ImageOutputPreview, VideoOutputPreview } from "./mediaPreviews";
 import { renderMarkdownPreview as renderMarkdown } from "./markdown/renderMarkdown";
 
@@ -11,13 +12,8 @@ import { renderMarkdownPreview as renderMarkdown } from "./markdown/renderMarkdo
 export { renderMarkdownPreview } from "./markdown/renderMarkdown";
 
 export function renderOpenedOutputBody(item: OutputPanelItem, kind: OpenedOutputRenderKind, language: string, copy: OutputFrameCopy): ReactNode {
-  // An artifact with nothing in it says so. Synthesizing a body here produced a page that
-  // looked like a real preview — a heading, a line of filler and a "Preview action" button —
-  // sitting next to the genuine article in a second tab.
-  if (item.body === undefined || item.body.trim() === "") {
-    return <div className="empty-state">{copy.emptyNoArtifact}</div>;
-  }
-  const body = item.body;
+  // Image / audio / video previews are driven by `imageSrc` or a demo asset, not by a text
+  // body. Guarding on an empty body first turned a png tab into "no preview content".
   if (kind === "image") {
     return <ImageOutputPreview item={item} />;
   }
@@ -27,6 +23,13 @@ export function renderOpenedOutputBody(item: OutputPanelItem, kind: OpenedOutput
   if (kind === "video") {
     return <VideoOutputPreview item={item} />;
   }
+  // An artifact with nothing in it says so. Synthesizing a body here produced a page that
+  // looked like a real preview — a heading, a line of filler and a "Preview action" button —
+  // sitting next to the genuine article in a second tab.
+  if (item.body === undefined || item.body.trim() === "") {
+    return <div className="empty-state">{copy.emptyNoArtifact}</div>;
+  }
+  const body = item.body;
   // The extension says "html"; the body decides whether there is a page to render. A `.html`
   // tab holding something else (a tool's JSON receipt, for instance) shows its source rather
   // than being dressed up as a page.
@@ -38,6 +41,9 @@ export function renderOpenedOutputBody(item: OutputPanelItem, kind: OpenedOutput
   }
   if (kind === "data") {
     return <pre data-language="json">{normalizeJsonPreview(body)}</pre>;
+  }
+  if (kind === "diff") {
+    return renderDiffPreview(body);
   }
   return <pre data-language={language}>{body}</pre>;
 }
