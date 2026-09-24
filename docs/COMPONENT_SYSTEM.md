@@ -11,7 +11,7 @@
 Layer 3  框架/区域组件   AppShell · Topbar · PresetRail · 区域容器 · StatusBar
 Layer 2  Agent 专属块    ChatFrame · ToolCallCard · PlanBlock · DiffBlock …
 Layer 1  基础组件        Button · Input · Dialog · Tabs · Badge …（src/components/ui/）
-Layer 0  设计令牌        颜色（themeTokens，按主题切换）+ 结构令牌（:root，主题无关）
+Layer 0  设计令牌        颜色（SkinModule tokens，经 SkinEngine 注入）+ 结构令牌（:root，主题无关）
 ```
 
 规则：
@@ -22,9 +22,11 @@ Layer 0  设计令牌        颜色（themeTokens，按主题切换）+ 结构�
 
 ## 2. 设计令牌（Layer 0）
 
-### 2.1 颜色令牌（已存在，本期不动）
+### 2.1 颜色令牌（SkinModule）
 
-`src/theme/themeTokens.ts` 的 6 套主题预设：surface / text / border / accent / status。
+`src/theme/themeTokens.ts` 提供 12 套 variant token（surface / text / border / accent / status）。
+`src/theme/skin.ts` + `skinRegistry.ts` 把它们封装成皮肤模块：`skinId = family/variant`。
+`src/theme/skinEngine.ts` 是唯一注入口（`applyTheme` 仍是写 CSS 变量的原语，不要在编辑器里再开第二条 apply 路径）。
 
 ### 2.2 结构令牌（本期新增，写入 `:root`，主题无关）
 

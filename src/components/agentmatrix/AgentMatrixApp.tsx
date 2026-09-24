@@ -18,7 +18,8 @@ import {
   type AgentMatrixClient,
   type ScenarioId,
 } from "../../agentmatrix";
-import { applyTheme } from "../../theme/applyTheme";
+import { familyForPreset, makeSkinId } from "../../theme/skin";
+import { applyWorkspaceSkins } from "../../theme/skinEngine";
 import { themeTokens, type ThemePresetId } from "../../theme/themeTokens";
 import { downloadProjectZip } from "../../agentmatrix/export/exportProject";
 import { AgentMatrixWorkspace, SessionHeader } from "./AgentMatrixWorkspace";
@@ -47,12 +48,13 @@ export function AgentMatrixApp() {
   );
 
   // Global page theme is the neutral console; the workspace surface is themed.
+  const previewSkinId = makeSkinId(familyForPreset(theme), theme);
   useEffect(() => {
-    applyTheme(themeTokens["polar-mono"]);
-  }, []);
-  useEffect(() => {
-    if (surfaceRef.current) applyTheme(themeTokens[theme], surfaceRef.current);
-  }, [theme]);
+    applyWorkspaceSkins({
+      previewSkinId,
+      previewRoot: surfaceRef.current,
+    });
+  }, [previewSkinId]);
 
   return (
     <IconSetProvider>
@@ -138,7 +140,7 @@ export function AgentMatrixApp() {
         </div>
 
         <div className="am-app-body">
-          <div className="am-surface" ref={surfaceRef} data-theme={theme}>
+          <div className="am-surface" ref={surfaceRef} data-theme={theme} data-skin={previewSkinId}>
             <ClientChrome client={client} />
             <AgentMatrixWorkspace client={client} sidePanel={sidePanel} />
           </div>
