@@ -8,6 +8,7 @@ import { useCopy, useLocale } from "../../i18n/LocaleContext";
 import { chatCopy } from "../../i18n/copy/chat";
 import { APP_LOCALES, type AppLocale } from "../../i18n/locales";
 import { buildToolDisplaySpec, type DisplayBlock } from "../../runtime/toolDisplaySpec";
+import { unifiedDiffText } from "../../runtime/unifiedDiff";
 import type { AgentFrontendProject } from "../../schema/agentuxConfig";
 import { deriveDisclosureOpen } from "./disclosureState";
 import type { OutputPanelItem, OutputPanelOpenRequest } from "./OutputFrame";
@@ -536,6 +537,13 @@ function buildToolFileReferences(
    * the raw result JSON, so the preview showed `{` and a placeholder card instead of the page.
    */
   const body = action === "read" ? resultBody ?? writtenBody : writtenBody ?? resultBody;
+  const diffBody = spec.outputBlock?.kind === "diff"
+    ? unifiedDiffText({
+        oldCode: spec.outputBlock.oldCode,
+        newCode: spec.outputBlock.newCode,
+        path: spec.outputBlock.path ?? titleParts.filePath ?? titleParts.fileName,
+      })
+    : undefined;
 
   // In progress vs finished, from the tool's own status — the same test the header uses. The
   // row label and the `active` flag must agree, or a completed read is captioned "reading".
@@ -545,13 +553,13 @@ function buildToolFileReferences(
   return [{
     fileName: titleParts.fileName,
     filePath: titleParts.filePath ?? titleParts.fileName,
-    // "diff" only when a diff is what we are actually showing. `edit_file` produces one; a
-    // `write_file` produces a whole file, and labelling that a diff mislabels the tab and
-    // discards the file's own type — which is what the preview needs to know it can render it.
-    language: spec.outputBlock?.kind === "diff" && body === resultBody
-      ? "diff"
-      : languageFromFileName(titleParts.fileName),
-    content: body,
+    // "diff" only when a diff is what we are actually showing. `edit_file` produces one from
+    // old/new; a `write_file` produces a whole file, and labelling that a diff mislabels the
+    // tab and discards the file's own type — which is what the preview needs to know it can
+    // render it. The previous `body === resultBody` test was true for `undefined === undefined`
+    // when the spec only had a diff block, so the tab was labelled "diff" with an empty body.
+    language: diffBody ? "diff" : languageFromFileName(titleParts.fileName),
+    content: diffBody ?? body,
     // `tool.preview` is the backend's own summary. No fallback: inventing a line count or a
     // diff stat is the same class of lie as inventing the file.
     meta: tool.preview,
@@ -664,10 +672,15 @@ function getString(obj: Record<string, unknown> | undefined, key: string): strin
 
 function DisplayBlockView({ title, block, tail = false }: { title: string; block: DisplayBlock; tail?: boolean }) {
   if (block.kind === "diff") {
+    const text = unifiedDiffText({
+      oldCode: block.oldCode,
+      newCode: block.newCode,
+      path: block.path,
+    });
     return (
       <div className="display-block">
         <span>{title}</span>
-        <pre>{`--- ${block.path ?? "before"}\n+++ ${block.path ?? "after"}\n${block.oldCode}\n---\n${block.newCode}`}</pre>
+        {text ? <pre data-language="diff">{text}</pre> : null}
       </div>
     );
   }

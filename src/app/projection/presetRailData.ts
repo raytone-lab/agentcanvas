@@ -314,20 +314,7 @@ export function rawStateCardToStateCard(card: RawStateCard, locale: AppLocale): 
   };
 }
 
-export const STYLE_AVATAR_DEFAULTS = {
-  native: {
-    "author.user": "blue-smile",
-    "author.agent": "orange-blob",
-  },
-  illustrated: {
-    "author.user": "user",
-    "author.agent": "orange-blob",
-  },
-  studio: {
-    "author.user": "user",
-    "author.agent": "bot",
-  },
-} as const satisfies Record<PresetStyleId, Record<"author.user" | "author.agent", string>>;
+export { SKIN_AVATAR_DEFAULTS as STYLE_AVATAR_DEFAULTS } from "../../theme/skinRegistry";
 
 export const NATIVE_HIDDEN_USER_AVATAR_IDS = new Set(["user", "assistant-second-avatar", "user-third-avatar", "green-calm"]);
 export const PREVIEW_RESPONSIVE_WIDTHS = {

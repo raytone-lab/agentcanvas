@@ -1,10 +1,10 @@
-import { Braces, FileAudio2, FileCode2, FileText, FileVideo2, ImageIcon, PanelsTopLeft } from "lucide-react";
+import { Braces, FileAudio2, FileCode2, FileDiff, FileText, FileVideo2, ImageIcon, PanelsTopLeft } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { ConcreteArtifactRenderer } from "./types";
 import type { OutputPanelItem } from "./panelItem";
 
-export type OpenedOutputRenderKind = "image" | "audio" | "video" | "html" | "markdown" | "data" | "code";
+export type OpenedOutputRenderKind = "image" | "audio" | "video" | "html" | "markdown" | "data" | "diff" | "code";
 
 export function languageFromTitle(title: string): string {
   const ext = title.split(".").pop()?.toLowerCase();
@@ -38,6 +38,9 @@ export function outputItemRenderKind(item: OutputPanelItem): OpenedOutputRenderK
   if (title.endsWith(".json") || language === "json" || language === "data") {
     return "data";
   }
+  if (title.endsWith(".diff") || title.endsWith(".patch") || language === "diff" || language === "patch") {
+    return "diff";
+  }
   return "code";
 }
 
@@ -61,6 +64,9 @@ export function outputItemIcon(item: OutputPanelItem, size = 13): ReactNode {
   if (kind === "data") {
     return <Braces size={size} />;
   }
+  if (kind === "diff") {
+    return <FileDiff size={size} />;
+  }
   return <FileCode2 size={size} />;
 }
 
@@ -71,6 +77,9 @@ export function outputItemModalRenderer(item: OutputPanelItem): ConcreteArtifact
   }
   if (kind === "data") {
     return "data";
+  }
+  if (kind === "diff") {
+    return "diff";
   }
   if (kind === "image" || kind === "audio" || kind === "video" || kind === "html") {
     return "preview";

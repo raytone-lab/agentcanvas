@@ -66,14 +66,12 @@ export function OutputPanelModal({
           </div>
         </header>
         <div className="artifact-content opened-output">
-          {items.length > 1 ? (
-            <OutputTabs
-              items={items}
-              activeId={activeItem.id}
-              onSelectOpenItem={onSelectItem}
-              onCloseOpenItem={onCloseItem}
-            />
-          ) : null}
+          <OutputTabs
+            items={items}
+            activeId={activeItem.id}
+            onSelectOpenItem={onSelectItem}
+            onCloseOpenItem={onCloseItem}
+          />
           <OpenedOutputItem item={activeItem} copy={c} />
         </div>
       </section>

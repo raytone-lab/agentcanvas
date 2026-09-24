@@ -16,7 +16,7 @@
 - 让"预览区"像**真实的 Agent 产品**（对话、工具调用、产物、Git 都要有产品级质感）；
 - 让"配置区"（预设轨、topbar）保持工具化的低调，不与预览争夺注意力。
 
-**参考坐标**：OpenAI Codex / ChatGPT 桌面端——纯白 + 冷中性灰的分层，**单一 OpenAI 蓝**作为唯一动作色（发送、开关、链接、焦点），选中态是中性浅灰药丸而非彩色底，阴影几乎不可见。默认主题 `console-light`（Codex Light）即由其派生。
+**参考坐标**：OpenAI Codex / ChatGPT 桌面端——纯白 + 冷中性灰的分层，**单一 OpenAI 蓝**作为唯一动作色（发送、开关、链接、焦点），选中态是中性浅灰药丸而非彩色底，阴影几乎不可见。默认皮肤 `native/soft-glass`（Soft Glass）即由其派生，variant 换成海军 accent 而非 OpenAI 蓝。
 
 **Don't**
 - ❌ 大圆角、强渐变、拟物投影、彩色霓虹
@@ -29,14 +29,14 @@
 
 ## 2. Color Palette
 
-颜色**随主题切换**：所有语义角色是 CSS 变量，具体 hex 由当前主题预设决定。下表记录**默认主题 `console-light`** 的精确值，作为设计参考基准。6 套预设见 §2.6。
+颜色**随皮肤切换**：所有语义角色是 CSS 变量，具体 hex 由当前 `skinId` 的 variant 决定。下表记录语义角色；取值以 `themeTokens` / 默认皮肤 `native/soft-glass` 为准。12 套皮肤见 §2.6。
 
 ### 2.1 Primary (Brand / Accent)
-| Token | Hex (console-light) | 用途 |
+| Token | Hex (`native/soft-glass`) | 用途 |
 |---|---|---|
-| `--accent` | `#0d6efd` | 主操作、发送、开关开启、焦点、链接（OpenAI 蓝） |
-| `--accent-hover` | `#0a58cc` | accent 悬停/按压加深 |
-| `--accent-soft` | `#e8f0fe` | accent 低饱和底（Agent 头像底、极轻蓝提示） |
+| `--accent` | `#111E36` | 开关、焦点环、链接（海军；主按钮仍走 `--text-primary`） |
+| `--accent-hover` | `color-mix(in srgb, #111E36 86%, #000)` | accent 悬停/按压加深 |
+| `--accent-soft` | `color-mix(in srgb, #111E36 10%, #FFFFFF)` | accent 低饱和底（Agent 头像底） |
 
 > 用户消息气泡**不用 accent 填充**（用中性 `--surface-inset` + `--text-primary`）。选中项优先用中性浅灰药丸（`--surface-hover`）而非蓝底。
 >
@@ -45,47 +45,64 @@
 ### 2.2 Surface（层级底色，由浅入深）
 | Token | Hex | 用途 |
 |---|---|---|
-| `--surface-canvas` | `#f5f5f7` | 应用最底层画布（冷中性浅灰） |
-| `--surface-panel` | `#ffffff` | 面板/卡片/气泡主体（纯白） |
-| `--surface-raised` | `#fbfbfc` | 抬升面（frame 容器） |
-| `--surface-inset` | `#f0f0f3` | 凹陷面（chip、model-picker、代码块底、用户气泡） |
-| `--surface-hover` | `#e8e8ec` | 通用悬停底 / 选中项药丸底 |
+| `--surface-canvas` | `#F4F6FA` | 应用最底层画布（冷中性浅灰） |
+| `--surface-panel` | `#FFFFFF` | 面板/卡片/气泡主体（纯白） |
+| `--surface-raised` | `#FFFFFF` | 抬升面（frame 容器） |
+| `--surface-inset` | `#F4F6FA` | 凹陷面（chip、model-picker、代码块底、用户气泡） |
+| `--surface-hover` | `#E6E9F0` | 通用悬停底 / 选中项药丸底 |
 
 ### 2.3 Text
 | Token | Hex | 用途 |
 |---|---|---|
-| `--text-primary` | `#0d0d0d` | 标题、正文强调（近黑） |
-| `--text-secondary` | `#40414f` | 正文（冷灰） |
-| `--text-muted` | `#8e8ea0` | 次要信息、区块标签、占位（冷灰） |
-| `--text-inverse` | `#ffffff` | 深底/accent 底上的文字（如按钮白字） |
+| `--text-primary` | `#111E36` | 标题、正文强调（海军近黑） |
+| `--text-secondary` | `color-mix(in srgb, #111E36 72%, #F4F6FA)` | 正文 |
+| `--text-muted` | `color-mix(in srgb, #111E36 55%, #F4F6FA)` | 次要信息、区块标签、占位 |
+| `--text-inverse` | `#FFFFFF` | 深底/accent 底上的文字（如按钮白字） |
 
 ### 2.4 Border
 | Token | Hex | 用途 |
 |---|---|---|
-| `--border-subtle` | `#ececee` | 卡片内分隔、hairline |
-| `--border-strong` | `#dcdce0` | 面板外框、输入框边界 |
+| `--border-subtle` | `#E6E9F0` | 卡片内分隔、hairline |
+| `--border-strong` | `#E6E9F0` | 面板外框、输入框边界 |
 
 ### 2.5 Semantic / State
 | Token | Hex | 语义 |
 |---|---|---|
-| `--success` | `#10a37f` | 工具成功、Git 已提交（OpenAI 绿） |
-| `--warning` | `#b7791f` | 待审批、告警 |
-| `--danger` | `#dc2626` | 错误、停止、破坏性操作 |
-| `--info` | `#2563eb` | 进行中、信息提示（蓝） |
+| `--success` | `#2E9E6E` | 工具成功、Git 已提交 |
+| `--warning` | `#B37518` | 待审批、告警 |
+| `--danger` | `#C24436` | 错误、停止、破坏性操作 |
+| `--info` | `#2E6FB0` | 进行中、信息提示 |
 
 > 状态色仅用于**语义指示**（状态点、工具卡左边条、状态 pill），不做大面积填充。
 
-### 2.6 Theming Axis（6 套主题预设）
-定义于 `src/theme/themeTokens.ts`，通过 `applyTheme()` 注入到预览容器。每套只改上述语义 token 的取值，**结构不变**。
+### 2.6 Theming Axis（皮肤模块 + 皮肤引擎）
+视觉身份是 **SkinModule**：`skinId = family/variant`（例如 `native/soft-glass`）。Family 对应 `stylePreset`（驱动 `app.css` 的 `data-style-preset` 分叉），variant 对应 token 预设。`preset` / `stylePreset` 是镜像字段，写入一律走 `withProjectSkin()`。
 
-| id | 名称 | 基调 | accent |
-|---|---|---|---|
-| `console-light` | Codex Light | 默认 · 冷中性白（Codex/ChatGPT 派生） | `#0d6efd` OpenAI 蓝 |
-| `graphite` | Graphite Mono | 暗色 · 石墨 | `#75b7a5` |
-| `oxide` | Oxide Workbench | 暖白 | `#326f5a` |
-| `studio-neutral` | Studio Neutral | 冷白 | `#5b648f` |
-| `paper-trail` | Paper Trail | 暖纸 · 衬线 | `#8d5039` |
-| `terminal-green` | Terminal Green | 暗色 · 等宽终端 | `#7acb83` |
+定义于 `src/theme/skin.ts` + `skinRegistry.ts` + `themeTokens.ts`，由 `SkinEngine`（`applyWorkspaceSkins` / `applySkin`）注入。配置器 chrome 固定 `illustrated/polar-mono`（只写 token，不打 `data-style-preset`）；预览/导出打 `data-skin` + 兼容属性。每套只改语义 token 的取值，**结构不变**。
+
+**Native / 原生风**（默认 `native/soft-glass`）
+
+| variant | 名称 | 基调 |
+|---|---|---|
+| `soft-glass` | Soft Glass | 默认 · 浅灰玻璃 + 海军 accent |
+| `sand-workspace` | Sand Workspace | 暖白工作区 + 陶土橙 |
+| `apricot-agent` | Tangerine Agent | 浅橙工作区 |
+| `warm-graphite` | Warm Graphite | 暗色石墨 + 琥珀 |
+| `cocoa-system` | Cocoa System | 深可可 + 玫瑰铜 |
+| `forest-ember` | Forest Ember | 深绿黑 + 暖金 |
+
+**Illustrated / 极简风**（默认 `illustrated/ice-white`；chrome 用 `illustrated/polar-mono`）
+
+| variant | 名称 | 基调 |
+|---|---|---|
+| `ice-white` | Ice White | 冷白 + 蓝 accent |
+| `mist-blue` | Mist Violet | 浅紫雾 + 紫 accent |
+| `polar-mono` | Polar Navy | 冷白 + 海军 |
+| `cold-mono` | Cold Mono | 冷黑白灰 |
+| `slate-blue` | Slate Blue | 冷蓝控制台 |
+| `cyan-grid` | Cyan Grid | 暗青黑技术板 |
+
+`studio` 家族仍在搭建：配置器切过去时保留当前 variant，导出回落到 `native/<preset>`。
 
 ### 2.7 Guardrails（色彩禁令）
 - 组件内**禁止裸 hex**；一律用语义 token。
@@ -97,13 +114,13 @@
 ## 3. Typography
 
 ### 3.1 Font Stack（随主题切换）
-| Token | console-light 取值 | 用途 |
+| Token | `native/soft-glass` 取值 | 用途 |
 |---|---|---|
-| `--font-ui` | `Inter, system-ui, …` | 界面正文与控件 |
-| `--font-display` | `Inter, …` | 标题（frame header、topbar） |
-| `--font-mono` | `SFMono-Regular, Consolas, …` | 代码、路径、diff、计数、状态元信息 |
+| `--font-ui` | `IBM Plex Sans, Aptos, ui-sans-serif, …` | 界面正文与控件 |
+| `--font-display` | `IBM Plex Sans Condensed, Aptos Display, …` | 标题（frame header、topbar） |
+| `--font-mono` | `IBM Plex Mono, SFMono-Regular, Consolas, …` | 代码、路径、diff、计数、状态元信息 |
 
-> 各主题可替换字体栈（如 `paper-trail` 用 Source Serif、`terminal-green` 全等宽），但角色（ui/display/mono）不变。
+> Family 决定字体栈：native 用 IBM Plex，illustrated 用 Inter。角色（ui/display/mono）不变。
 
 ### 3.2 Type Scale（紧凑密度，主题无关）
 | Token | 值 | 用途 |
@@ -278,7 +295,7 @@ Output/artifact 面板右上角 Maximize 按钮切换**浮层展开**（`--z-mod
 ## 10. Version & Assets
 
 - **版本**：v1.0（首版正式设计规范）· 2026-07-13。
-- **事实来源文件**：`src/theme/themeTokens.ts`（颜色，6 主题）、`src/styles/app.css :root`（结构 token）。
-- **已实现并固化**：6 主题预设 · 结构 token 全集 · Layer 1 ui/ 组件 · 对话泳道/气泡/头像 · 工具卡状态边条 · Composer 统一外壳 + Send 药丸。
+- **事实来源文件**：`src/theme/themeTokens.ts` + `src/theme/skinRegistry.ts`（12 套皮肤）、`src/styles/app.css :root`（结构 token）。
+- **已实现并固化**：12 套皮肤（2 family × 6 variant）· SkinEngine 注入 · 结构 token 全集 · Layer 1 ui/ 组件 · 对话泳道/气泡/头像 · 工具卡状态边条 · Composer 统一外壳 + Send 药丸。
 - **待收敛**：`app.css` 存量裸 px（非 8dp 阶梯值如 10/14px、头像 30px）逐步替换为 token；motion 值未来可下放主题预设。
 - **关联文档**：`docs/COMPONENT_SYSTEM.md`（组件架构/花名册/分期）· `AGENTS.md`（产品边界）。

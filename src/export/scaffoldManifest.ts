@@ -1,6 +1,7 @@
 import { appVersion } from "../appVersion";
 import { assertValidProject, sanitizeProjectCredentials, type AgentFrontendProject } from "../schema/agentuxConfig";
-import { themeTokens } from "../theme/themeTokens";
+import { makeSkinId } from "../theme/skin";
+import { withProjectSkin } from "../theme/skinEngine";
 import { scaffoldTemplateContent } from "./scaffoldTemplates";
 
 /**
@@ -333,7 +334,7 @@ export function createScaffoldPackageJson(project: AgentFrontendProject): Scaffo
 function exportableProject(project: AgentFrontendProject): AgentFrontendProject {
   const sanitized = sanitizeProjectCredentials(project);
   if (sanitized.theme.stylePreset !== "studio") return sanitized;
-  return { ...sanitized, theme: { ...sanitized.theme, stylePreset: "native" } };
+  return withProjectSkin(sanitized, makeSkinId("native", sanitized.theme.preset));
 }
 
 export function createScaffoldExportSnapshot(input: AgentFrontendProject): ScaffoldExportSnapshot {
@@ -736,8 +737,7 @@ import {
   type SlotConfig,
 } from "./schema/agentuxConfig";
 import { renderSlots, slotsForTemplate, type SlotRenderContext } from "./slots/slotRegistry";
-import { applyTheme } from "./theme/applyTheme";
-import { themeTokens } from "./theme/themeTokens";
+import { applySkin, resolveSkin } from "./theme/skinEngine";
 import { isFixtureMode, useEventSource } from "./event-source";
 import { project } from "./exported-project";
 import {
@@ -899,9 +899,8 @@ export function AgentApp() {
   }, []);
 
   useEffect(() => {
-    const tokens = themeTokens[project.theme.preset] ?? Object.values(themeTokens)[0];
-    applyTheme(tokens, document.documentElement);
-    if (frameRef.current) applyTheme(tokens, frameRef.current);
+    applySkin(project.theme.skinId);
+    if (frameRef.current) applySkin(project.theme.skinId, frameRef.current);
   }, []);
 
   useEffect(() => {
@@ -1253,7 +1252,7 @@ export function AgentApp() {
     { ...slotContext, onCollapseRight: undefined },
   );
 
-  const appearance = (themeTokens[project.theme.preset] ?? Object.values(themeTokens)[0]).appearance;
+  const appearance = resolveSkin(project.theme.skinId).tokens.appearance;
   // Explicit opt-in even in dev: npm run dev is how recipients first inspect the package,
   // so debug chrome must not appear unless they ask for it with ?devtools=1.
   const showPicker = devtoolsRequested() && isFixtureMode && streams.length > 0;
@@ -1274,6 +1273,7 @@ export function AgentApp() {
           data-has-right-panel={rightPanelVisible}
           data-left-collapsed={leftCollapsed}
           data-right-collapsed={rightCollapsed}
+          data-skin={project.theme.skinId}
           data-style-preset={project.theme.stylePreset}
           data-appearance={appearance}
           ref={frameRef}

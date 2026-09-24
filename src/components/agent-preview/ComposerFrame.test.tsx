@@ -27,7 +27,11 @@ describe("ComposerFrame controls", () => {
     const project = {
       ...defaultCodingAgentProject,
       composer: { ...defaultCodingAgentProject.composer, mic: true },
-      theme: { ...defaultCodingAgentProject.theme, stylePreset: "illustrated" as const },
+      theme: {
+        ...defaultCodingAgentProject.theme,
+        stylePreset: "illustrated" as const,
+        skinId: "illustrated/soft-glass" as const,
+      },
     };
 
     const markup = renderToStaticMarkup(
