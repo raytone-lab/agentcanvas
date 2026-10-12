@@ -6,6 +6,7 @@ import {
   enabledProviderConnections,
 } from "./agentuxConfig";
 import { applyPresetOption, isPresetOptionActive } from "./presetActions";
+import { withProjectSkin } from "../theme/skinEngine";
 
 describe("preset actions", () => {
   it("writes UX preset choices back to the scaffold schema", () => {
@@ -261,13 +262,28 @@ describe("preset actions", () => {
     const forest = applyPresetOption(sand, "forest-ember");
 
     expect(warm.theme.preset).toBe("warm-graphite");
+    expect(warm.theme.skinId).toBe("native/warm-graphite");
+    expect(warm.theme.stylePreset).toBe("native");
     expect(isPresetOptionActive(warm, "warm-graphite")).toBe(true);
     expect(isPresetOptionActive(warm, "soft-glass")).toBe(false);
     expect(sand.theme.preset).toBe("sand-workspace");
+    expect(sand.theme.skinId).toBe("native/sand-workspace");
     expect(isPresetOptionActive(sand, "sand-workspace")).toBe(true);
     expect(isPresetOptionActive(sand, "warm-graphite")).toBe(false);
     expect(forest.theme.preset).toBe("forest-ember");
+    expect(forest.theme.skinId).toBe("native/forest-ember");
     expect(isPresetOptionActive(forest, "forest-ember")).toBe(true);
     expect(isPresetOptionActive(forest, "sand-workspace")).toBe(false);
+  });
+
+  it("keeps the current family when switching a theme variant", () => {
+    const illustrated = withProjectSkin(defaultCodingAgentProject, "illustrated/ice-white");
+    const mist = applyPresetOption(illustrated, "mist-blue");
+
+    expect(illustrated.theme.skinId).toBe("illustrated/ice-white");
+    expect(illustrated.theme.stylePreset).toBe("illustrated");
+    expect(mist.theme.skinId).toBe("illustrated/mist-blue");
+    expect(mist.theme.stylePreset).toBe("illustrated");
+    expect(mist.theme.preset).toBe("mist-blue");
   });
 });

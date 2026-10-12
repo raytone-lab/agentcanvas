@@ -4,20 +4,16 @@ import type { Dispatch, SetStateAction } from "react";
 import type { IconSlot } from "../../agentmatrix";
 import type { AppLocale } from "../../i18n/uiCopy";
 import type { AgentFrontendProject, PresetStyleId } from "../../schema/agentuxConfig";
-import { STYLE_AVATAR_DEFAULTS, presetStyleOptions } from "../projection/presetRailData";
-
-// Each style owns its own theme set, so switching style also moves to that
-// style's default theme after confirmation.
-function defaultThemeForStyle(styleId: PresetStyleId) {
-  if (styleId === "native") return "soft-glass" as const;
-  if (styleId === "illustrated") return "ice-white" as const;
-  return null; // studio (under construction) keeps the current theme
-}
+import { makeSkinId } from "../../theme/skin";
+import { applySkinRecipe, withProjectSkin } from "../../theme/skinEngine";
+import { defaultSkinForFamily } from "../../theme/skinRegistry";
+import { presetStyleOptions } from "../projection/presetRailData";
 
 /**
  * Style-preset switching view model: owns the confirm-dialog state and the
- * 450ms swap animation timer. Confirmation also resets the theme preset and
- * the style's default avatars on the project (the Model).
+ * 450ms swap animation timer. Confirmation also resets the skin (family default
+ * variant, or the current variant for studio) and the style's default avatars
+ * on the project (the Model).
  */
 export function useStyleSwitch({
   selectedPresetStyle,
@@ -52,9 +48,12 @@ export function useStyleSwitch({
       if (styleSwitchTimerRef.current) {
         window.clearTimeout(styleSwitchTimerRef.current);
       }
-      setProject((current) => ({ ...current, theme: { ...current.theme, stylePreset: styleId } }));
-      setSlot("author.user", STYLE_AVATAR_DEFAULTS[styleId]["author.user"]);
-      setSlot("author.agent", STYLE_AVATAR_DEFAULTS[styleId]["author.agent"]);
+      const recipeSkinId = defaultSkinForFamily(styleId) ?? makeSkinId(styleId, "soft-glass");
+      applySkinRecipe(recipeSkinId, setSlot);
+      setProject((current) => {
+        const skinId = defaultSkinForFamily(styleId) ?? makeSkinId(styleId, current.theme.preset);
+        return withProjectSkin(current, skinId);
+      });
       setStyleSwitching(true);
       window.requestAnimationFrame(() => {
         styleSwitchTimerRef.current = window.setTimeout(() => {
@@ -91,10 +90,6 @@ export function useStyleSwitch({
     const button = pendingStyleButtonRef.current;
     pendingStyleButtonRef.current = null;
     switchPresetStyle(target, button);
-    const themeId = defaultThemeForStyle(target);
-    if (themeId) {
-      setProject((current) => ({ ...current, theme: { ...current.theme, preset: themeId } }));
-    }
   }
 
   return {

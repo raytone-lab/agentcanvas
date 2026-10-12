@@ -6,6 +6,7 @@ import {
   type AgentCanvasExperienceV2,
   type CompleteAgentCanvasExperienceV2,
 } from "@agentmatrix/agentcanvas-contract";
+import { makeSkinId, parseSkinId, skinFamilies, type SkinFamily, type SkinId } from "../theme/skin";
 import type { ThemePresetId } from "../theme/themeTokens";
 
 export const allowedRegions = [
@@ -280,9 +281,9 @@ export type SlotConfig = {
  * the project — the exported scaffold reads it to render the same style the
  * configurator previewed. "studio" is still under construction.
  */
-export type PresetStyleId = "native" | "illustrated" | "studio";
+export type PresetStyleId = SkinFamily;
 
-export const presetStyleIds: readonly PresetStyleId[] = ["native", "illustrated", "studio"];
+export const presetStyleIds: readonly PresetStyleId[] = skinFamilies;
 
 export type AgentProductInterface = Pick<
   CompleteAgentCanvasExperienceV2,
@@ -311,6 +312,8 @@ export type AgentFrontendProject = {
     bottomDockSize: number;
   };
   theme: {
+    /** Canonical skin identity (`family/variant`). `stylePreset` and `preset` mirror it. */
+    skinId: SkinId;
     preset: ThemePresetId;
     /** Drives `data-style-preset`; 168 rules in app.css branch on it. */
     stylePreset: PresetStyleId;
@@ -475,6 +478,7 @@ export const defaultCodingAgentProject: AgentFrontendProject = {
     ],
   },
   theme: {
+    skinId: makeSkinId("native", "soft-glass"),
     preset: "soft-glass",
     stylePreset: "native",
     density: "compact",
@@ -638,6 +642,15 @@ export function assertValidProject(project: AgentFrontendProject): void {
 
   if (!presetStyleIds.includes(project.theme.stylePreset)) {
     throw new Error(`Unsupported style preset: ${project.theme.stylePreset}`);
+  }
+
+  const parsedSkin = parseSkinId(project.theme.skinId);
+  if (!parsedSkin) {
+    throw new Error(`Unsupported skin: ${project.theme.skinId}`);
+  }
+  const expectedSkinId = makeSkinId(project.theme.stylePreset, project.theme.preset);
+  if (project.theme.skinId !== expectedSkinId) {
+    throw new Error(`theme.skinId must equal ${expectedSkinId}`);
   }
 
   for (const region of project.layout.regions) {

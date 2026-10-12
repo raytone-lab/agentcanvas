@@ -73,6 +73,9 @@ describe("scaffold package manifest", () => {
       "src/components/ui/index.ts",
       "src/i18n/LocaleContext.tsx",
       "src/theme/applyTheme.ts",
+      "src/theme/skin.ts",
+      "src/theme/skinRegistry.ts",
+      "src/theme/skinEngine.ts",
       "src/agentmatrix/index.ts",
     ]) {
       expect(snapshot.files).toContain(file);
@@ -123,6 +126,7 @@ describe("scaffold package manifest", () => {
       "data-has-right-panel",
       "data-left-collapsed",
       "data-right-collapsed",
+      "data-skin",
       "data-style-preset",
       "data-appearance",
       "data-welcome",
@@ -132,6 +136,7 @@ describe("scaffold package manifest", () => {
     // The style preset must come from the project — hardcoding it silently sent every
     // export down app.css's "native" branch.
     expect(shell).toContain("project.theme.stylePreset");
+    expect(shell).toContain("project.theme.skinId");
     // The configurator does not set data-theme; an extra attribute is a divergence too.
     expect(shell).not.toContain("data-theme");
   });
@@ -290,11 +295,17 @@ describe("scaffold package manifest", () => {
   it("downgrades the under-construction studio style to native", () => {
     const studio = {
       ...defaultCodingAgentProject,
-      theme: { ...defaultCodingAgentProject.theme, stylePreset: "studio" as const },
+      theme: {
+        ...defaultCodingAgentProject.theme,
+        stylePreset: "studio" as const,
+        skinId: "studio/soft-glass" as const,
+      },
     };
     const snapshot = createScaffoldExportSnapshot(studio);
     expect(snapshot.agentuxConfig.theme.stylePreset).toBe("native");
+    expect(snapshot.agentuxConfig.theme.skinId).toBe("native/soft-glass");
     expect(snapshot.fileContents["src/exported-project.ts"]).toContain('"stylePreset": "native"');
+    expect(snapshot.fileContents["src/exported-project.ts"]).toContain('"skinId": "native/soft-glass"');
   });
 
   it("emits a portable vite config and a project snapshot", () => {

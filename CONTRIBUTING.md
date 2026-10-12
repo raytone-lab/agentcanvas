@@ -4,7 +4,7 @@ Thanks for taking an interest in AgentCanvas.
 
 ## Setup
 
-Node.js `^20.19.0 || >=22.12.0`.
+Node.js `>=22.19.0`, matching `engines` in `package.json`.
 
 ```bash
 npm install

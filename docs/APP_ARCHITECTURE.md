@@ -75,7 +75,9 @@ action 语义分组（共 37 个）：
 | `runActions.ts` | 运行编排（524 行）：保存预览、replay 流式揭示、live 帧合并提交、Pi 回合与会话生命周期 |
 | `controllerShared.ts` | `WorkspaceControllerDeps` / `ControllerContext` 类型、`createProjectUpdater`（saved-preview 模式下改快照而非编辑工程）、`bumpPreviewRefresh` |
 | `useProviderSettings.ts` | provider 连接 CRUD + 模型探测/拉取（网络与 toast）；不含运行态写操作 |
-| `useStyleSwitch.ts` | 风格确认对话框 + 450ms 切换动画 + 确认后重置主题与头像默认值 |
+| `useStyleSwitch.ts` | 风格确认对话框 + 450ms 切换动画 + 确认后一次 `withProjectSkin()`（family 默认皮肤，studio 保留当前 variant）并重置头像 |
+
+主题写入走 `src/theme/skinEngine.ts`：配置器 `applyWorkspaceSkins()`（chrome = `illustrated/polar-mono`，预览 = `project.theme.skinId`），导出壳 `applySkin()`。不要在 App 里直接 `applyTheme(themeTokens[...])`。
 
 约定：
 
@@ -157,7 +159,7 @@ SSR/测试环境下 mermaid 渲染为 pending 占位，真实渲染走客户端�
 1. **scaffold 断言**：`scaffoldManifest.test.ts` 断言导出包含
    `src/components/agent-preview/ChatFrame.tsx`、内容含字面量 `"chat-frame"` 与
    `externalApprovalPlacement = "overlay"`、且 >5000 字节；`exportFacts.test.ts` 把
-   落地页公示的文件数（`EXPORT_FILE_COUNT = 202`）钉到真实快照。清单变化必须同步常量。
+   落地页公示的文件数（`EXPORT_FILE_COUNT = 208`）钉到真实快照。清单变化必须同步常量。
 2. **新文件只能放 `src/components/agent-preview/` 内**（含子目录）：导出 glob 只打包该
    目录，移出去会让导出工程编译失败。
 3. **markdown 渲染依赖随导出包发布**：`katex`、`mermaid`、`@types/katex` 已在编辑器

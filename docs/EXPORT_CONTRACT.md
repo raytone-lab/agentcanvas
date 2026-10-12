@@ -35,8 +35,10 @@ git rebase origin/am/welcome-greeting     # 或 merge
 如果你手写过 project 字面量（新 preset、新 fixture、测试夹具），typecheck 会报缺字段，补上即可：
 
 ```ts
-theme: { preset: "soft-glass", stylePreset: "native", density: "compact", /* … */ }
+theme: { skinId: "native/soft-glass", preset: "soft-glass", stylePreset: "native", density: "compact", /* … */ }
 ```
+
+`theme.skinId` 同样是**必填**（`family/variant`，例如 `native/soft-glass`）。它是皮肤身份的唯一写入入口；`stylePreset` 与 `preset` 必须等于 `makeSkinId(stylePreset, preset) === skinId`。导出壳在 `.preview-frame` 上打 `data-skin`，并继续保留 `data-style-preset` / `data-appearance` 给现有 CSS。`studio` 导出时回落为 `native/<preset>`（含 `skinId`）。
 
 为什么加：这个值原来只是 `App.tsx` 的一个 `useState`，导出端读不到，于是被写死成 `"native"`。而 `app.css` 有 **168 条**规则按 `data-style-preset` 分叉（native 118 / illustrated 49），所以选 illustrated 的项目导出后有 49 条规则走错分支。现在它随 project 走。
 
