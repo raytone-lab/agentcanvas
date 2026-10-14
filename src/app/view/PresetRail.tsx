@@ -29,7 +29,7 @@ import type {
   ProviderConnection,
   ProviderConnectionId,
 } from "../../schema/agentuxConfig";
-import { themeTokens } from "../../theme/themeTokens";
+import { resolveSkin } from "../../theme/skinEngine";
 import type { MessageActionKey } from "../appTypes";
 import {
   isOptionSelectedInRail,
@@ -534,9 +534,10 @@ export function PresetRail({
         className="preset-panel"
         data-preset-group={selectedPresetGroup.id}
         data-nav-section={navSection}
+        data-skin={project.theme.skinId}
         data-style-preset={visualStylePreset(selectedPresetStyle)}
         data-style-id={selectedPresetStyle}
-        data-appearance={themeTokens[project.theme.preset].appearance}
+        data-appearance={resolveSkin(project.theme.skinId).tokens.appearance}
         data-theme-preset={project.theme.preset}
         aria-label={translatePresetGroupName(selectedPresetGroup.id, copy.shell.presetRail.groups[selectedPresetGroup.id].label, locale)}
       >

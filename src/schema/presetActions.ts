@@ -10,6 +10,8 @@ import {
   type MediaGenerationVideoStyle,
   type ProviderCatalogId,
 } from "./agentuxConfig";
+import { makeSkinId } from "../theme/skin";
+import { withProjectSkin } from "../theme/skinEngine";
 import {
   isThemePresetId,
   atlasThemePresetIds,
@@ -162,10 +164,7 @@ const mediaGenerationPresetPatches: Record<string, PresetPatch> = Object.fromEnt
 );
 
 const setThemePreset = (preset: ThemePresetId): PresetPatch =>
-  (project) => ({
-    ...project,
-    theme: { ...project.theme, preset },
-  });
+  (project) => withProjectSkin(project, makeSkinId(project.theme.stylePreset, preset));
 
 const themePresetPatches: Record<string, PresetPatch> = Object.fromEntries(
   selectableThemePresetIds.map((preset) => [preset, setThemePreset(preset)]),

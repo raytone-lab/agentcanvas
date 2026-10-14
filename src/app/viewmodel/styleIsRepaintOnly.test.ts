@@ -26,7 +26,8 @@ describe("applying a style", () => {
     // The repaint itself still happens — verified in the browser: an untouched
     // project went native/soft-glass → inkwash/ink-rice on applying 水墨风.
     expect(body).toContain("switchPresetStyle(target");
-    expect(body).toContain("theme: { ...current.theme, preset: nextTheme }");
+    // Style, colourway and skin id as one identity, through the skin engine.
+    expect(body).toContain("withProjectSkin(current, makeSkinId(target, nextTheme))");
   });
 
   it("adds no components of its own", () => {

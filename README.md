@@ -4,8 +4,8 @@ A visual UX configurator and scaffold generator for Agent frontends.
 
 Compose how an agent presents itself — conversation flow, reasoning disclosure,
 tool-call cards, approvals, artifacts, output and Git panels — preview it
-against a replaying event stream, then export a standalone React project you
-can run and own.
+against a replaying event stream or a real local Pi run, then export a
+standalone React project you can run and own.
 
 The configurator is the mold. The agent interface you compose inside it is the
 product, and that is what gets exported.
@@ -25,8 +25,9 @@ have to wire up.
 
 - **Configure, don't scaffold by hand.** Panels for theme, avatars, composer,
   writing cadence, content blocks, rendering, provider and Git.
-- **Preview is honest.** Live preview replays a bundled demo event stream
-  offline, with no keys and no tool execution.
+- **Preview is honest.** The default preview replays a bundled demo event
+  stream offline, with no keys and no tool execution. The built-in Pi runtime
+  runs the same composed surfaces for real, in the editor and in an export.
 - **Export is a real project.** One click produces a zip that runs with
   `npm install && npm run dev`. No AgentCanvas runtime dependency, no builder
   chrome, no session keys.
@@ -35,7 +36,7 @@ have to wire up.
 
 ## Quick start
 
-Requires Node.js 20+.
+Requires Node.js 22.19 or newer.
 
 ```bash
 git clone https://github.com/raytone-lab/agentcanvas.git
@@ -64,14 +65,16 @@ page. Both are built from the same Vite config.
 agentcanvas/
 ├── src/
 │   ├── App.tsx                 configurator shell
+│   ├── app/                    workspace state, viewmodels, projections
 │   ├── agentmatrix/            event-stream standard layer (go-forward)
 │   ├── agentux/                legacy render runtime (preview + legacy export)
 │   ├── components/             configurator UI and preview components
 │   ├── export/                 scaffold export pipeline
 │   │   └── templates/          source of the generated project
+│   ├── pi/                     built-in Pi runtime (editor and export)
 │   ├── schema/                 AgentFrontendProject config object
 │   ├── slots/                  region/slot → component mapping
-│   └── theme/                  theme tokens (6 presets)
+│   └── theme/                  skin engine and theme tokens
 ├── packages/
 │   ├── contract/               @agentmatrix/agentcanvas-contract
 │   └── react/                  @agentmatrix/agentcanvas-react
@@ -106,6 +109,8 @@ to change SDK behavior, patch it upstream and refresh the vendored `dist`.
   model or agent: an agentic CLI's JSONL, a model API, or your own backend
 - [docs/PI_RUNTIME.md](docs/PI_RUNTIME.md) — the built-in Pi agent runtime: what it provides,
   which events it emits, and why it needs a Node process
+- [docs/APP_ARCHITECTURE.md](docs/APP_ARCHITECTURE.md) — configurator layering: state
+  machine, viewmodels, projections
 - [docs/COMPONENT_SYSTEM.md](docs/COMPONENT_SYSTEM.md) — component and slot system
 - [docs/EXPORT_CONTRACT.md](docs/EXPORT_CONTRACT.md) — what the exported project guarantees
 - [docs/EMBEDDABLE_PACKAGES.md](docs/EMBEDDABLE_PACKAGES.md) — package boundaries

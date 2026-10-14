@@ -30,8 +30,7 @@ import {
   hasAdmissionFindings,
 } from "./runtime/admissionReport";
 import { renderSlots, slotsForTemplate, type SlotRenderContext } from "./slots/slotRegistry";
-import { applyTheme } from "./theme/applyTheme";
-import { themeTokens } from "./theme/themeTokens";
+import { applyWorkspaceSkins, resolveSkin, withSyncedSkinId } from "./theme/skinEngine";
 import {
   defaultCodingAgentProject,
   emptyStructureProject,
@@ -143,7 +142,18 @@ export function App() {
   // Opens on the empty three-column skeleton. `defaultCodingAgentProject` stays
   // the shape an *exported* project ships with; this is only the editor's
   // starting point. See emptyStructureProject for why they are separate.
-  const [project, setProject] = useState<AgentFrontendProject>(emptyStructureProject);
+  const [project, setProjectState] = useState<AgentFrontendProject>(() => withSyncedSkinId(emptyStructureProject));
+  /*
+   * Every project write goes through here, and leaves with `theme.skinId`
+   * re-derived from the style and the colourway. The skin engine treats the id
+   * as the canvas's identity — it is what gets painted — so a write that moved
+   * `preset` or `stylePreset` on its own (palettes, saved projects, fixtures)
+   * would otherwise paint the old skin, with no error until export rejected
+   * the project.
+   */
+  const setProject: typeof setProjectState = useCallback((next) => {
+    setProjectState((previous) => withSyncedSkinId(typeof next === "function" ? next(previous) : next));
+  }, []);
   /**
    * The module the pointer is over, which is what the edit toolbar points at.
    *
@@ -169,9 +179,8 @@ export function App() {
     null,
   );
   const { state, dispatch, refs } = useWorkspaceState(locale);
-  // Single source of truth: the style preset lives on the project so it travels with
-  // the export (168 rules in app.css branch on `data-style-preset`). Derived rather
-  // than mirrored in local state so the two can never diverge.
+  // Single source of truth: `theme.skinId` is the canonical identity; stylePreset is
+  // derived so 168 `data-style-preset` rules in app.css stay in lockstep with export.
   const selectedPresetStyle = project.theme.stylePreset;
   const [commandOpen, setCommandOpen] = useState(false);
 
@@ -684,14 +693,13 @@ export function App() {
   useEffect(() => {
     // Configurator chrome (topbar/left rail/preset panel) uses a neutral scheme
     // so its icons/controls stay neutral — never tinted by a preview accent.
-    applyTheme(themeTokens["polar-mono"]);
-    if (builderSurfaceRef.current) {
-      applyTheme(
-        resolveThemeTokens(activeProject.theme.preset, activeProject.theme.colorOverrides),
-        builderSurfaceRef.current,
-      );
-    }
-  }, [activeProject.theme.preset, activeProject.theme.colorOverrides]);
+    applyWorkspaceSkins({
+      previewSkinId: activeProject.theme.skinId,
+      previewRoot: builderSurfaceRef.current,
+      // The reader's repaints ride on the preview's tokens, as they always did.
+      colorOverrides: activeProject.theme.colorOverrides,
+    });
+  }, [activeProject.theme.skinId, activeProject.theme.colorOverrides]);
 
   useEffect(() => {
     if (!showDebugViewToggle && state.workspaceView === "debug") {
@@ -839,7 +847,7 @@ export function App() {
       const allowed = styleAvatarOptionIds(selectedPresetStyle, slot);
       if (allowed && allowed.length > 0 && !allowed.includes(current)) setSlot(slot, allowed[0]);
     }
-  }, [iconSet, selectedPresetStyle, setSlot]);
+  }, [activeProject.theme.skinId, iconSet, selectedPresetStyle, setSlot]);
 
   /*
    * Same rule for the thinking motion.
@@ -2362,9 +2370,10 @@ export function App() {
                   // The *visual* style, so 空白 wears 原生风's rules; the id is
                   // beside it for anything that needs identity. See
                   // `visualStylePreset`.
+                  data-skin={activeProject.theme.skinId}
                   data-style-preset={visualStylePreset(selectedPresetStyle)}
                   data-style-id={selectedPresetStyle}
-                  data-appearance={themeTokens[activeProject.theme.preset].appearance}
+                  data-appearance={resolveSkin(activeProject.theme.skinId).tokens.appearance}
                   data-theme-preset={activeProject.theme.preset}
                   data-preview-refreshing={state.previewRefreshing}
                   // Which rail group is open, for showcase rules that only make
@@ -2587,7 +2596,7 @@ export function App() {
             <div className="canvas-status-bar">
               <SelectionIsland
                 locale={locale}
-                appearance={themeTokens[activeProject.theme.preset].appearance}
+                appearance={resolveSkin(activeProject.theme.skinId).tokens.appearance}
                 project={activeProject}
                 pickedOptionIds={state.pickedOptionIds}
                 activeGroupId={state.selectedGroup}

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { OutputFrameCopy } from "./types";
 import type { OutputPanelItem } from "./panelItem";
 import type { OpenedOutputRenderKind } from "./renderKind";
+import { renderDiffPreview } from "./diffPreview";
 import { AudioOutputPreview, ImageOutputPreview, VideoOutputPreview } from "./mediaPreviews";
 import { renderMarkdownPreview as renderMarkdown } from "./markdown/renderMarkdown";
 
@@ -49,6 +50,9 @@ export function renderOpenedOutputBody(item: OutputPanelItem, kind: OpenedOutput
   }
   if (kind === "data") {
     return <pre data-language="json">{normalizeJsonPreview(body)}</pre>;
+  }
+  if (kind === "diff") {
+    return renderDiffPreview(body);
   }
   return <pre data-language={language}>{body}</pre>;
 }

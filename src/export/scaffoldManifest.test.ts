@@ -73,6 +73,9 @@ describe("scaffold package manifest", () => {
       "src/components/ui/index.ts",
       "src/i18n/LocaleContext.tsx",
       "src/theme/applyTheme.ts",
+      "src/theme/skin.ts",
+      "src/theme/skinRegistry.ts",
+      "src/theme/skinEngine.ts",
       "src/agentmatrix/index.ts",
     ]) {
       expect(snapshot.files).toContain(file);
@@ -125,6 +128,7 @@ describe("scaffold package manifest", () => {
       "data-right-collapsed",
       "data-right-folding",
       "data-right-toggle",
+      "data-skin",
       "data-style-preset",
       "data-style-id",
       "data-appearance",
@@ -138,6 +142,7 @@ describe("scaffold package manifest", () => {
     expect(shell).toContain("project.theme.stylePreset");
     // 空白 wears 原生风's rules on the canvas (`visualStylePreset`), so it must here too.
     expect(shell).toContain('project.theme.stylePreset === "blank" ? "native" : project.theme.stylePreset');
+    expect(shell).toContain("project.theme.skinId");
     // The configurator does not set a bare data-theme; an extra attribute is a divergence too.
     expect(shell).not.toMatch(/data-theme=/);
   });
@@ -302,10 +307,16 @@ describe("scaffold package manifest", () => {
     // would have quietly handed back Native.
     const studio = {
       ...defaultCodingAgentProject,
-      theme: { ...defaultCodingAgentProject.theme, stylePreset: "studio" as const, preset: "studio-grape" as const },
+      theme: {
+        ...defaultCodingAgentProject.theme,
+        stylePreset: "studio" as const,
+        preset: "studio-grape" as const,
+        skinId: "studio/studio-grape" as const,
+      },
     };
     const snapshot = createScaffoldExportSnapshot(studio);
     expect(snapshot.agentuxConfig.theme.stylePreset).toBe("studio");
+    expect(snapshot.agentuxConfig.theme.skinId).toBe("studio/studio-grape");
     expect(snapshot.fileContents["src/exported-project.ts"]).toContain('"stylePreset": "studio"');
     expect(snapshot.fileContents["src/exported-project.ts"]).toContain('"preset": "studio-grape"');
   });

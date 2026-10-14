@@ -19,15 +19,22 @@
  * the viewport, and re-emitted every time the screenshots are retaken. Nothing is eyeballed
  * or hardcoded in the page.
  *
- * The state is reached by clicking into the coding-agent fixture ("对话" → 名称标签). That
- * is the only state where all six anchors are on screen at once: the tool-actions overview
- * has no reasoning block, and the thinking preview has no tool cards.
+ * The state is reached by clicking into the coding-agent fixture (conversation -> speaker
+ * labels). That is the only state where all six anchors are on screen at once: the
+ * tool-actions overview has no reasoning block, and the thinking preview has no tool cards.
+ *
+ * Both stills are in English. The editor defaults to zh, so the locale is seeded into
+ * localStorage before the app boots — the same three lines `capture-editor-tour.mjs` uses,
+ * and for the same reason: the theme wipe on the landing page sits under English copy, so a
+ * Chinese UI inside it reads as a different product. The rail is driven by preset-group id
+ * rather than visible label, because the labels are the thing that moves with the locale.
  *
  * deviceScaleFactor 1.5, not 2: the hero renders about 1160px wide, so 1.5x already exceeds
  * 2x density and costs ~30% fewer bytes.
  *
  * Options (env):
  *   URL     editor URL       (default http://localhost:5173/editor.html)
+ *   LOCALE  "en" | "zh"      (default "en")
  *   CHROME  browser binary   (default the macOS Google Chrome path)
  *   PORT    devtools port    (default 9222)
  */
@@ -39,7 +46,7 @@ import { fileURLToPath } from "node:url";
 import {
   assertReachable,
   clickPresetOption,
-  clickRail,
+  clickRailTile,
   connectPage,
   evaluate,
   launchChrome,
@@ -48,6 +55,9 @@ import {
 
 const EDITOR_URL = process.env.URL ?? "http://localhost:5173/editor.html";
 const PORT = Number(process.env.PORT ?? 9222);
+const LOCALE = process.env.LOCALE ?? "en";
+/** Must match LocaleContext's STORAGE_KEY. */
+const LOCALE_STORAGE_KEY = "agentcanvas.locale";
 const VIEW = { width: 1440, height: 900, deviceScaleFactor: 1.5 };
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -84,11 +94,12 @@ async function main() {
     await page.send("Page.enable");
     await page.send("Runtime.enable");
     await page.send("Emulation.setDeviceMetricsOverride", { ...VIEW, mobile: false });
+    await seedLocale(page);
     await page.send("Page.navigate", { url: EDITOR_URL });
     await sleep(3800);
 
     // Into the coding-agent fixture: reasoning + tool calls + an artifact, all at once.
-    await clickRail(page, "对话");
+    await clickRailTile(page, "conversation");
     await sleep(1200);
     await clickPresetOption(page, "speaker-labels");
     await sleep(5000);
@@ -98,13 +109,13 @@ async function main() {
     console.log("  src/landing/anchors.json");
 
     // Same content, dark theme, for the before/after slider.
-    await clickRail(page, "主题");
+    await clickRailTile(page, "theme");
     await sleep(1200);
     await clickPresetOption(page, "warm-graphite");
     await sleep(2500);
     // Reopen the conversation group so both frames show identical chrome; only the
     // colours may differ, or the slider would be comparing two different screens.
-    await clickRail(page, "对话");
+    await clickRailTile(page, "conversation");
     await sleep(2000);
     await shoot(page, "editor-dark.png");
 
@@ -112,6 +123,25 @@ async function main() {
   } finally {
     chrome.kill();
   }
+}
+
+/**
+ * Write the locale to localStorage, before the run that gets captured.
+ *
+ * Needs a load first: localStorage is per-origin, and there is no origin to write to until
+ * the page has been navigated once. The caller navigates again afterwards, so the app boots
+ * with the value already in place rather than switching language in frame. The write is
+ * unconditional because the user-data-dir persists across runs and a previous one may have
+ * left "zh" behind.
+ */
+async function seedLocale(page) {
+  await page.send("Page.navigate", { url: EDITOR_URL });
+  await sleep(1200);
+  await evaluate(
+    page,
+    `window.localStorage.setItem(${JSON.stringify(LOCALE_STORAGE_KEY)}, ${JSON.stringify(LOCALE)});
+     return "ok";`,
+  );
 }
 
 async function shoot(page, name) {
@@ -148,10 +178,11 @@ async function readAnchors(page) {
 
   const missing = Object.keys(ANCHORS).filter((key) => !entries[key]);
   if (missing.length > 0) {
-    throw new Error(
-      `Anchors missing from this state: ${missing.join(", ")}. ` +
-        "The callouts would point at nothing — check the fixture still renders all six.",
-    );
+    // A warning, not a throw. The callouts this fed were dropped from the page — nothing
+    // imports anchors.json — so an incomplete set costs nothing, while throwing here stops
+    // the run between the two screenshots and leaves the wipe comparing a fresh light frame
+    // against a stale dark one. Restore the throw if the callouts ever come back.
+    console.warn(`  ! anchors missing from this state: ${missing.join(", ")}`);
   }
   return entries;
 }

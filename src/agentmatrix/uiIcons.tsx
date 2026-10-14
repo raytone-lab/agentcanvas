@@ -150,6 +150,7 @@ const CODICON_BY_LUCIDE: Partial<Record<string, string>> = {
   Maximize2: "screen-full",
   Minimize2: "screen-normal",
   FileCode2: "file-code",
+  FileDiff: "diff",
   TerminalSquare: "terminal",
   Braces: "json",
   FileAudio2: "unmute",
@@ -228,6 +229,8 @@ const PIXELART_BY_LUCIDE: Partial<Record<string, string>> = {
   FileText: "FileText",
   Files: "Files",
   FileCode2: "Code",
+  // A diff is a code document; the same plate as the file it changes.
+  FileDiff: "Code",
   TerminalSquare: "Terminal",
   Braces: "Code",
   FileAudio2: "Music",
@@ -335,6 +338,7 @@ const GAME_BY_LUCIDE: Partial<Record<string, LucideIcon>> = {
   Brain: GameArtPotion,
   FileText: GameArtScroll,
   FileCode2: GameArtPages,
+  FileDiff: GameArtPages,
   FileAudio2: GameArtMic,
   FileVideo2: GameArtChest,
   Files: GameArtChronicle,
@@ -409,6 +413,7 @@ const COMIC_BY_LUCIDE: Record<string, LucideIcon | undefined> = {
   Brain: ComicThoughtIcon,
   FileText: ComicDocIcon,
   FileCode2: ComicDocIcon,
+  FileDiff: ComicDocIcon,
   FileAudio2: ComicMicIcon,
   FileVideo2: ComicPanelsIcon,
   Files: ComicDocsIcon,
@@ -523,6 +528,7 @@ export const Copy = withStyledIcon("Copy", lucide.Copy);
 export const Download = withStyledIcon("Download", lucide.Download);
 export const FileAudio2 = withStyledIcon("FileAudio2", lucide.FileAudio2);
 export const FileCode2 = withStyledIcon("FileCode2", lucide.FileCode2);
+export const FileDiff = withStyledIcon("FileDiff", lucide.FileDiff);
 export const FileText = withStyledIcon("FileText", lucide.FileText);
 export const FileVideo2 = withStyledIcon("FileVideo2", lucide.FileVideo2);
 export const Files = withStyledIcon("Files", lucide.Files);

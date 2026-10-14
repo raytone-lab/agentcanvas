@@ -1902,95 +1902,10 @@ export function rawStateCardToStateCard(card: RawStateCard, locale: AppLocale): 
   };
 }
 
-/**
- * The reader's four, the same in every style.
- *
- * Every style used to pick its own reader avatars, which made the reader's side
- * a second mascot slot. Those characters moved to the agent's gallery in the
- * style they were drawn for (below); the reader gets four plain people and an
- * upload tile (`UPLOADED_AVATAR_ID`, which the gallery adds itself).
- */
-export const DEFAULT_USER_AVATAR_IDS = ["default-sky", "default-sage", "default-apricot", "default-ink"] as const;
-
-const DEFAULT_USER_AVATAR = DEFAULT_USER_AVATAR_IDS[0];
-
-export const STYLE_AVATAR_DEFAULTS = {
-  // 原生风's, because 空白 wears 原生风's looks (`visualStylePreset`). Both
-  // avatar slots start switched off, so this is what the reader gets the moment
-  // they turn one on.
-  blank: {
-    "author.user": DEFAULT_USER_AVATAR,
-    "author.agent": "orange-blob",
-  },
-  native: {
-    "author.user": DEFAULT_USER_AVATAR,
-    "author.agent": "orange-blob",
-  },
-  illustrated: {
-    "author.user": DEFAULT_USER_AVATAR,
-    "author.agent": "orange-blob",
-  },
-  studio: {
-    "author.user": DEFAULT_USER_AVATAR,
-    "author.agent": "bot",
-  },
-  // A machine rather than a creature for the agent: the style's own signature
-  // is the monospace section label, and a rounded mascot beside it would be
-  // arguing with it.
-  //
-  // This said `square-terminal` and had done nothing. That id belongs to
-  // `content.terminal`, not to `author.agent`, and `resolveIcon` answers an
-  // unknown id with `options[0]` — so the style had been quietly showing the
-  // orange blob, the exact mascot the note above rules out. `bot` is the
-  // nearest thing the agent slot actually offers.
-  zine: {
-    "author.user": DEFAULT_USER_AVATAR,
-    "author.agent": "bot",
-  },
-  game: {
-    "author.user": DEFAULT_USER_AVATAR,
-    "author.agent": "game-orb-bot",
-  },
-  // Its own sprites, drawn on the same 16-cell grid as the style's bricks and
-  // coins.
-  pixel: {
-    "author.user": DEFAULT_USER_AVATAR,
-    "author.agent": "pixel-mushroom",
-  },
-  /* Office software had no mascot. The plainest agent glyph the registry has,
-     which in this style renders through pixelarticons like everything else. */
-  pixeldesk: {
-    "author.user": DEFAULT_USER_AVATAR,
-    "author.agent": "bot",
-  },
-  retro: {
-    "author.user": DEFAULT_USER_AVATAR,
-    "author.agent": "bot",
-  },
-  handdrawn: {
-    "author.user": DEFAULT_USER_AVATAR,
-    "author.agent": "sketch-bot-classic",
-  },
-  /* The supplied plates: a painted robot head for the agent, in the same ink
-     as everything else. */
-  inkwash: {
-    "author.user": DEFAULT_USER_AVATAR,
-    "author.agent": "ink-bot-leaf",
-  },
-  // The client shows no avatar on either side — the user's turn is a gray pill
-  // and the agent's is bare text — so this is the plainest agent glyph; the
-  // workbuddy stylesheet hides the avatar slots outright.
-  workbuddy: {
-    "author.user": DEFAULT_USER_AVATAR,
-    "author.agent": "bot",
-  },
-  /* A moulded shell with an LED matrix for a face is the register the rest of
-     the style is already in, and `robot-heads` draws one. */
-  tech: {
-    "author.user": DEFAULT_USER_AVATAR,
-    "author.agent": "robot-head-tv",
-  },
-} as const satisfies Record<PresetStyleId, Record<"author.user" | "author.agent", string>>;
+/* The reader's four and every style's opening faces are the skin recipe's now
+   (`skinRegistry.ts`); re-exported under the names the configurator uses. */
+import { DEFAULT_USER_AVATAR_IDS, SKIN_AVATAR_DEFAULTS as STYLE_AVATAR_DEFAULTS } from "../../theme/skinRegistry";
+export { DEFAULT_USER_AVATAR_IDS, STYLE_AVATAR_DEFAULTS };
 
 /**
  * The avatars each style offers.

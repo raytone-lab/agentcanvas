@@ -553,6 +553,7 @@ export const INK_BY_LUCIDE: Record<string, LucideIcon | undefined> = {
   Brain: InkBrainIcon,
   FileText: InkFileIcon,
   FileCode2: InkFileCodeIcon,
+  FileDiff: InkFileCodeIcon,
   FileAudio2: InkFileAudioIcon,
   FileVideo2: InkFileVideoIcon,
   FileSearch: InkDocSearchIcon,

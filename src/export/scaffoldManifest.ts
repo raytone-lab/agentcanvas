@@ -1,6 +1,6 @@
 import { appVersion } from "../appVersion";
 import { assertValidProject, sanitizeProjectCredentials, type AgentFrontendProject } from "../schema/agentuxConfig";
-import { themeTokens } from "../theme/themeTokens";
+import { withSyncedSkinId } from "../theme/skinEngine";
 import { scaffoldTemplateContent } from "./scaffoldTemplates";
 
 /**
@@ -323,6 +323,9 @@ const realSourceModules = import.meta.glob(
     "../agentmatrix/**/*.{ts,tsx,json}",
     "../agentux/**/*.{ts,tsx}",
     "../runtime/toolDisplaySpec.ts",
+    // The tool-diff renderer's parser: `ToolCallCard` and `artifactPreview` import
+    // it, and without it an exported project did not typecheck.
+    "../runtime/unifiedDiff.ts",
     // The right panel's three run sections read the timeline through this, the
     // same way the console tab reads it through `toolDisplaySpec`.
     "../runtime/runPanelData.ts",
@@ -542,7 +545,9 @@ export function createScaffoldPackageJson(project: AgentFrontendProject): Scaffo
  * pick 插画风, export, and get Native.
  */
 function exportableProject(project: AgentFrontendProject): AgentFrontendProject {
-  return sanitizeProjectCredentials(project);
+  /* Every style exports as itself (see above), and the skin id is re-derived
+     from the two fields so it always names what is being exported. */
+  return withSyncedSkinId(sanitizeProjectCredentials(project));
 }
 
 export function createScaffoldExportSnapshot(input: AgentFrontendProject): ScaffoldExportSnapshot {
@@ -1002,9 +1007,7 @@ import {
   type SlotConfig,
 } from "./schema/agentuxConfig";
 import { renderSlots, slotsForTemplate, type SlotRenderContext } from "./slots/slotRegistry";
-import { applyTheme } from "./theme/applyTheme";
-import { resolveThemeTokens } from "./theme/customTheme";
-import { themeTokens } from "./theme/themeTokens";
+import { applySkin, resolveSkin } from "./theme/skinEngine";
 import { isFixtureMode, useEventSource } from "./event-source";
 import { project } from "./exported-project";
 import {
@@ -1184,10 +1187,10 @@ export function AgentApp() {
   }, []);
 
   useEffect(() => {
-    // The colourway as it was left in the configurator, repaints included.
-    const tokens = resolveThemeTokens(project.theme.preset, project.theme.colorOverrides);
-    applyTheme(tokens, document.documentElement);
-    if (frameRef.current) applyTheme(tokens, frameRef.current);
+    // The colourway as it was left in the configurator, repaints included,
+    // through the same skin engine the canvas paints with.
+    applySkin(project.theme.skinId, document.documentElement, project.theme.colorOverrides);
+    if (frameRef.current) applySkin(project.theme.skinId, frameRef.current, project.theme.colorOverrides);
   }, []);
 
   useEffect(() => {
@@ -1590,7 +1593,7 @@ export function AgentApp() {
     { ...slotContext, onCollapseRight: undefined },
   );
 
-  const appearance = (themeTokens[project.theme.preset] ?? Object.values(themeTokens)[0]).appearance;
+  const appearance = resolveSkin(project.theme.skinId).tokens.appearance;
   // Explicit opt-in even in dev: npm run dev is how recipients first inspect the package,
   // so debug chrome must not appear unless they ask for it with ?devtools=1.
   const showPicker = devtoolsRequested() && isFixtureMode && streams.length > 0;
@@ -1628,6 +1631,7 @@ export function AgentApp() {
           data-right-folding={rightCollapsing ? "true" : undefined}
           data-right-collapsed={rightCollapsed}
           data-right-toggle={showRightToggle ? "true" : undefined}
+          data-skin={project.theme.skinId}
           // The same attributes the canvas frame carries, so every style rule
           // that reads them lands here too: 空白 wears 原生风's rules, and the
           // colourway rules key on the theme preset.

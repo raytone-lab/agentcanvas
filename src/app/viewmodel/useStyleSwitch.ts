@@ -4,36 +4,21 @@ import type { Dispatch, SetStateAction } from "react";
 import type { IconSlot } from "../../agentmatrix";
 import type { AppLocale } from "../../i18n/uiCopy";
 import type { AgentFrontendProject, PresetStyleId } from "../../schema/agentuxConfig";
-import { STYLE_AVATAR_DEFAULTS } from "../projection/presetRailData";
+import { makeSkinId, parseSkinId } from "../../theme/skin";
+import { applySkinRecipe, withProjectSkin } from "../../theme/skinEngine";
+import { defaultSkinForFamily } from "../../theme/skinRegistry";
 import type { ThemePresetId } from "../../theme/themeTokens";
 
-// Each style owns its own theme set, so switching style also moves to that
-// style's default theme after confirmation.
-function defaultThemeForStyle(styleId: PresetStyleId) {
-  // No style, so no style's theme — the palette the empty project already
-  // carries. Returning null instead would leave the previous style's theme on
-  // an unstyled canvas.
-  if (styleId === "blank") return "soft-glass" as const;
-  if (styleId === "native") return "soft-glass" as const;
-  if (styleId === "illustrated") return "ice-white" as const;
-  if (styleId === "workbuddy") return "wb-light" as const;
-  if (styleId === "studio") return "studio-grape" as const;
-  if (styleId === "zine") return "zine-butter" as const;
-  if (styleId === "game") return "game-campfire" as const;
-  if (styleId === "pixel") return "pixel-overworld" as const;
-  if (styleId === "pixeldesk") return "desk-bluegrey" as const;
-  if (styleId === "handdrawn") return "sketch-grid" as const;
-  if (styleId === "inkwash") return "ink-rice" as const;
-  /* Glacier, the default set. The original black-on-white one is `tech-paper`. */
-  if (styleId === "tech") return "tech-glacier" as const;
-  if (styleId === "retro") return "retro-paper" as const;
-  return null;
+/** The colourway a style opens on: its family's default skin. */
+function defaultThemeForStyle(styleId: PresetStyleId): ThemePresetId | null {
+  const skinId = defaultSkinForFamily(styleId);
+  return skinId ? parseSkinId(skinId)?.variant ?? null : null;
 }
 
 /**
- * Style-preset switching view model: owns the confirm-dialog state and the
- * 450ms swap animation timer. Confirmation also resets the theme preset and
- * the style's default avatars on the project (the Model).
+ * Style-preset switching view model: owns the 450ms swap animation timer.
+ * Applying a style moves the project's skin (style + colourway, as one id) and
+ * puts on the style's default avatars from its skin recipe.
  */
 export function useStyleSwitch({
   selectedPresetStyle,
@@ -67,23 +52,22 @@ export function useStyleSwitch({
         window.clearTimeout(styleSwitchTimerRef.current);
       }
       setProject((current) => ({
-        ...current,
-        theme: { ...current.theme, stylePreset: styleId },
+        ...withProjectSkin(current, makeSkinId(styleId, current.theme.preset)),
         /*
          * Styles whose avatars are part of the style rather than a choice.
          *
-         * `STYLE_AVATAR_DEFAULTS` only says *which* sprite a style uses; these
-         * two booleans are what decides whether a slot renders at all. Pixel
-         * was in the first table and not this one, so its sprites were
-         * registered and had nowhere to appear — measured as
-         * `.msg-avatar` count 0 with the art sitting in the registry.
+         * The skin recipe only says *which* sprite a style uses; these two
+         * booleans are what decides whether a slot renders at all. Pixel was in
+         * the first table and not this one, so its sprites were registered and
+         * had nowhere to appear — measured as `.msg-avatar` count 0 with the art
+         * sitting in the registry.
          */
         conversation: styleId === "game" || styleId === "pixel"
           ? { ...current.conversation, userAvatar: true, agentAvatar: true }
           : current.conversation,
       }));
-      setSlot("author.user", STYLE_AVATAR_DEFAULTS[styleId]["author.user"]);
-      setSlot("author.agent", STYLE_AVATAR_DEFAULTS[styleId]["author.agent"]);
+      // The style's own faces, from its skin recipe.
+      applySkinRecipe(defaultSkinForFamily(styleId) ?? makeSkinId(styleId, "soft-glass"), setSlot);
       setStyleSwitching(true);
       window.requestAnimationFrame(() => {
         styleSwitchTimerRef.current = window.setTimeout(() => {
@@ -143,7 +127,8 @@ export function useStyleSwitch({
     switchPresetStyle(target, tabButton ?? null);
     const nextTheme = themeId ?? defaultThemeForStyle(target);
     if (nextTheme) {
-      setProject((current) => ({ ...current, theme: { ...current.theme, preset: nextTheme } }));
+      // One identity: style, colourway and skin id move together.
+      setProject((current) => withProjectSkin(current, makeSkinId(target, nextTheme)));
     }
   }
 

@@ -48,7 +48,11 @@ describe("repainted colourways", () => {
     };
     const snapshot = createScaffoldExportSnapshot(project);
     expect(snapshot.files).toContain("src/theme/customTheme.ts");
-    expect(snapshot.fileContents["src/agent-shell.tsx"]).toContain("resolveThemeTokens(project.theme.preset, project.theme.colorOverrides)");
+    // Painted through the skin engine, which lays the repaints over the variant.
+    expect(snapshot.fileContents["src/agent-shell.tsx"]).toContain(
+      "applySkin(project.theme.skinId, document.documentElement, project.theme.colorOverrides)",
+    );
+    expect(snapshot.fileContents["src/theme/skinEngine.ts"]).toContain("resolveThemeTokens(skin.variant, colorOverrides)");
     expect(JSON.stringify(snapshot.fileContents)).toContain("#7c3aed");
   });
 });

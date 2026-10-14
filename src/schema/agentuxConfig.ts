@@ -7,6 +7,7 @@ import {
   type AgentCanvasExperienceV2,
   type CompleteAgentCanvasExperienceV2,
 } from "@agentmatrix/agentcanvas-contract";
+import { makeSkinId, parseSkinId, skinFamilies, type SkinFamily, type SkinId } from "../theme/skin";
 import type { ThemePresetId } from "../theme/themeTokens";
 
 export const allowedRegions = [
@@ -283,69 +284,9 @@ export type SlotConfig = {
  * and the thinnest, carrying palette, weight and icon treatment rather than a
  * full set of component geometry.
  */
-export type PresetStyleId =
-  /**
-   * No style at all — the state the configurator opens in.
-   *
-   * Deliberately has no `app.css` branch, which is the whole point: components
-   * added while this is selected render in the base stylesheet, so "no style
-   * chosen yet" looks like what it is, and picking any real style afterwards is
-   * a visible change. It also has no kit, so it is the only entry in the picker
-   * that leaves the canvas empty.
-   */
-  | "blank"
-  | "native"
-  | "illustrated"
-  | "studio"
-  | "workbuddy"
-  | "zine"
-  | "game"
-  | "pixel"
-  | "retro"
-  | "handdrawn"
-  | "inkwash"
-  /**
-   * 90s desktop software, not a game.
-   *
-   * Distinct from `pixel`, which is a pixel *game* — bricks, sprites, a mascot.
-   * This one is the era's office software: a blue-grey chrome column, a warm
-   * white document area, navy hairlines, bevelled controls and hard offset
-   * shadows with no blur in them anywhere. Same bitmap face and the same
-   * pixelarticons set, because those are the parts of "pixel" that are about
-   * resolution rather than about play.
-   */
-  | "pixeldesk"
-  /**
-   * Black ink on white, with the weight in the type and the geometry.
-   *
-   * The 8th selectable style, and appended rather than inserted: `styleKitIndex`
-   * numbers the non-blank styles by position, so slipping one into the middle
-   * shifts every later style's default component picks.
-   *
-   * Its own shape rather than a recolour of 原生风: the centre and the right
-   * panel share one frame the way 水墨风's do, the left column is a flat
-   * #F6F6F6 rail beside it, and the composer is two bands in one large radius —
-   * white where you type, grey where the controls are, with no line between
-   * them. The icons are 原生风's set at a heavier stroke, which is the one part
-   * that is a recolour.
-   */
-  | "tech";
+export type PresetStyleId = SkinFamily;
 
-export const presetStyleIds: readonly PresetStyleId[] = [
-  "blank",
-  "native",
-  "illustrated",
-  "studio",
-  "workbuddy",
-  "zine",
-  "game",
-  "pixel",
-  "retro",
-  "handdrawn",
-  "inkwash",
-  "pixeldesk",
-  "tech",
-];
+export const presetStyleIds: readonly PresetStyleId[] = skinFamilies;
 
 export type AgentProductInterface = Pick<
   CompleteAgentCanvasExperienceV2,
@@ -374,6 +315,8 @@ export type AgentFrontendProject = {
     bottomDockSize: number;
   };
   theme: {
+    /** Canonical skin identity (`family/variant`). `stylePreset` and `preset` mirror it. */
+    skinId: SkinId;
     preset: ThemePresetId;
     /**
      * Colourways the reader has repainted, by colourway: any of canvas, panel,
@@ -661,6 +604,7 @@ export const defaultCodingAgentProject: AgentFrontendProject = {
     ],
   },
   theme: {
+    skinId: makeSkinId("native", "soft-glass"),
     preset: "soft-glass",
     stylePreset: "native",
     density: "compact",
@@ -860,7 +804,8 @@ export const emptyStructureProject: AgentFrontendProject = {
    * applied. `defaultCodingAgentProject` keeps `native`; that one is the
    * published schema default and the exported scaffold's starting point.
    */
-  theme: { ...defaultCodingAgentProject.theme, stylePreset: "blank" },
+  // The skin id names the style too, so it moves with it — 空白 on 原生风's palette.
+  theme: { ...defaultCodingAgentProject.theme, stylePreset: "blank", skinId: makeSkinId("blank", "soft-glass") },
   layout: {
     ...defaultCodingAgentProject.layout,
     regions: ["sidebar", "main", "composer", "right-panel"],
@@ -1043,6 +988,15 @@ export function assertValidProject(project: AgentFrontendProject): void {
 
   if (!presetStyleIds.includes(project.theme.stylePreset)) {
     throw new Error(`Unsupported style preset: ${project.theme.stylePreset}`);
+  }
+
+  const parsedSkin = parseSkinId(project.theme.skinId);
+  if (!parsedSkin) {
+    throw new Error(`Unsupported skin: ${project.theme.skinId}`);
+  }
+  const expectedSkinId = makeSkinId(project.theme.stylePreset, project.theme.preset);
+  if (project.theme.skinId !== expectedSkinId) {
+    throw new Error(`theme.skinId must equal ${expectedSkinId}`);
   }
 
   for (const region of project.layout.regions) {

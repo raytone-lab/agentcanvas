@@ -104,7 +104,7 @@ agentcanvas/                      ← git 仓库根 = 应用根
 ### 3.4 配置对象:`AgentFrontendProject`(组合结果的唯一数据源)
 `src/schema/agentuxConfig.ts`。用户在配置器里的所有选择,最终都落成这个对象,导出时序列化进 `agentux.config.ts`。主要字段组:
 - `template`、`runtime{transport: "replay"|"mock"|"sse", harness}`
-- `theme{preset, density, radius, motion{reasoning, writing, toolCall, writingParams}}`(6 套主题:`console-light / graphite / oxide / studio-neutral / paper-trail / terminal-green`)
+- `theme{skinId, preset, stylePreset, density, radius, motion{reasoning, writing, toolCall, writingParams}}`（`skinId = family/variant`，例如 `native/soft-glass`；12 套皮肤，写入走 `withProjectSkin()`）
 - `providers{connections[]}`、`layout{regions, slots}`
 - `composer / conversation / sidebar / context / toolCalls / reasoning / blocks / output / git`(各种开关与呈现模式)
 
