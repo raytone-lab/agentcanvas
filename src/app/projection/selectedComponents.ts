@@ -6,12 +6,19 @@ import {
 import { previewCopy } from "../../i18n/copy/preview";
 import { APP_LOCALES } from "../../i18n/locales";
 import { uiCopy, type AppLocale, type UiCopy } from "../../i18n/uiCopy";
-import { isPresetOptionActive } from "../../schema/presetActions";
+import { applyPresetOption, isPresetOptionActive, togglePresetOption } from "../../schema/presetActions";
 import { presetGroupsForProject } from "../../schema/presets";
 import type { PresetGroupId, PresetOption } from "../../schema/presets";
-import type { AgentFrontendProject } from "../../schema/agentuxConfig";
+import type { AgentFrontendProject, PresetStyleId, SlotConfig } from "../../schema/agentuxConfig";
 import type { MessageActionKey } from "../appTypes";
-import { presetRailSections, stateSectionTitle } from "./presetRailData";
+import {
+  PRESENCE_OPTION_IDS,
+  groupPresetOptions,
+  isOptionSelectedInRail,
+  isOptionShownInRail,
+  presetRailSections,
+  stateSectionTitle,
+} from "./presetRailData";
 
 export type SelectedComponentItem = {
   id: string;
@@ -38,7 +45,7 @@ const selectedComponentGroupIds = new Set<PresetGroupId>([
 ]);
 
 const selectedProviderComponentIds = new Set(["provider-settings-launcher"]);
-const hiddenSelectedComponentOptionIds = new Set([
+export const hiddenSelectedComponentOptionIds = new Set([
   "message-actions",
   "reasoning-public-summary",
   "error-collapse",
@@ -210,4 +217,90 @@ export function selectedComponentItemsForProject(
   }
 
   return Array.from(items.values());
+}
+
+/**
+ * How much of a group has been chosen: `done` of `total` choices.
+ *
+ * For the counts on the rail's group rows. Asked for directly: in 架构 and 组件
+ * a reader could not tell which groups still had things left to pick without
+ * opening each one — "要不其实用户很容易遗漏".
+ *
+ * A choice is what the reader can actually make, which is not the same as an
+ * option card:
+ *
+ *   - a section of *variants* (four thinking motions, three loaders) is one
+ *     choice — only one of them can be in force, so counting all four would
+ *     show 1/4 for a section that is finished;
+ *   - an *additive* option (upload, mic, 名称标签) is a choice of its own;
+ *   - 对话区's two avatars and seven message actions are one each, the same
+ *     units the selection island counts.
+ *
+ * Icon galleries are not counted: every slot always draws an icon, so a
+ * gallery is never "not chosen". Done-ness reads `isOptionSelectedInRail`, the
+ * rule the rail's own ticks use, so the count and the ticks cannot disagree.
+ */
+export function groupChoiceProgress(
+  project: AgentFrontendProject,
+  group: { id: PresetGroupId; options: readonly PresetOption[] },
+  options: {
+    stylePreset?: PresetStyleId;
+    picked?: readonly string[];
+    mounted?: ReadonlySet<SlotConfig["component"]>;
+  } = {},
+): { done: number; total: number } {
+  const { stylePreset, picked = [], mounted } = options;
+  let done = 0;
+  let total = 0;
+  const selected = (option: PresetOption) => isOptionSelectedInRail(project, option, group.id, picked, mounted);
+  /*
+   * Which options exclude each other: picking B turns A off. Tested pairwise on
+   * the project as it stands rather than read off one option, because a
+   * section can mix the two — 人机协作's 替我审批 is a toggle beside 内联审批 /
+   * 外部审批, which are one choice. Each exclusive cluster is one choice; every
+   * option outside one is a choice of its own.
+   */
+  const excludes = (a: PresetOption, b: PresetOption) => {
+    if (PRESENCE_OPTION_IDS.has(a.id) || PRESENCE_OPTION_IDS.has(b.id)) return false;
+    const withA = applyPresetOption(project, a.id);
+    if (!isPresetOptionActive(withA, a.id)) return false;
+    return !isPresetOptionActive(applyPresetOption(withA, b.id), a.id);
+  };
+
+  const shown = group.options.filter(
+    (option) =>
+      !hiddenSelectedComponentOptionIds.has(option.id) &&
+      option.id !== "speaker-labels" &&
+      isOptionShownInRail(option, stylePreset),
+  );
+  for (const section of groupPresetOptions(shown, "")) {
+    const items = section.items;
+    const cluster = items.map((_, index) => index);
+    const root = (index: number): number => (cluster[index] === index ? index : (cluster[index] = root(cluster[index])));
+    for (let i = 0; i < items.length; i += 1) {
+      for (let j = i + 1; j < items.length; j += 1) {
+        if (excludes(items[i], items[j]) || excludes(items[j], items[i])) cluster[root(j)] = root(i);
+      }
+    }
+    const clusters = new Map<number, PresetOption[]>();
+    items.forEach((option, index) => clusters.set(root(index), [...(clusters.get(root(index)) ?? []), option]));
+    for (const members of clusters.values()) {
+      total += 1;
+      if (members.some(selected)) done += 1;
+    }
+  }
+
+  if (group.id === "conversation") {
+    const extras = [
+      Boolean(project.conversation.userAvatar),
+      Boolean(project.conversation.agentAvatar),
+      ...(group.options.some((option) => option.id === "speaker-labels")
+        ? [isPresetOptionActive(project, "speaker-labels")]
+        : []),
+      ...selectedMessageActionComponents.map((item) => selectedMessageActionActive(project, item.key)),
+    ];
+    total += extras.length;
+    done += extras.filter(Boolean).length;
+  }
+  return { done, total };
 }

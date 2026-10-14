@@ -19,13 +19,13 @@ import type { AppLocale } from "../../i18n/uiCopy";
  */
 export type CanvasBackgroundId =
   | "slate"
-  | "paper"
-  | "sand"
+  | "fog"
+  | "oat"
   | "mist"
-  | "ink"
+  | "graphite"
   | "dots"
   | "grid"
-  | "hatch";
+  | "glow";
 
 export type CanvasBackground = {
   id: CanvasBackgroundId;
@@ -36,45 +36,73 @@ export type CanvasBackground = {
   label: Record<AppLocale, string>;
 };
 
-/** The ink the patterns are drawn in — the text colour, at a fraction. */
-const PATTERN_INK = "rgba(31, 35, 43, 0.13)";
+/**
+ * The set, redrawn the way design tools draw theirs.
+ *
+ * The first set read as five unrelated picks: two muddy greys, a sand that
+ * went brown next to white, a dull blue, and a near-black with a blue cast —
+ * no two at the same lightness — with a hatch that was the loudest thing on
+ * the page. Figma, Framer, Freeform and tldraw all keep their canvases inside
+ * one band of lightness and vary only the temperature, and keep patterns at
+ * the edge of visibility: there to align by, never to look at.
+ *
+ * So: one lightness, five temperatures (cool slate, neutral fog, warm oat,
+ * clear mist, and a neutral graphite for dark), and patterns at about half
+ * the ink they had. The hatch is gone; its slot is a soft light falling from
+ * the top. Every plain one stays at or below the slate's lightness, so a
+ * white frame is always the brightest thing on it (`canvasBackgrounds.test`).
+ */
+/** The ink the patterns are drawn in — the text colour, at a whisper. */
+const DOT_INK = "rgba(31, 35, 43, 0.12)";
+const GRID_MINOR = "rgba(31, 35, 43, 0.045)";
+const GRID_MAJOR = "rgba(31, 35, 43, 0.085)";
 
 export const CANVAS_BACKGROUNDS: readonly CanvasBackground[] = [
   // The one the canvas has always been, so the default changes nothing.
   { id: "slate", color: "#DDE1E9", label: { en: "Slate", zh: "石板灰", ja: "スレート" } },
-  { id: "paper", color: "#D8D8D6", label: { en: "Paper", zh: "纸灰", ja: "ペーパー" } },
-  { id: "sand", color: "#D5CFC4", label: { en: "Sand", zh: "暖砂", ja: "サンド" } },
-  { id: "mist", color: "#C9D3DD", label: { en: "Mist", zh: "雾蓝", ja: "ミスト" } },
-  { id: "ink", color: "#242A33", label: { en: "Ink", zh: "墨黑", ja: "インク" } },
+  { id: "fog", color: "#DCDDE0", label: { en: "Fog", zh: "雾灰", ja: "フォグ" } },
+  { id: "oat", color: "#E0DBD3", label: { en: "Oat", zh: "燕麦", ja: "オーツ" } },
+  { id: "mist", color: "#D7DEE8", label: { en: "Mist", zh: "雾蓝", ja: "ミスト" } },
+  { id: "graphite", color: "#26282D", label: { en: "Graphite", zh: "石墨", ja: "グラファイト" } },
   {
     id: "dots",
-    color: "#D9DCE2",
+    color: "#DCE0E7",
     texture: {
-      image: `radial-gradient(circle at 1px 1px, ${PATTERN_INK} 1.2px, transparent 0)`,
-      size: "16px 16px",
-      swatchSize: "6px 6px",
+      image: `radial-gradient(circle at 1px 1px, ${DOT_INK} 1px, transparent 0)`,
+      size: "20px 20px",
+      swatchSize: "7px 7px",
     },
     label: { en: "Dot grid", zh: "点阵", ja: "ドット" },
   },
   {
+    // Fine squares with a heavier line every fifth, the way a drawing board
+    // is ruled — the major lines are what the eye aligns to.
     id: "grid",
-    color: "#DBDEE4",
+    color: "#DCE0E7",
     texture: {
-      image: `linear-gradient(to right, ${PATTERN_INK} 1px, transparent 1px), linear-gradient(to bottom, ${PATTERN_INK} 1px, transparent 1px)`,
-      size: "24px 24px, 24px 24px",
-      swatchSize: "6px 6px, 6px 6px",
+      image: [
+        `linear-gradient(to right, ${GRID_MINOR} 1px, transparent 1px)`,
+        `linear-gradient(to bottom, ${GRID_MINOR} 1px, transparent 1px)`,
+        `linear-gradient(to right, ${GRID_MAJOR} 1px, transparent 1px)`,
+        `linear-gradient(to bottom, ${GRID_MAJOR} 1px, transparent 1px)`,
+      ].join(", "),
+      size: "16px 16px, 16px 16px, 80px 80px, 80px 80px",
+      swatchSize: "6px 6px, 6px 6px, 30px 30px, 30px 30px",
     },
     label: { en: "Grid", zh: "方格", ja: "グリッド" },
   },
   {
-    id: "hatch",
-    color: "#D6D9DF",
+    // A soft light falling from the top onto the slate: depth without a
+    // pattern to read.
+    id: "glow",
+    color: "#DCE0E8",
     texture: {
-      image: `repeating-linear-gradient(45deg, ${PATTERN_INK} 0 1.5px, transparent 1.5px 7px)`,
-      size: "auto",
-      swatchSize: "auto",
+      image:
+        "radial-gradient(110% 75% at 50% 0%, rgba(255, 255, 255, 0.6), transparent 62%), linear-gradient(180deg, transparent 40%, rgba(31, 35, 43, 0.05))",
+      size: "100% 100%, 100% 100%",
+      swatchSize: "100% 100%, 100% 100%",
     },
-    label: { en: "Hatch", zh: "斜纹", ja: "ハッチ" },
+    label: { en: "Soft light", zh: "柔光", ja: "ソフトライト" },
   },
 ];
 

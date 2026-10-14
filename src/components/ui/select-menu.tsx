@@ -24,6 +24,7 @@ export type SelectMenuProps = {
   className?: string;
   triggerLabel?: ReactNode;
   triggerContent?: ReactNode;
+  portalContainer?: HTMLElement | null;
 };
 
 /**
@@ -45,6 +46,7 @@ export function SelectMenu({
   className,
   triggerLabel,
   triggerContent,
+  portalContainer,
 }: SelectMenuProps) {
   const selected = options.find((option) => option.value === value);
 
@@ -86,12 +88,13 @@ export function SelectMenu({
           <path d="M2.5 4.5 6 8l3.5-3.5" />
         </svg>
       </span>
-      <RDropdown.Portal>
+      <RDropdown.Portal container={portalContainer}>
         <RDropdown.Content
           className="ui-dropdown-menu ui-select-menu-content"
           sideOffset={6}
           align={align}
           collisionPadding={12}
+          collisionBoundary={portalContainer ?? undefined}
           sticky="always"
         >
           <RDropdown.RadioGroup value={value} onValueChange={onValueChange}>

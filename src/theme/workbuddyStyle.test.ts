@@ -294,19 +294,30 @@ describe("WorkBuddy style", () => {
     const appTsx = readFileSync(new URL("../App.tsx", import.meta.url), "utf8");
     const exporter = readFileSync(new URL("../export/scaffoldManifest.ts", import.meta.url), "utf8");
 
+    // Both surfaces must agree about which icon set they draw; a mismatch means
+    // the preview and the exported app disagree.
+    //
+    // This used to be checked by requiring each file to contain the same
+    // `? "codicon"` ternary and inspecting the 120 characters in front of it.
+    // Both now call one resolver instead, so agreement is structural rather
+    // than asserted — which is the stronger version of what this was for: the
+    // old shape could drift the moment a style was added to one copy and not
+    // the other, and that only surfaced after running an export.
     for (const source of [appTsx, exporter]) {
-      expect(source).toContain('"codicon"');
-      expect(source).toContain("workbuddy");
+      expect(source).toContain("iconStyleForStylePreset");
+      expect(source).not.toContain('? "codicon"');
     }
 
-    // Both surfaces must agree; a mismatch means the preview and the exported
-    // app disagree about which icon set they draw.
-    for (const source of [appTsx, exporter]) {
-      const codiconIdx = source.indexOf('? "codicon"');
-      expect(codiconIdx, "codicon must be chosen by a style conditional").toBeGreaterThan(-1);
-      const condition = source.slice(Math.max(0, codiconIdx - 120), codiconIdx);
-      expect(condition).toContain("workbuddy");
-    }
+    // And the resolver is where the scoping lives. Load-bearing beyond looks:
+    // codicon is CC-BY-4.0, so any other style leaves an export with no
+    // attribution obligation.
+    const icons = readFileSync(new URL("../agentmatrix/icons.tsx", import.meta.url), "utf8");
+    const resolver = icons.slice(icons.indexOf("export function iconStyleForStylePreset"));
+    const codiconIdx = resolver.indexOf('return "codicon"');
+    expect(codiconIdx, "codicon must be chosen by a style conditional").toBeGreaterThan(-1);
+    expect(resolver.slice(0, codiconIdx)).toContain("workbuddy");
+    // Nothing else may reach it.
+    expect(resolver.match(/return "codicon"/g)).toHaveLength(1);
   });
 
   it("keeps the codicon attribution with anything that redistributes it", () => {

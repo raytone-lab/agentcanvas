@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="utf-8" />
+    <title>水墨风 · 图标字重对照</title>
+    <!--
+      Dev-only, like `/icon-sheet.html`, and not in Vite's `rollupOptions.input`
+      — so it is served in dev and never built.
+
+      Two jobs. It plates 水墨风's marks at all four Phosphor weights on the
+      rice-paper and night colourways, which is the evidence for why the set
+      draws `fill` (see `inkIcons.tsx`); and it publishes `window.__ink` for
+      `scripts/probe-phosphor-fill.mjs`, which cannot import a bare specifier
+      itself — `Runtime.evaluate` is resolved by the browser, not by Vite, so
+      only a module Vite already transformed can hand the dep out.
+
+        /icon-weights.html        → the plate
+        node scripts/probe-ink-weights.mjs    → shoots it
+        node scripts/probe-phosphor-fill.mjs  → audits fill-weight degradation
+    -->
+    <style>
+      body { margin: 0; padding: 32px 36px; background: #fff; width: 1560px; box-sizing: border-box;
+             font: 13px/1.5 -apple-system, "PingFang SC", system-ui, sans-serif; color: #14161a; }
+      h1 { margin: 0 0 22px; font-size: 22px; }
+      h2 { margin: 26px 0 10px; font-size: 15px; }
+      .plate { padding: 16px 18px; border-radius: 10px; margin-bottom: 10px; }
+      .paper { background: #F3F0E9; color: #3A3F46; }
+      .night { background: #1B1F24; color: #E6E3DA; }
+      .row { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+      .cell { display: grid; place-items: center; width: 44px; height: 40px; }
+      .tag { font: 11px ui-monospace, Menlo, monospace; opacity: 0.6; width: 116px; flex: none; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      import React from "react";
+      import { createRoot } from "react-dom/client";
+      import * as Ph from "@phosphor-icons/react";
+      import { StateIcon, IconSetProvider, IconStyleProvider } from "/src/agentmatrix/IconSetContext.tsx";
+      import { STYLE_AVATAR_DEFAULTS } from "/src/app/projection/presetRailData.ts";
+
+      const h = React.createElement;
+
+      /* Handed to `scripts/probe-phosphor-fill.mjs`. A bare
+         `import("@phosphor-icons/react")` inside `Runtime.evaluate` is resolved
+         by the browser, not by Vite, so the probe cannot reach the dep itself —
+         only a module Vite already transformed can pass it out. */
+      window.__ink = { Ph, React, ...(await import("react-dom/client")) };
+
+      /* The reference row, chosen as the marks the *old* hand-drawn set collapsed
+         hardest: InkAlertIcon covered 19 slots, InkCycleIcon and InkCrossIcon 15
+         each. A weight that cannot tell these apart at 15px has fixed nothing,
+         which is the question this page is for. */
+      const NAMES = [
+        "MagnifyingGlass", "ChatTeardrop", "Brain", "FileText", "FileMagnifyingGlass",
+        "NotePencil", "Terminal", "GitDiff", "ShieldCheck", "ShieldWarning",
+        "Check", "X", "Warning", "WarningCircle", "ArrowsClockwise", "Hourglass",
+        "PaperPlaneTilt", "Paperclip", "Microphone", "SidebarSimple", "Plus", "Copy",
+        "PencilSimple", "Gear", "Sparkle", "Image", "Globe", "Gauge", "Play", "Prohibit",
+      ];
+
+      const strip = (weight, size) =>
+        h("div", { className: "row" },
+          h("div", { className: "tag" }, `${weight} · ${size}px`),
+          NAMES.map((n) => {
+            const Icon = Ph[n];
+            return h("div", { className: "cell", key: n + weight + size },
+              Icon ? h(Icon, { size, weight }) : h("span", { style: { color: "red" } }, "?"));
+          }));
+
+      const plate = (cls, label) =>
+        h(React.Fragment, null,
+          h("h2", null, label),
+          h("div", { className: `plate ${cls}` },
+            ["duotone", "fill", "bold", "regular"].flatMap((w) => [strip(w, 15), strip(w, 22)])));
+
+      /* What the style actually draws today, through `StateIcon` — the same path
+         the canvas takes, so this row cannot drift from the product. */
+      const CURRENT = [
+        "tool.search", "session.item", "content.thinking", "content.text", "tool.file_read",
+        "tool.file_edit", "content.terminal", "content.diff", "tool.pending_approval", "tool.failed",
+        "tool.completed", "tool.cancelled", "severity.warning", "severity.error", "incident.retrying",
+        "permission.pending", "surface.activity", "error.resource", "content.audio", "content.mcp",
+        "runtime.op", "tool.partial", "tool.file_modified", "surface.config", "permission.allow_always",
+        "content.image", "content.location", "error.budget", "runtime.ready", "permission.deny",
+      ];
+      const inkStrip = (size) =>
+        h("div", { className: "row" },
+          h("div", { className: "tag" }, `当前 ink · ${size}px`),
+          CURRENT.map((slot) =>
+            h("div", { className: "cell", key: slot + size }, h(StateIcon, { slot, size }))));
+
+      createRoot(document.getElementById("root")).render(
+        h("div", { "data-style-preset": "inkwash" },
+          h(IconSetProvider, { initial: { ...STYLE_AVATAR_DEFAULTS.inkwash } },
+            h(IconStyleProvider, { value: "ink" },
+              h(React.Fragment, null,
+                h("h1", null, "水墨风 · 图标字重对照（Phosphor 四档 vs 当前槽位）"),
+                h("h2", null, "当前：本风格实际画在槽位上的笔画"),
+                h("div", { className: "plate paper" }, inkStrip(15), inkStrip(22)),
+                plate("paper", "Phosphor 四档 · 宣纸 #F3F0E9 / 墨 #3A3F46"),
+                plate("night", "Phosphor 四档 · 夜色 #1B1F24 / 墨 #E6E3DA"))))));
+    </script>
+  </body>
+</html>

@@ -36,7 +36,7 @@ export type SlotRenderContext = {
   gitPreviewState?: GitPreviewState;
   modelOptions: readonly string[];
   isRunning: boolean;
-  onSubmit: (prompt: string, context?: ComposerSubmitContext) => void;
+  onSubmit: (prompt: string, context?: ComposerSubmitContext) => void | boolean | Promise<void | boolean>;
   onStop: () => void;
   onExport: () => void;
   onGitCommit: () => void;
@@ -94,9 +94,10 @@ export const slotComponentRegistry: Record<SlotComponent, SlotRenderer> = {
       externalApprovalPlacement={externalApprovalPlacement}
     />
   ),
-  ComposerFrame: ({ project, modelOptions, isRunning, onSubmit, onStop, onProviderChange, onModelChange, providerSettingsControl, welcomeGreeting, isWelcome }) => (
+  ComposerFrame: ({ project, viewModel, modelOptions, isRunning, onSubmit, onStop, onProviderChange, onModelChange, providerSettingsControl, welcomeGreeting, isWelcome }) => (
     <ComposerFrame
       project={project}
+      timeline={viewModel.timeline}
       modelOptions={modelOptions}
       isRunning={isRunning}
       providerSettingsControl={providerSettingsControl}

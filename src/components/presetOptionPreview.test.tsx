@@ -25,9 +25,10 @@ describe("sidebar option cards", () => {
     expect(newChat).toContain("新建对话");
     expect(newChat).toContain("<svg");
 
-    // The magnifier alone — in the sidebar that is all this option adds.
+    // A miniature column with the magnifier in focus: the card says what the
+    // option adds and where it sits (the header's right end).
     const search = render("sidebar-search");
-    expect(search).toContain('data-align="center"');
+    expect(search).toContain('data-focus="search"');
     expect(search).toContain("<svg");
 
     // Both headings, stacked: the grouping is those words.

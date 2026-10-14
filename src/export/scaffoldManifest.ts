@@ -85,10 +85,192 @@ export const SCAFFOLD_PUBLIC_ASSETS = [
   "style-native.png",
   "style-minimal.png",
   "style-illustrated.png",
+  /* The seven `style-swatch/*.png` were here, packed because app.css named
+     them. They are out for two reasons, either of which is enough: app.css
+     does not name them any more (the picker's chip takes its image from the
+     style's card plate, set by the component), and the picker is editor chrome
+     — an exported project wears one fixed style and has no style list to draw
+     swatches for. 72KB nobody could see. The files stay in `public/`. */
+  /* 手绘风's avatars: four animals for the reader, four robots for the agent.
+     Painted plates rather than the SVG faces the style shipped with, so they
+     are files and they ship with the product — an exported project renders the
+     same avatar the canvas showed. */
+  "handdrawn/avatars/cat.png",
+  "handdrawn/avatars/rabbit.png",
+  "handdrawn/avatars/panda.png",
+  "handdrawn/avatars/fox.png",
+  "handdrawn/avatars/bot-classic.png",
+  "handdrawn/avatars/bot-sprint.png",
+  "handdrawn/avatars/bot-warm.png",
+  "handdrawn/avatars/bot-headset.png",
+  /* 游戏风's avatars, the same deal: painted plates that ship with the product,
+     so an export renders the avatar the canvas showed. */
+  "game/avatars/wolf.png",
+  "game/avatars/cat.png",
+  "game/avatars/eagle.png",
+  "game/avatars/golem.png",
+  "game/avatars/orb-bot.png",
+  "game/avatars/mage.png",
+  "game/avatars/sprout.png",
+  "game/avatars/tome.png",
+  /* 水墨风's sidebar painting: ink on rice paper, supplied as art. */
+  "ink/boat.jpg",
+  /* …and the sheet the whole style sits on — torn paper with the sun, the
+     birds, the ranges and the bamboo painted into it. This one is the style's
+     entire background, so an export without it renders 水墨风 as a flat
+     colour. */
+  "ink/sheet.jpg",
+  /* 科技风's corner piece: the style plate's glass ring and sphere, at the
+     foot of the left column (`--tech-orb` in app.css), and its monochrome cut
+     for the Paper colourway. */
+  "tech/orb.jpg",
+  "tech/orb-mono.jpg",
+  /* …and the brush stroke that marks the open session and underlines the
+     conversation title. Referenced from `--ink-brush-mark` in app.css, so an
+     export that misses it shows a title with nothing under it. */
+  "ink/brush-row.png",
+  /* …and the eight avatars: four washes for the reader, four painted robot
+     heads for the agent. WebP, like 游戏风's two portraits — as PNG the same
+     eight were 746KB against 82KB. */
+  "ink/avatars/peaks.webp",
+  "ink/avatars/bridge.webp",
+  "ink/avatars/bamboo.webp",
+  "ink/avatars/sun.webp",
+  "ink/avatars/bot-leaf.webp",
+  "ink/avatars/bot-hat.webp",
+  "ink/avatars/bot-bamboo.webp",
+  "ink/avatars/bot-cloud.webp",
   "output-previews/product-projector.png",
   "output-previews/aurora.png",
   "output-previews/lens.png",
+  // The Pixel style's bitmap face, referenced by an `@font-face` at the top of
+  // app.css. Binary, so it cannot ride along in the `?raw` CSS inline the way
+  // every other part of a style does — miss it and the exported project falls
+  // back to a system monospace, which is the one thing that style cannot do.
+  //
+  // The licence file travels with it because OFL 1.1 requires the licence to
+  // accompany any redistribution, and an exported project is a redistribution.
+  "fonts/ark-pixel-12px-zh_cn.woff2",
+  "fonts/ark-pixel-font-OFL.txt",
+  // The Comic style's Latin face, same reasoning and the same OFL obligation.
+  "fonts/outfit-variable.ttf",
+  "fonts/outfit-OFL.txt",
+  "fonts/eb-garamond-regular.ttf",
+  "fonts/eb-garamond-medium.ttf",
+  "fonts/eb-garamond-OFL.txt",
+  // The Game style's display face, and the keep its sidebar ends in. Same OFL
+  // obligation as the faces above; the castle is art, so it carries none.
+  "fonts/cinzel-variable.woff2",
+  "fonts/cinzel-OFL.txt",
+  // The Handdrawn style's two hands: Patrick Hand for body copy, Caveat for
+  // titles. Both OFL, so both licences travel with them.
+  "fonts/patrick-hand.woff2",
+  "fonts/patrick-hand-OFL.txt",
+  "fonts/caveat-variable.woff2",
+  "fonts/caveat-OFL.txt",
+  "game/castle-keep.png",
+  /* The Handdrawn sidebar's desk drawing. It was an inline data-URI SVG,
+     which is why this list did not need it before; the supplied artwork is
+     a halftone raster, and a halftone cannot be a handful of paths. 39KB,
+     quantised to 96 colours — the drawing is ink, grey dots and two
+     near-black accents, so a full RGBA PNG was 277KB for no visible
+     difference. */
+  "sketch/desk.png",
+  /* The Game style's whole icon set, 24 painted PNGs at 96px (428KB).
+     Raster because the art is painted — bevelled gold with an inset gem —
+     which is the thing that makes it read as a game and the thing a stroked
+     vector cannot have. `gameSlots.ts` maps them onto all 65 icon slots and
+     `uiIcons.tsx` onto the chrome, so every one of them is referenced from
+     code rather than from CSS; `exportContract.test.ts` checks both
+     directions. */
+  "game/icons/chat-new.png",
+  "game/icons/lens.png",
+  "game/icons/portrait.png",
+  "game/icons/charter.png",
+  "game/icons/pack.png",
+  "game/icons/compass.png",
+  "game/icons/crest.png",
+  "game/icons/swords.png",
+  "game/icons/chest.png",
+  "game/icons/potion.png",
+  "game/icons/cog.png",
+  "game/icons/market.png",
+  "game/icons/scroll.png",
+  "game/icons/folder.png",
+  "game/icons/chronicle.png",
+  "game/icons/pages.png",
+  "game/icons/quill.png",
+  "game/icons/cycle.png",
+  "game/icons/mic.png",
+  "game/icons/plane.png",
+  "game/icons/bell.png",
+  "game/icons/fellowship.png",
+  "game/icons/trophy.png",
+  "game/icons/keep.png",
+  "game/icons/panels.png",
+  "retro-grid.svg",
+  "retro/search.svg",
+  "retro/sidebar.svg",
+  "retro/new-chat.svg",
+  "retro/header-sidebar.svg",
+  "retro/copy.svg",
+  "retro/edit.svg",
+  "retro/thinking-dots.svg",
+  "retro/retry.svg",
+  /* `file-status.svg` was packed here and is not any more: the stylesheet
+     painted it over the icon the left rail had set, so four of 复古风's icon
+     galleries were inert. It is ported into the style's own set now
+     (`RetroSheetIcon` in `retroIcons.tsx`), path for path, with `currentColor`
+     in place of its baked `#3A332B` — which is also what frees it from the
+     reason this style cannot have a dark colourway. The file stays in
+     `public/retro/` as the reference the port is checked against; it is simply
+     no longer shipped, which is what `exportContract.test.ts` asks about.
+
+     `attachment-cube.svg` below is still packed, and the difference is worth
+     keeping: the artifact card's icon box is not a slot. */
+  "retro/attachment-cube.svg",
+  "retro/attachment-chevron.svg",
+  "retro/quick-search.svg",
+  "retro/quick-fix.svg",
+  "retro/quick-explain.svg",
+  "retro/composer-add.svg",
+  "retro/permission.svg",
+  "retro/chevron.svg",
+  "retro/effort.svg",
+  "retro/model.svg",
+  "retro/microphone.svg",
+  /* `retro/send-button.svg` was here: a #A8A196 disc at 78%, one baked colour.
+     The key needs two now — the reader's bubble fill when there is nothing to
+     send, the darkest value of their avatar when there is — so the disc is
+     drawn from the palette and the plate has no reference left. The file stays
+     in `public/` as the supplied original; this list is what an export packs. */
+  "retro/send-arrow.svg",
+  /* `game/campfire-banner.webp` was here. The Game style was rebuilt from a
+     design that puts its art at the foot of the sidebar rather than across the
+     chat header, so nothing references the camp banner any more and the
+     contract test flagged it as dead weight in every export. The file is still
+     in `public/game/` — putting it back is restoring this line. */
+  "game/companion.webp",
+  "game/traveler.webp",
 ] as const;
+
+/**
+ * Assets that ship because a licence says so, not because code points at them.
+ *
+ * `exportContract.test.ts` otherwise flags any packed asset nothing references
+ * as dead weight, which is the right default — this is the one category that
+ * legitimately has no referent. OFL 1.1 requires its licence text to accompany
+ * the font in any redistribution, and an exported project is one, so the file
+ * has to be in the zip whether or not a line of source mentions it.
+ */
+export const SCAFFOLD_LICENSE_ASSETS: readonly string[] = [
+  "fonts/ark-pixel-font-OFL.txt",
+  "fonts/outfit-OFL.txt",
+  "fonts/eb-garamond-OFL.txt",
+  "fonts/cinzel-OFL.txt",
+  "fonts/patrick-hand-OFL.txt",
+  "fonts/caveat-OFL.txt",
+];
 
 export type ScaffoldAssetMap = Record<string, Uint8Array>;
 
@@ -141,6 +323,9 @@ const realSourceModules = import.meta.glob(
     "../agentmatrix/**/*.{ts,tsx,json}",
     "../agentux/**/*.{ts,tsx}",
     "../runtime/toolDisplaySpec.ts",
+    // The right panel's three run sections read the timeline through this, the
+    // same way the console tab reads it through `toolDisplaySpec`.
+    "../runtime/runPanelData.ts",
     "../runtime/eventLimits.ts",
     // The admission layer travels with the export: the exported app is the one that talks to a
     // real backend, so it is the one that most needs a vendor's stream narrowed to what these
@@ -319,10 +504,19 @@ export function createScaffoldPackageJson(project: AgentFrontendProject): Scaffo
       katex: "^0.16.47",
       "lucide-react": "^1.16.0",
       mermaid: "^11.17.2",
+      // The Pixel style's icon set, reached through `agentmatrix/pixelSlots` and
+      // `uiIcons` — both of which are copied into the export, so the generated
+      // project needs the dependency or it will not install. MIT, so unlike
+      // codicon it adds no attribution obligation.
+      pixelarticons: "^2.4.1",
       motion: "^12.40.0",
       react: "^19.2.6",
       "react-dom": "^19.2.6",
       "react-resizable-panels": "^4.11.1",
+      // 科技风's agent avatars, reached through `agentmatrix/robotHeadAvatars`,
+      // which the `../agentmatrix/**` glob above already copies. MIT, canvas
+      // only, no runtime dependencies of its own.
+      "robot-heads": "^0.1.0",
       "thinking-orbs": "^0.1.1",
     },
     devDependencies: {
@@ -338,15 +532,17 @@ export function createScaffoldPackageJson(project: AgentFrontendProject): Scaffo
 }
 
 /**
- * "studio" is still under construction: in the configurator it renders a placeholder
- * panel ("正在搭建中…") rather than a real surface, and it contributes no `app.css`
- * rules. The exported app has no placeholder to show, so it falls back to "native".
- * Applied once here so the shell and `exported-project.ts` can never disagree.
+ * Every style is exportable now.
+ *
+ * "studio" used to be rewritten to "native" here, because it rendered a
+ * placeholder panel instead of a surface and contributed no `app.css` rules —
+ * so an export of it would have been an export of nothing. It now has its own
+ * theme, its own CSS branch and its own icon treatment, all of which travel
+ * with the project, so the substitution would now be the bug: the reader would
+ * pick 插画风, export, and get Native.
  */
 function exportableProject(project: AgentFrontendProject): AgentFrontendProject {
-  const sanitized = sanitizeProjectCredentials(project);
-  if (sanitized.theme.stylePreset !== "studio") return sanitized;
-  return { ...sanitized, theme: { ...sanitized.theme, stylePreset: "native" } };
+  return sanitizeProjectCredentials(project);
 }
 
 export function createScaffoldExportSnapshot(input: AgentFrontendProject): ScaffoldExportSnapshot {
@@ -441,12 +637,14 @@ function scaffoldFileContent(file: string, project: AgentFrontendProject, packag
 // Generated entry + shell (static; import the real components).
 // ---------------------------------------------------------------------------
 
-// Provider tree mirrors App.tsx (`IconStyleProvider` wraps everything at App.tsx:2449
-// with "bold" for the native style, "line" otherwise).
+// Provider tree mirrors App.tsx. The icon style is resolved by the same
+// function both sides call (`iconStyleForStylePreset`, in agentmatrix/icons) —
+// it used to be this ternary written out twice, and a style added to one copy
+// and not the other only showed up after running an export.
 const MAIN_SOURCE = `import { createRoot } from "react-dom/client";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { LocaleProvider } from "./i18n/LocaleContext";
-import { IconSetProvider, IconStyleProvider } from "./agentmatrix";
+import { IconSetProvider, IconStyleProvider, iconStyleForStylePreset } from "./agentmatrix";
 import { AgentApp } from "./agent-shell";
 import { project } from "./exported-project";
 import "./styles/app.css";
@@ -456,7 +654,7 @@ createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>
     <LocaleProvider>
       <IconSetProvider>
-        <IconStyleProvider value={project.theme.stylePreset === "workbuddy" ? "codicon" : project.theme.stylePreset === "native" ? "bold" : "line"}>
+        <IconStyleProvider value={iconStyleForStylePreset(project.theme.stylePreset)}>
           <AgentApp />
         </IconStyleProvider>
       </IconSetProvider>
@@ -470,6 +668,16 @@ import type { AgentUXEvent } from "@agent-ux/protocol";
 
 import { liveEventSource } from "./adapters/backendAdapter";
 import { project } from "./exported-project";
+import {
+  admissionSeverity,
+  admitEvents,
+  describeAdmission,
+  hasAdmissionFindings,
+} from "./runtime/admissionReport";
+import {
+  aliasesForHarness,
+  diagnosticMarkersForHarness,
+} from "./harness/adapters/registry";
 
 /**
  * The single event entry point for this app.
@@ -553,11 +761,55 @@ export function useEventSource(): EventSourceState {
     );
   }, []);
 
-  const events = useMemo(() => {
+  const rawEvents = useMemo(() => {
     if (!isFixtureMode) return liveEvents;
     const stream = loaded.find((item) => item.id === streamId);
     return stream ? stream.load() : [];
   }, [liveEvents, loaded, streamId]);
+
+  /**
+   * Admission — the same call the configurator makes, with the same arguments.
+   *
+   * Without it this module handed raw vendor events straight to the components. The
+   * components match a tool call on its *name*, and the alias table that rewrites a
+   * vendor's spelling into the one they know lives inside this layer: Claude Code's
+   * \`TodoWrite\` / \`Bash\` / \`Edit\`, Codex's \`shell.exec\` / \`apply_patch\` and the rest
+   * reached a designed card only in the configurator, never in an exported app — so a
+   * tool call rendered as nothing and there was no message to search for.
+   *
+   * The aliases and diagnostic markers come from the harness the project was exported
+   * for, which is what makes a vendor's stream land on our vocabulary. Keep this
+   * identical to the configurator's call; two admission policies would mean the preview
+   * and the exported app disagree about what renders, which is the one difference nobody
+   * can debug from a screenshot.
+   */
+  const admission = useMemo(
+    () =>
+      admitEvents(rawEvents, {
+        extraAliases: aliasesForHarness(project.runtime.harness),
+        diagnosticMarkers: diagnosticMarkersForHarness(project.runtime.harness),
+      }),
+    [rawEvents],
+  );
+  const events = admission.events;
+
+  /**
+   * Say it out loud in dev.
+   *
+   * A stream that is held back renders an empty transcript, which looks exactly like a
+   * working connection with nothing to say. \`describeAdmission\` names what arrived, what
+   * was held back and what to change — including the tool names that found no concept and
+   * the file to add an alias to.
+   */
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    if (!hasAdmissionFindings(admission)) return;
+    const severity = admissionSeverity(admission);
+    const log = severity === "blocked" ? console.error : console.warn;
+    log(
+      "[AgentCanvas] 事件准入 " + severity + "\\n" + describeAdmission(admission),
+    );
+  }, [admission]);
 
   const streams = useMemo(
     () => loaded.map((item) => ({ id: item.id, label: item.label })),
@@ -719,11 +971,10 @@ export type ScaffoldExportSnapshot = {
 };
 `;
 
-const AGENT_SHELL_SOURCE = `import { useEffect, useMemo, useRef, useState } from "react";
+const AGENT_SHELL_SOURCE = `import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import type { AgentUXEvent } from "@agent-ux/protocol";
 import type { AgentUXToolTimelineItem } from "@agent-ux/render-core";
 import { useAgentUXReplay } from "@agent-ux/react";
-import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { PanelLeft, PanelRight } from "lucide-react";
 
 import {
@@ -733,6 +984,7 @@ import {
   type OutputPanelOpenRequest,
 } from "./components/agent-preview/OutputFrame";
 import { ProviderFloatingSettings } from "./components/agent-preview/ProviderFloatingSettings";
+import { SketchFilters } from "./components/agent-preview/SketchFilters";
 import type { ComposerSubmitContext } from "./components/agent-preview/ComposerFrame";
 import { ExternalApprovalSurface, InlineApprovalSurface } from "./components/agent-preview/ChatFrame";
 import type { ApprovalDecision } from "./components/agent-preview/ToolCallCard";
@@ -751,6 +1003,7 @@ import {
 } from "./schema/agentuxConfig";
 import { renderSlots, slotsForTemplate, type SlotRenderContext } from "./slots/slotRegistry";
 import { applyTheme } from "./theme/applyTheme";
+import { resolveThemeTokens } from "./theme/customTheme";
 import { themeTokens } from "./theme/themeTokens";
 import { isFixtureMode, useEventSource } from "./event-source";
 import { project } from "./exported-project";
@@ -801,6 +1054,14 @@ function devtoolsRequested(): boolean {
  * Pi is mounted by the generated Vite config, so submit, stop, provider/model selection and
  * tool approvals are live while the same fixture path remains available for visual QA.
  */
+/** Matches \`--motion-slow\`, the column fold — the canvas's \`COLUMN_EXIT_MS\`. */
+const COLUMN_EXIT_MS = 240;
+
+/** The side columns' drag bounds, the canvas's. */
+function clampColumnWidth(width: number): number {
+  return Math.round(Math.min(420, Math.max(180, width)));
+}
+
 export function AgentApp() {
   const { locale } = useLocale();
   const copy = useCopy();
@@ -810,6 +1071,16 @@ export function AgentApp() {
   // hand half the canvas to an empty output panel. Opens on the drawer toggle or on clicking an
   // artifact in the conversation.
   const [rightCollapsed, setRightCollapsed] = useState(true);
+  // The right column's fold in flight, either way — the same two-phase fold the
+  // configurator's canvas runs (see \`.preview-panel-slot[data-slot="right"]\` in
+  // app.css), so the column slides out at the left column's speed and curve.
+  const [rightCollapsing, setRightCollapsing] = useState(false);
+  // Dragged widths of the two side columns; null is the style's default, which
+  // is the same for both. Session state, as on the canvas.
+  const [sidebarWidth, setSidebarWidth] = useState<number | null>(null);
+  const [rightPanelWidth, setRightPanelWidth] = useState<number | null>(null);
+  const columnDragRef = useRef<{ side: "left" | "right"; startX: number; startWidth: number } | null>(null);
+  const [draggingColumn, setDraggingColumn] = useState<"left" | "right" | null>(null);
   const [autoHiddenRails, setAutoHiddenRails] = useState({ left: false, right: false });
   const [outputPanelItems, setOutputPanelItems] = useState<OutputPanelItem[]>([]);
   const [activeOutputPanelItemId, setActiveOutputPanelItemId] = useState<string | undefined>(undefined);
@@ -913,7 +1184,8 @@ export function AgentApp() {
   }, []);
 
   useEffect(() => {
-    const tokens = themeTokens[project.theme.preset] ?? Object.values(themeTokens)[0];
+    // The colourway as it was left in the configurator, repaints included.
+    const tokens = resolveThemeTokens(project.theme.preset, project.theme.colorOverrides);
     applyTheme(tokens, document.documentElement);
     if (frameRef.current) applyTheme(tokens, frameRef.current);
   }, []);
@@ -954,8 +1226,59 @@ export function AgentApp() {
   const leftSidebarVisible = leftSidebarMounted && !leftCollapsed;
   // Available = it could be shown. Visible = the reader has opened it. Clicking an artifact
   // keys on the former, so a collapsed panel reopens instead of being bypassed for a modal.
-  const rightPanelAvailable = hasRightPanel && !autoHiddenRails.right && !isWelcome;
-  const rightPanelVisible = rightPanelAvailable && !rightCollapsed;
+  // Not gated on the welcome screen: the right column is part of the structure,
+  // so it is there before the first turn too — as on the canvas.
+  const rightPanelAvailable = hasRightPanel && !autoHiddenRails.right;
+  // Mounted while it folds, in either direction, so there is a column to animate.
+  const rightPanelVisible = rightPanelAvailable && (!rightCollapsed || rightCollapsing);
+  // On the welcome screen too: the column is there before the first turn, so a
+  // fold there must have a way back — the canvas's rule.
+  const showRightToggle = rightPanelAvailable && rightCollapsed;
+
+  /** Fold the right column away: slide it out, then unmount it. */
+  function foldRightColumn() {
+    setRightCollapsing(true);
+    window.setTimeout(() => {
+      setRightCollapsed(true);
+      setRightCollapsing(false);
+    }, COLUMN_EXIT_MS);
+  }
+
+  /** Bring it back. The slide in is \`@starting-style\` in app.css, so every way
+      of opening it — this, or clicking an artifact — runs the same animation. */
+  function openRightColumn() {
+    setRightCollapsed(false);
+  }
+
+  function columnHandleProps(side: "left" | "right") {
+    return {
+      role: "separator",
+      "aria-orientation": "vertical" as const,
+      "aria-label": copy.shell.editor.resizeSidebar,
+      "data-dragging": draggingColumn === side ? "true" : undefined,
+      onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => {
+        const column = side === "left" ? event.currentTarget.previousElementSibling : event.currentTarget.nextElementSibling;
+        if (!(column instanceof HTMLElement)) return;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setDraggingColumn(side);
+        columnDragRef.current = { side, startX: event.clientX, startWidth: column.offsetWidth };
+      },
+      onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => {
+        const drag = columnDragRef.current;
+        if (!drag) return;
+        const travel = event.clientX - drag.startX;
+        const width = clampColumnWidth(drag.side === "left" ? drag.startWidth + travel : drag.startWidth - travel);
+        if (drag.side === "left") setSidebarWidth(width);
+        else setRightPanelWidth(width);
+      },
+      onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+        columnDragRef.current = null;
+        setDraggingColumn(null);
+      },
+      onDoubleClick: () => (side === "left" ? setSidebarWidth(null) : setRightPanelWidth(null)),
+    };
+  }
 
   function openArtifact(request: OutputPanelOpenRequest) {
     const item = normalizeOutputPanelRequest(request);
@@ -1233,7 +1556,7 @@ export function AgentApp() {
     onModelChange: (model) => void selectModel(model),
     onApprovalDecision: (toolCallId, decision) => resolvePiApproval(toolCallId, decision),
     onCollapseLeft: () => setLeftCollapsed(true),
-    onCollapseRight: () => setRightCollapsed(true),
+    onCollapseRight: foldRightColumn,
     onOpenArtifact: openArtifact,
     outputPanelItems,
     activeOutputPanelItemId,
@@ -1272,8 +1595,23 @@ export function AgentApp() {
   // so debug chrome must not appear unless they ask for it with ?devtools=1.
   const showPicker = devtoolsRequested() && isFixtureMode && streams.length > 0;
   // String concat (not a template literal) so this file can be emitted from the exporter.
-  const mainSize = activeProject.layout.mainSize + "%";
-  const rightSize = activeProject.layout.rightPanelSize + "%";
+  const columnWidths = {
+    ...(sidebarWidth === null ? {} : { "--session-width-set": sidebarWidth + "px" }),
+    ...(rightPanelWidth === null ? {} : { "--right-width-set": rightPanelWidth + "px" }),
+  } as CSSProperties;
+  const rightToggle = showRightToggle ? (
+    <button
+      type="button"
+      className="rail-icon-btn preview-rail-float"
+      data-side="right"
+      aria-label={copy.shell.editor.expandPanel}
+      aria-expanded={false}
+      onClick={openRightColumn}
+    >
+      <span className="native-rail-icon"><RightSidebarRailIcon size={15} /></span>
+      <span className="legacy-rail-icon"><PanelRight size={15} /></span>
+    </button>
+  ) : null;
 
   return (
     // No inline layout: \`.exported-shell\` shares \`.builder-surface\`'s rule in app.css,
@@ -1287,31 +1625,55 @@ export function AgentApp() {
           data-has-sidebar={hasSidebar}
           data-has-right-panel={rightPanelVisible}
           data-left-collapsed={leftCollapsed}
+          data-right-folding={rightCollapsing ? "true" : undefined}
           data-right-collapsed={rightCollapsed}
-          data-style-preset={project.theme.stylePreset}
+          data-right-toggle={showRightToggle ? "true" : undefined}
+          // The same attributes the canvas frame carries, so every style rule
+          // that reads them lands here too: 空白 wears 原生风's rules, and the
+          // colourway rules key on the theme preset.
+          data-style-preset={project.theme.stylePreset === "blank" ? "native" : project.theme.stylePreset}
+          data-style-id={project.theme.stylePreset}
           data-appearance={appearance}
+          data-theme-preset={project.theme.preset}
+          style={columnWidths}
           ref={frameRef}
         >
+          {/* The Handdrawn style's wobble is \`filter: url(#sketchy)\`, a reference —
+              so the \`<filter>\` has to be in the document, unlike every other
+              texture here, which is a data-URI background. Mounted only for that
+              style, so nothing else pays for it. */}
+          {project.theme.stylePreset === "handdrawn" ? <SketchFilters /> : null}
           {leftSidebarMounted ? renderSlots(visibleLayoutSlots, "sidebar", slotContext) : null}
+          {leftSidebarMounted && !leftCollapsed ? (
+            <div className="resize-handle sidebar-resize-handle" {...columnHandleProps("left")} />
+          ) : null}
+          {/* The centre and the right column — the canvas's markup, so app.css
+              lays them out and folds them identically. */}
           {rightPanelVisible ? (
-            <PanelGroup className="preview-panels" orientation="horizontal">
-              <Panel defaultSize={mainSize} minSize="52%">
-                <section className="preview-stack" data-welcome={isWelcome ? "true" : undefined}>
-                  {renderSlots(visibleLayoutSlots, "main", slotContext)}
-                  {inlineApprovalOverlay}
-                  {externalApprovalOverlay}
-                  {renderSlots(visibleLayoutSlots, "composer", slotContext)}
-                </section>
-              </Panel>
-              <PanelResizeHandle className="resize-handle" />
-              <Panel defaultSize={rightSize} minSize="24%">
-                <aside className="right-panel">
-                  {renderSlots(visibleLayoutSlots, "right-panel", slotContext)}
-                </aside>
-              </Panel>
-            </PanelGroup>
+            <div className="preview-panels">
+              <div className="preview-panel-slot" data-slot="main">
+                <div className="preview-panel">
+                  <section className="preview-stack" data-welcome={isWelcome ? "true" : undefined}>
+                    {rightToggle}
+                    {renderSlots(visibleLayoutSlots, "main", slotContext)}
+                    {inlineApprovalOverlay}
+                    {externalApprovalOverlay}
+                    {renderSlots(visibleLayoutSlots, "composer", slotContext)}
+                  </section>
+                </div>
+              </div>
+              <div className="resize-handle right-resize-handle" {...columnHandleProps("right")} />
+              <div className="preview-panel-slot" data-slot="right">
+                <div className="preview-panel">
+                  <aside className="right-panel">
+                    {renderSlots(visibleLayoutSlots, "right-panel", slotContext)}
+                  </aside>
+                </div>
+              </div>
+            </div>
           ) : (
             <section className="preview-stack preview-stack-solo" data-welcome={isWelcome ? "true" : undefined}>
+              {rightToggle}
               {renderSlots(visibleLayoutSlots, "main", slotContext)}
               {inlineApprovalOverlay}
               {externalApprovalOverlay}
@@ -1328,18 +1690,6 @@ export function AgentApp() {
             >
               <span className="native-rail-icon"><SidebarRailIcon size={15} /></span>
               <span className="legacy-rail-icon"><PanelLeft size={15} /></span>
-            </button>
-          ) : null}
-          {hasRightPanel && rightCollapsed && !autoHiddenRails.right && !isWelcome ? (
-            <button
-              type="button"
-              className="rail-icon-btn preview-rail-float"
-              data-side="right"
-              aria-label={copy.shell.editor.expandPanel}
-              onClick={() => setRightCollapsed(false)}
-            >
-              <span className="native-rail-icon"><RightSidebarRailIcon size={15} /></span>
-              <span className="legacy-rail-icon"><PanelRight size={15} /></span>
             </button>
           ) : null}
           {outputModalOpen ? (
@@ -1624,6 +1974,12 @@ function thirdPartyNoticesContent(project: AgentFrontendProject): string {
         "is declared because the stylesheet imports it for the WorkBuddy style;",
         "the attribution above is kept so it does not go missing if you switch.",
       ].join("\n"),
+    "",
+    "## EB Garamond (SIL OFL 1.1)",
+    "",
+    "The Retro style bundles EB Garamond from Google Fonts. The unmodified font",
+    "files and their OFL license are in `public/fonts/eb-garamond-*`.",
+    "Keep the license alongside the font when redistributing this project.",
     "",
   ].join("\n");
 }

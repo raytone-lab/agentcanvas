@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="utf-8" />
+    <title>原生风 · 图标清单</title>
+    <style>
+      :root { color-scheme: light; }
+      body { margin: 0; padding: 40px 44px 52px; background: #ffffff;
+             font: 13px/1.5 -apple-system, "SF Pro Text", "PingFang SC", system-ui, sans-serif;
+             color: #14161a; width: 1680px; box-sizing: border-box; }
+      h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: -0.01em; }
+      .sub { margin: 0 0 30px; color: #6b7280; font-size: 13px; }
+      h2 { margin: 30px 0 4px; font-size: 16px; }
+      h2 span { color: #9aa1ab; font-weight: 400; font-size: 13px; margin-left: 8px; }
+      .note { margin: 0 0 14px; color: #6b7280; font-size: 12px; }
+      .grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; }
+      .cell { border: 1px solid #e6e9f0; border-radius: 10px; padding: 12px 10px 10px;
+              display: grid; justify-items: center; gap: 8px; background: #fbfcfe; }
+      .art { display: grid; place-items: center; width: 40px; height: 40px;
+             border-radius: 8px; background: #fff; border: 1px solid #eef1f6; }
+      .id { font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; color: #14161a;
+            text-align: center; word-break: break-all; }
+      .zh { font-size: 11px; color: #6b7280; text-align: center; }
+    </style>
+  </head>
+  <body><div id="root"></div>
+    <script type="module">
+      /*
+       * Dev-only contact sheet: "what icons does this style need, and what is
+       * each one called". Not part of the product — it is served by Vite in dev
+       * and imports the product's own registry, so the sheet cannot drift from
+       * what the canvas actually renders.
+       *
+       *   /icon-sheet.html?style=studio     (native | studio | game | pixel |
+       *                                      pixeldesk | retro | handdrawn | blank)
+       *
+       * Each style is drawn through `StateIcon` inside `IconStyleProvider`, which
+       * is the same path the canvas takes — so a style with its own set (game,
+       * pixel, workbuddy) shows *its* marks here, not lucide.
+       */
+      import React from "react";
+      import { createRoot } from "react-dom/client";
+      import { ICON_OPTIONS, iconStyleForStylePreset } from "/src/agentmatrix/icons.tsx";
+      import { IconSetProvider, IconStyleProvider, StateIcon } from "/src/agentmatrix/IconSetContext.tsx";
+      import * as ui from "/src/agentmatrix/uiIcons.tsx";
+      import { visibleStateCards, presetStyleOptions, STYLE_AVATAR_DEFAULTS, visualStylePreset }
+        from "/src/app/projection/presetRailData.ts";
+      import { presetGroups } from "/src/schema/presets.ts";
+
+      const h = React.createElement;
+      const styleId = new URL(location.href).searchParams.get("style") ?? "native";
+      const visual = visualStylePreset(styleId);
+      const iconStyle = iconStyleForStylePreset(visual);
+      const label = presetStyleOptions.find((s) => s.id === styleId)?.label?.zh ?? styleId;
+
+      /* Chinese titles from the rail's own state cards, so the names on the
+         sheet are the names the product uses. */
+      const zhBySlot = {};
+      for (const group of presetGroups) {
+        for (const card of visibleStateCards(group.id)) {
+          if (!zhBySlot[card.slot]) zhBySlot[card.slot] = card.title.zh;
+        }
+      }
+
+      /* The slots the preview components render directly, from
+         `grep -rho 'slot="…"' src/components/agent-preview`, plus every slot the
+         rail surfaces. */
+      const RENDERED = [
+        "session.item", "author.user", "author.agent",
+        "content.thinking", "content.text", "content.terminal", "content.diff", "content.mcp",
+        "tool.pending_approval", "tool.completed", "tool.failed", "tool.cancelled",
+        "tool.file_read", "tool.file_modified", "tool.file_edit", "tool.validate", "tool.search",
+        "permission.pending", "incident.retrying", "incident.exhausted", "incident.terminal",
+        "surface.activity", "surface.diagnostics", "surface.model_span", "surface.interrupt",
+      ];
+      const usedSlots = [...new Set([...RENDERED, ...Object.keys(zhBySlot)])].filter((s) => ICON_OPTIONS[s]);
+      const restSlots = Object.keys(ICON_OPTIONS).filter((s) => !usedSlots.includes(s));
+
+      const CHROME = ["Search","PanelsTopLeft","PanelLeft","PanelRight","Plus","Copy","Pencil",
+        "RotateCcw","RefreshCw","ChevronDown","ChevronRight","Mic","Send","Paperclip","Settings",
+        "ShieldCheck","ShieldHalf","ShieldOff","Sparkles","X","Play","Square","Maximize2","Minimize2",
+        "Download","Save","FileText","FileCode2","Files","FileAudio2","FileVideo2","ImageIcon","Image",
+        "Volume2","Braces","Boxes","Brain","Bug","CheckCircle2","CircleDot","GitBranch","Globe2",
+        "Gauge","MessageSquareText","TerminalSquare","ArrowUpRight","Rocket","Star","TentTree"];
+
+      const cell = (art, id, zh, key) => h("div", {className:"cell", key},
+        h("div", {className:"art"}, art), h("div", {className:"id"}, id),
+        zh ? h("div", {className:"zh"}, zh) : null);
+
+      const slotCell = (slot) =>
+        cell(h(StateIcon, {slot, size:22, strokeWidth:2.1}), slot, zhBySlot[slot] ?? "", slot);
+      const chromeCells = [...new Set(CHROME)].map((name) => {
+        const Icon = ui[name];
+        return Icon ? cell(h(Icon, {size:22, strokeWidth:2.1}), name, "", name) : null;
+      }).filter(Boolean);
+
+      const sheet = h(React.Fragment, null,
+        h("h1", null, label + " · 需要的图标清单"),
+        h("p", {className:"sub"},
+          "组件与架构真正会渲染的全部图标。语义槽位由画布按状态自动选用，界面图标画在按钮和控件上。"
+          + "名字即 slot id / 组件名 —— 出图时用这个名字，接线就不会猜。"
+          + "（style=" + styleId + (visual !== styleId ? " → " + visual : "") + " · 图标体系=" + iconStyle + "）"),
+        h("h2", null, "语义槽位（已启用）", h("span", null, usedSlots.length + " 个")),
+        h("p", {className:"note"}, "一个槽位一个状态。同一槽位在左栏可以有多个候选，这里画的是本风格的默认选择。"),
+        h("div", {className:"grid"}, usedSlots.map(slotCell)),
+        h("h2", null, "界面图标", h("span", null, chromeCells.length + " 个")),
+        h("p", {className:"note"}, "输入框、消息操作、栏位开合、输出面板上的控件图标，不随状态变化。"),
+        h("div", {className:"grid"}, chromeCells),
+        h("h2", null, "语义槽位（注册了但当前未展开）", h("span", null, restSlots.length + " 个")),
+        h("p", {className:"note"}, "协议里有、v1 画布还没放出来的状态。做整套风格时可以先不画，这些 id 已在注册表里。"),
+        h("div", {className:"grid"}, restSlots.map(slotCell)));
+
+      /* The avatars are the one pair that must be set per style, or the sheet
+         shows 原生风's faces under every skin. */
+      const initial = { ...STYLE_AVATAR_DEFAULTS[visual] };
+      createRoot(document.getElementById("root")).render(
+        h("div", {"data-style-preset": visual, "data-style-id": styleId},
+          h(IconSetProvider, {initial},
+            h(IconStyleProvider, {value: iconStyle}, sheet))));
+    </script>
+  </body>
+</html>

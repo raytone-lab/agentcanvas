@@ -10,6 +10,24 @@ const en = {
     reasoned: "Thinking",
     reasonedPlain: "Thought",
     reasonedFor: "Thought for {seconds}s",
+    /** Past a minute, seconds alone stop being readable. */
+    reasonedForLong: "Thought for {minutes}m {seconds}s",
+    /**
+     * The settled title when it counts passes instead of seconds.
+     *
+     * A whole phrase per locale rather than a unit appended to `reasonedPlain`:
+     * the count sits in the middle in Japanese and the unit word differs by
+     * language, so assembling it from parts would read as translated English.
+     */
+    reasonedCount: "Thought · {count} passes",
+    /** While the span is still open and the clock is running. */
+    /**
+     * Appended to whatever the running title says, rather than a phrase of its
+     * own: the title may be a cycling stage name ("Reading files"), and
+     * "Thinking for 12s" cannot compose with that.
+     */
+    elapsedSuffix: "{seconds}s",
+    elapsedSuffixLong: "{minutes}m {seconds}s",
     /**
      * What the indicator says while the span is open, in order.
      *
@@ -34,7 +52,6 @@ const en = {
   frame: {
     title: "Coding Agent",
     fallbackConversationTitle: "Mock conversation",
-    subtitleSuffix: "preset preview",
   },
   status: {
     running: "running",
@@ -98,6 +115,7 @@ const en = {
     yes: "Yes",
     always: "Always",
     no: "No",
+    cancel: "Cancel",
     decision: {
       yes: "Approved",
       always: "Always allowed",
@@ -115,6 +133,7 @@ const en = {
     noOutput: "No output.",
   },
   artifactLaunch: {
+    open: "Open",
     openWith: "Open with",
     kindImage: "Generated image",
     kindAudio: "Audio loading",
@@ -137,14 +156,33 @@ const en = {
       search: "Searching",
       runCommand: "Running command",
     },
+    /*
+     * What the header says once the call is over rather than mid-flight.
+     *
+     * The card used to name the action whatever the status, so a call the run
+     * had given up on still read "Modifying file" — "正在修改文件", present
+     * tense, on a row whose icon is a cancel mark. The action is still in the
+     * event for anyone who wants it; what the header reports now is the
+     * outcome, because that is what the reader is being told.
+     */
+    outcome: {
+      cancelled: "Cancelled",
+      failed: "Failed",
+    },
     /** Per-file row status: the last row is still active, earlier ones are done. */
+    /*
+     * Lower case. The row reads as one sentence — "read notes.md 1 line" —
+     * with the file name and the count either side of this word, and a capital
+     * in the middle of it started a sentence that the row does not contain.
+     * The other two locales have no case to set.
+     */
     fileRow: {
-      readActive: "Reading",
-      readDone: "Read",
-      editActive: "Editing",
-      editDone: "Edited",
-      modifyActive: "Modifying",
-      modifyDone: "Modified",
+      readActive: "reading",
+      readDone: "read",
+      editActive: "editing",
+      editDone: "edited",
+      modifyActive: "modifying",
+      modifyDone: "modified",
     },
   },
 };
@@ -154,7 +192,11 @@ const zh: typeof en = {
     thinking: "思考中",
     reasoned: "思考过程",
     reasonedPlain: "已思考",
-    reasonedFor: "已思考（用时 {seconds} 秒）",
+    reasonedFor: "已思考{seconds}秒",
+    reasonedForLong: "已思考{minutes}分{seconds}秒",
+    reasonedCount: "已思考 · {count} 段",
+    elapsedSuffix: "{seconds}秒",
+    elapsedSuffixLong: "{minutes}分{seconds}秒",
     thinkingStages: ["思考中", "推理需求", "规划回复"],
     visibility: {
       statusOnly: "仅状态",
@@ -171,7 +213,6 @@ const zh: typeof en = {
   frame: {
     title: "编码 Agent",
     fallbackConversationTitle: "模拟对话",
-    subtitleSuffix: "预设预览",
   },
   status: {
     running: "运行中",
@@ -229,6 +270,7 @@ const zh: typeof en = {
     yes: "允许",
     always: "始终允许",
     no: "拒绝",
+    cancel: "取消",
     decision: {
       yes: "已允许",
       always: "已始终允许",
@@ -246,6 +288,7 @@ const zh: typeof en = {
     noOutput: "没有输出。",
   },
   artifactLaunch: {
+    open: "打开",
     openWith: "打开方式",
     kindImage: "生成图片",
     kindAudio: "音频加载",
@@ -266,6 +309,12 @@ const zh: typeof en = {
       search: "正在搜索",
       runCommand: "正在运行命令",
     },
+    /* See the English block: the header reports the outcome once the call is
+       over, not the action it was in the middle of. */
+    outcome: {
+      cancelled: "已取消",
+      failed: "失败",
+    },
     fileRow: {
       readActive: "正在读取",
       readDone: "已读取",
@@ -284,6 +333,10 @@ const ja: typeof en = {
     reasoned: "思考プロセス",
     reasonedPlain: "考えました",
     reasonedFor: "{seconds} 秒 考えました",
+    reasonedForLong: "{minutes} 分 {seconds} 秒 考えました",
+    reasonedCount: "{count} 段階 考えました",
+    elapsedSuffix: "{seconds}秒",
+    elapsedSuffixLong: "{minutes}分{seconds}秒",
     thinkingStages: ["思考中", "要望を読み解く", "返答を組み立てる"],
     visibility: {
       statusOnly: "ステータスのみ",
@@ -300,7 +353,6 @@ const ja: typeof en = {
   frame: {
     title: "コーディング Agent",
     fallbackConversationTitle: "モック会話",
-    subtitleSuffix: "プリセットプレビュー",
   },
   status: {
     running: "実行中",
@@ -358,6 +410,7 @@ const ja: typeof en = {
     yes: "許可",
     always: "常に許可",
     no: "拒否",
+    cancel: "キャンセル",
     decision: {
       yes: "許可しました",
       always: "常に許可に設定しました",
@@ -375,6 +428,7 @@ const ja: typeof en = {
     noOutput: "出力はありません。",
   },
   artifactLaunch: {
+    open: "開く",
     openWith: "開き方",
     kindImage: "生成された画像",
     kindAudio: "音声の読み込み",
@@ -394,6 +448,11 @@ const ja: typeof en = {
       validate: "検証中",
       search: "検索中",
       runCommand: "コマンドを実行中",
+    },
+    /* See the English block. */
+    outcome: {
+      cancelled: "キャンセル",
+      failed: "失敗",
     },
     fileRow: {
       readActive: "読み取り中",

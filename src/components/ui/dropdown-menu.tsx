@@ -14,17 +14,20 @@ export function DropdownMenuTrigger(props: DropdownMenuTriggerProps) {
   return <RDropdown.Trigger {...props} />;
 }
 
-export type DropdownMenuContentProps = RDropdown.DropdownMenuContentProps;
+export type DropdownMenuContentProps = RDropdown.DropdownMenuContentProps & {
+  portalContainer?: HTMLElement | null;
+};
 
 export function DropdownMenuContent({
   className,
   sideOffset = 6,
   align = "start",
+  portalContainer,
   children,
   ...rest
 }: DropdownMenuContentProps) {
   return (
-    <RDropdown.Portal>
+    <RDropdown.Portal container={portalContainer}>
       <RDropdown.Content
         className={["ui-dropdown-menu", className].filter(Boolean).join(" ")}
         sideOffset={sideOffset}

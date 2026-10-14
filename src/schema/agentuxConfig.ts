@@ -1,3 +1,4 @@
+import type { ThemeColorOverrides } from "../theme/customTheme";
 import {
   AGENTCANVAS_EXPERIENCE_V2,
   completeAgentCanvasExperienceV2,
@@ -278,11 +279,73 @@ export type SlotConfig = {
  * Visual style preset. Each style owns its own theme set and its own branch of
  * `app.css` (via the `data-style-preset` attribute), so this has to travel with
  * the project — the exported scaffold reads it to render the same style the
- * configurator previewed. "studio" is still under construction.
+ * configurator previewed. All four are built; "studio" (插画风) is the newest
+ * and the thinnest, carrying palette, weight and icon treatment rather than a
+ * full set of component geometry.
  */
-export type PresetStyleId = "native" | "illustrated" | "studio" | "workbuddy";
+export type PresetStyleId =
+  /**
+   * No style at all — the state the configurator opens in.
+   *
+   * Deliberately has no `app.css` branch, which is the whole point: components
+   * added while this is selected render in the base stylesheet, so "no style
+   * chosen yet" looks like what it is, and picking any real style afterwards is
+   * a visible change. It also has no kit, so it is the only entry in the picker
+   * that leaves the canvas empty.
+   */
+  | "blank"
+  | "native"
+  | "illustrated"
+  | "studio"
+  | "workbuddy"
+  | "zine"
+  | "game"
+  | "pixel"
+  | "retro"
+  | "handdrawn"
+  | "inkwash"
+  /**
+   * 90s desktop software, not a game.
+   *
+   * Distinct from `pixel`, which is a pixel *game* — bricks, sprites, a mascot.
+   * This one is the era's office software: a blue-grey chrome column, a warm
+   * white document area, navy hairlines, bevelled controls and hard offset
+   * shadows with no blur in them anywhere. Same bitmap face and the same
+   * pixelarticons set, because those are the parts of "pixel" that are about
+   * resolution rather than about play.
+   */
+  | "pixeldesk"
+  /**
+   * Black ink on white, with the weight in the type and the geometry.
+   *
+   * The 8th selectable style, and appended rather than inserted: `styleKitIndex`
+   * numbers the non-blank styles by position, so slipping one into the middle
+   * shifts every later style's default component picks.
+   *
+   * Its own shape rather than a recolour of 原生风: the centre and the right
+   * panel share one frame the way 水墨风's do, the left column is a flat
+   * #F6F6F6 rail beside it, and the composer is two bands in one large radius —
+   * white where you type, grey where the controls are, with no line between
+   * them. The icons are 原生风's set at a heavier stroke, which is the one part
+   * that is a recolour.
+   */
+  | "tech";
 
-export const presetStyleIds: readonly PresetStyleId[] = ["native", "illustrated", "studio", "workbuddy"];
+export const presetStyleIds: readonly PresetStyleId[] = [
+  "blank",
+  "native",
+  "illustrated",
+  "studio",
+  "workbuddy",
+  "zine",
+  "game",
+  "pixel",
+  "retro",
+  "handdrawn",
+  "inkwash",
+  "pixeldesk",
+  "tech",
+];
 
 export type AgentProductInterface = Pick<
   CompleteAgentCanvasExperienceV2,
@@ -312,6 +375,12 @@ export type AgentFrontendProject = {
   };
   theme: {
     preset: ThemePresetId;
+    /**
+     * Colourways the reader has repainted, by colourway: any of canvas, panel,
+     * accent and ink (`theme/customTheme.ts`). Absent means every colourway is
+     * as shipped.
+     */
+    colorOverrides?: ThemeColorOverrides;
     /** Drives `data-style-preset`; 168 rules in app.css branch on it. */
     stylePreset: PresetStyleId;
     density: "compact" | "comfortable";
@@ -327,7 +396,41 @@ export type AgentFrontendProject = {
         | "orbit"
         | "orb-s1"
         | "orb-b5"
-        | "orb-m2";
+        | "orb-m2"
+        | "hourglass"
+        /*
+         * Per-style indicators. Grouped by the style that offers them, because
+         * that is also where their CSS lives — the three `orb-*` values above
+         * are native-only in exactly this way, and reading them as universal
+         * was what left four styles with no working motion at all.
+         */
+        | "comic-halftone"
+        | "comic-inkblot"
+        | "comic-bubble"
+        | "comic-flip"
+        | "quest-torch"
+        | "quest-rune"
+        | "quest-coins"
+        | "pixel-cursor"
+        | "pixel-bars"
+        | "pixel-spin"
+        | "pixel-bricks"
+        | "sketch-bubble"
+        | "sketch-pencil"
+        | "sketch-blot"
+        | "sketch-page"
+        | "tech-matrix"
+        | "tech-signal"
+        | "tech-scan"
+        | "tech-segments"
+        | "ink-drop"
+        | "ink-stroke"
+        | "ink-ripple"
+        | "ink-seal"
+        | "retro-watch"
+        | "retro-record"
+        | "retro-metronome"
+        | "retro-telegraph";
       writing: "smooth-stream" | "typewriter" | "chunked";
       toolCall: "card" | "expanded" | "inline" | "drawer";
       /** Per-mode timing for the writing animation. */
@@ -378,6 +481,15 @@ export type AgentFrontendProject = {
     search: boolean;
     /** The conversation rows themselves. */
     sessionList: boolean;
+    /**
+     * A mark on each row.
+     *
+     * Off by default and in every style but 游戏风, whose reference gives every
+     * row one — a compass, a scroll, a shield. In a plain list the title is the
+     * whole row and a glyph in front of it is decoration; in a quest log it is
+     * how the list is read.
+     */
+    rowIcon: boolean;
     grouping: boolean;
     footer: boolean;
   };
@@ -403,7 +515,36 @@ export type AgentFrontendProject = {
      * and rules the body off down its left edge. More to come; this is the
      * first of the set.
      */
-    doneStyle: "label" | "timed";
+    doneStyle: "label" | "timed" | "counted" | "conclusion";
+    /**
+     * Whether the settled body is ruled off down its left edge.
+     *
+     * Its own field, decoupled from `doneStyle`. `timed` used to carry the rule
+     * as a side effect, so "the rule without the clock" and "the clock without
+     * the rule" were both unreachable — one value deciding two things, the same
+     * shape of bug as the thinking motions pinning `collapse`.
+     */
+    doneRule: boolean;
+    /**
+     * What survives once the span closes.
+     *
+     * `expandable` only answers whether the reader *can* reopen it; this
+     * answers what is left on screen when they do not. The group had no axis
+     * for it at all, so every project kept the full body behind the chevron.
+     */
+    doneBody: "expandable" | "title-only" | "first-line";
+    /**
+     * Whether the title cycles through the stages of the wait instead of
+     * holding one status word.
+     *
+     * Its own field, not a value of `theme.motion.reasoning`, which is what it
+     * used to be. As a motion it was mutually exclusive with every glyph — a
+     * reader who picked the dots and then the text cycle lost the dots — and
+     * the two are not alternatives: one is the mark beside the words, the other
+     * is what the words do. Orthogonal fields let them compose, which is how
+     * "dots + cycling text + elapsed" becomes expressible.
+     */
+    textCycle: boolean;
     /** How the reasoning text arrives, the way `theme.motion.writing` does for the answer. */
     writing: "smooth-stream" | "typewriter" | "chunked";
   };
@@ -417,6 +558,23 @@ export type AgentFrontendProject = {
     artifactRenderer: ArtifactRenderer;
     surface: OutputSurface;
     supportedArtifactRenderers: Exclude<ArtifactRenderer, "auto">[];
+    /*
+     * What the panel holds *besides* the artifact.
+     *
+     * The four fields above answer "which document, drawn how" — one thing at a
+     * time, mutually exclusive. These three are additive: a panel can list the
+     * run's tasks, summarise its progress and index the files it touched while
+     * still showing the delivery. Each is off by default, because the panel
+     * opens as a document viewer and every one of these is a second thing to
+     * read.
+     *
+     * All three are derived from the run rather than configured: see
+     * `runPanelData.ts`. The flag decides whether the section is there, never
+     * what is in it.
+     */
+    taskList: boolean;
+    execProgress: boolean;
+    workspaceFiles: boolean;
   };
   mediaGeneration: {
     imageStyle: MediaGenerationImageStyle;
@@ -476,8 +634,21 @@ export const defaultCodingAgentProject: AgentFrontendProject = {
   },
   layout: {
     regions: ["sidebar", "main", "composer", "right-panel", "bottom-dock", "overlay"],
-    mainSize: 68,
-    rightPanelSize: 32,
+    /*
+     * 62 / 38, measured off the reference: the left column is 21.6% of the
+     * frame, the centre 48% and the right 29.9%. The sidebar is a fixed-width
+     * flex item outside this split, so these two are shares of what is left —
+     * 850 / 1380 and 530 / 1380.
+     *
+     * The sidebar itself is unchanged at 236px: scaling the reference back by
+     * its capture factor puts its left column at ~239px, which is the default
+     * already. Only the right panel was narrower than intended.
+     *
+     * `packages/contract` keeps 68 / 32. That is the published schema default
+     * and a separate artifact; this is the configurator's starting project.
+     */
+    mainSize: 62,
+    rightPanelSize: 38,
     bottomDockSize: 28,
     slots: [
       { id: "sessions", region: "sidebar", component: "SessionSidebar", enabled: true },
@@ -538,6 +709,7 @@ export const defaultCodingAgentProject: AgentFrontendProject = {
     newButton: true,
     search: true,
     sessionList: true,
+    rowIcon: false,
     grouping: true,
     footer: true,
   },
@@ -555,9 +727,38 @@ export const defaultCodingAgentProject: AgentFrontendProject = {
   },
   reasoning: {
     show: "summary",
-    collapse: "summary-first",
+    // Off by default: the plain status word is the quieter starting point, and
+    // cycling stages is a thing the reader asks for.
+    textCycle: false,
+    /*
+     * Left as `summary-first`, which is the one disclosure mode that is *not*
+     * toggleable — `ReasoningBlock` reads it as "always open, no control".
+     *
+     * That used to be the whole story: every `thinking-*` motion patch pinned
+     * this value too, so picking any motion stripped the fold control and the
+     * chevron could never appear — and the patch for *that* was to have every
+     * motion write `collapse: "expanded"`, which pinned the block open in every
+     * style and is what the reader then asked to have taken out ("我希望都是收起的").
+     *
+     * So the fix moved here, where it belongs: `auto` is open while the span
+     * runs and closed once it settles, and it is not on the list
+     * `canToggleSummary` excludes — so the chevron is there and the settled
+     * block opens on a click. The motions no longer write this field at all; a
+     * glyph is not a disclosure policy.
+     *
+     * Safe against the scenario picker, which was the reason this default sat
+     * on `summary-first`: `resolveDefaultPreviewScenario` reads
+     * `collapse === "expanded"` as "this reader cares about reasoning", and
+     * `auto` is not that value.
+     */
+    collapse: "auto",
     expandable: true,
     doneStyle: "label",
+    // False, matching what `doneStyle: "label"` used to imply — the rule only
+    // ever appeared under `timed`, so defaulting it on would change how every
+    // existing project's settled block reads.
+    doneRule: false,
+    doneBody: "expandable",
     writing: "smooth-stream",
   },
   blocks: {
@@ -570,6 +771,9 @@ export const defaultCodingAgentProject: AgentFrontendProject = {
     artifactRenderer: "auto",
     surface: "right-panel",
     supportedArtifactRenderers: ["code", "diff", "markdown", "preview", "data"],
+    taskList: false,
+    execProgress: false,
+    workspaceFiles: false,
   },
   mediaGeneration: {
     imageStyle: "grid",
@@ -622,7 +826,20 @@ export const defaultCodingAgentProject: AgentFrontendProject = {
  * be on is not a choice.
  *
  * `chat` stays off. A conversation is content, and content is the reader's to
- * pick.
+ * pick — and with the canvas replay now streaming one fixed full turn whatever
+ * is picked, leaving it on meant the "empty" canvas rendered the entire
+ * exchange: bubbles, reasoning, a tool card, an artifact and an error.
+ * Measured, not assumed — that is what the centre column held at boot.
+ *
+ * It was briefly on, on the reasoning that the centre column should open
+ * showing a conversation because that is what the product is, and that an empty
+ * middle put the control that fills it somewhere else. Both true, and both
+ * outweighed by 空白 having to actually be blank.
+ *
+ * The consequence to know about: from 空白, picking a conversation stage
+ * (思考中, a tool card) needs 显示对话流 on first, because every stage renders
+ * inside the conversation. `isEventFlowReady` already detects this and has the
+ * rail say so, rather than accepting a pick that would change nothing.
  */
 const OPENING_SLOT_IDS = ["sessions", "composer", "output"];
 
@@ -633,6 +850,17 @@ export const emptyStructureProject: AgentFrontendProject = {
   // A real default rather than a placeholder: an unnamed project would put
   // "未命名" on the canvas, which is not a name anyone would ship.
   name: "My Agent",
+  /*
+   * Opens on no style, matching the empty canvas below.
+   *
+   * It used to inherit `native` from the project it spreads, which made the
+   * picker claim a style the canvas was not showing — and worse, made 原生风
+   * unreachable: `requestStyleSwitch` returns early when the target is already
+   * selected, so the one style that was pre-selected could never have its kit
+   * applied. `defaultCodingAgentProject` keeps `native`; that one is the
+   * published schema default and the exported scaffold's starting point.
+   */
+  theme: { ...defaultCodingAgentProject.theme, stylePreset: "blank" },
   layout: {
     ...defaultCodingAgentProject.layout,
     regions: ["sidebar", "main", "composer", "right-panel"],
@@ -663,14 +891,27 @@ export const emptyStructureProject: AgentFrontendProject = {
     newButton: false,
     search: false,
     sessionList: false,
+    rowIcon: false,
     grouping: false,
     footer: false,
   },
   conversation: {
     ...defaultCodingAgentProject.conversation,
     speakerLabels: false,
-    userAvatar: false,
-    agentAvatar: false,
+    /*
+     * Both avatars on, in every style, from the first frame — asked for, and
+     * the two `false`s that used to be here are gone rather than flipped so
+     * the spread above is the single place the answer lives.
+     *
+     * It is a deliberate exception to this project's "nothing is picked yet"
+     * premise, and it earns it: a face is not a component the reader adds to a
+     * column, it is who is speaking. Every style ships a pair
+     * (`STYLE_AVATAR_DEFAULTS` is a total table), and switching styles keeps
+     * them on — the kit works on preset options and these two are state-card
+     * toggles writing `conversation.userAvatar` / `agentAvatar` directly, so
+     * nothing in the style path turns them back off. The effect in `App.tsx`
+     * then swaps the *face* to whichever one the new style offers.
+     */
   },
   composer: {
     ...defaultCodingAgentProject.composer,
@@ -689,6 +930,37 @@ export const emptyStructureProject: AgentFrontendProject = {
     allowPush: false,
   },
 };
+
+/**
+ * Put the canvas back to empty, keeping everything that is not a component.
+ *
+ * What 空白 needs when it is switched *to*: a style's kit only ever adds, so
+ * without this, choosing 空白 after building a screen would clear the rail's
+ * ticks and leave the canvas fully populated.
+ *
+ * The emptied fields are read off `emptyStructureProject` rather than listed
+ * again, so the two cannot drift — a new content toggle that opens off is
+ * turned off here by construction.
+ *
+ * Deliberately kept: the project's name, its providers and runtime, the layout
+ * sizes, and everything under `theme.motion` / `toolCalls` / `reasoning`. Those
+ * are either the reader's own data or how a thing looks rather than whether it
+ * is there, and an either/or value has no "off" to return to.
+ */
+export function withEmptyStructure(project: AgentFrontendProject): AgentFrontendProject {
+  return {
+    ...project,
+    layout: {
+      ...project.layout,
+      regions: [...emptyStructureProject.layout.regions],
+      slots: emptyStructureProject.layout.slots.map((slot) => ({ ...slot })),
+    },
+    sidebar: { ...emptyStructureProject.sidebar },
+    conversation: { ...emptyStructureProject.conversation },
+    composer: { ...emptyStructureProject.composer },
+    git: { ...emptyStructureProject.git },
+  };
+}
 
 /** Project the branch-owned Canvas model into the portable v2 product contract. */
 export function projectExperienceV2(
@@ -724,7 +996,21 @@ export function projectExperienceV2(
       },
       reasoning: project.reasoning,
       blocks: project.blocks,
-      output: project.output,
+      /*
+       * Field by field, like `toolCalls` and `conversation` above, and for the
+       * same reason: the v2 contract's `output` is a closed object (its codec
+       * reports an unlisted key as `is not supported`, and the frozen schema
+       * sets `additionalProperties: false`). `taskList` / `execProgress` /
+       * `workspaceFiles` are panel contents this branch renders and the
+       * contract has no words for yet, so they stay out of the portable
+       * document rather than making it invalid.
+       */
+      output: {
+        source: project.output.source,
+        artifactRenderer: project.output.artifactRenderer,
+        surface: project.output.surface,
+        supportedArtifactRenderers: project.output.supportedArtifactRenderers,
+      },
       export: {
         target: project.export.target,
         includeHarnessAdapter: project.export.includeHarnessAdapter,

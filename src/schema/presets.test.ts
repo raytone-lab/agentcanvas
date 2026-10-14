@@ -1,8 +1,33 @@
 import { describe, expect, it } from "vitest";
 
-import { RAIL_WITHHELD_GROUP_IDS, presetRailSections } from "../app/projection/presetRailData";
+import { RAIL_WITHHELD_GROUP_IDS, isOptionShownInRail, presetRailSections, visibleStateCards } from "../app/projection/presetRailData";
 import { hasPresetAction } from "./presetActions";
-import { presetGroups, presetGroupsForTemplate, resolvePresetGroupSelection } from "./presets";
+import { presetGroups, presetGroupsForTemplate, resolvePresetGroupSelection, type PresetGroupId } from "./presets";
+
+/**
+ * Options the panel draws as their own block, so they are not in a section.
+ *
+ * The same four `App` filters out of `selectedPresetSections`. A group whose
+ * only options are these has empty sections and a full panel, which is why the
+ * emptiness check below has to know about them — measuring options alone is
+ * what let the placeholder appear above 运行状态's cards.
+ */
+const SURFACED_AS_OWN_BLOCK = new Set([
+  "speaker-labels",
+  "message-actions",
+  "reasoning-public-summary",
+  "error-collapse",
+]);
+
+/** Groups whose panel is a component of its own, options or not. */
+const PANEL_OWN_CONTENT = new Set<PresetGroupId>([
+  // The coming-soon block and the provider editor replace the option list.
+  "git",
+  "provider",
+  // The welcome-message editor and the two message-action pickers sit after it.
+  "composer",
+  "conversation",
+]);
 
 /** Structure first, then event flow in turn order, then appearance and integration. */
 const RAIL_ORDER = [
@@ -34,6 +59,31 @@ describe("template preset groups", () => {
   it("moves a hidden selected group back to the first visible preset", () => {
     expect(resolvePresetGroupSelection("git", "chat")).toBe("sidebar");
     expect(resolvePresetGroupSelection("git", "coding")).toBe("git");
+  });
+
+  it("gives every reachable group something to configure", () => {
+    /*
+     * A group whose every option is `pending` or hidden renders as the dashed
+     * "先占个位" placeholder — a row the reader can open and find nothing in.
+     * 右栏 was in exactly that state: one option hidden because it can only ever
+     * be on, and its other three unbuilt, so the whole panel was a placeholder.
+     *
+     * The placeholder itself stays (a stage in the flow with nothing in it yet
+     * should say so rather than render blank), but no *reachable* group should
+     * be reaching it. A group with nothing to offer belongs in
+     * `RAIL_WITHHELD_GROUP_IDS`, like 中断 — named in the flow, kept out of the
+     * rail until it exists.
+     */
+    const empty = presetGroups
+      .filter((group) => !RAIL_WITHHELD_GROUP_IDS.has(group.id))
+      .filter((group) => !PANEL_OWN_CONTENT.has(group.id))
+      .filter(
+        (group) =>
+          visibleStateCards(group.id).length === 0 &&
+          !group.options.some((option) => isOptionShownInRail(option) && !SURFACED_AS_OWN_BLOCK.has(option.id)),
+      )
+      .map((group) => group.id);
+    expect(empty).toEqual([]);
   });
 
   it("keeps every group reachable from the rail, or deliberately withheld", () => {
@@ -104,6 +154,10 @@ describe("template preset groups", () => {
       "mic",
       "budget",
       "model-config",
+      // The run's progress and steps dock above the prompt (see
+      // `RunStatusDock`), so their switches live with the composer.
+      "exec-progress",
+      "task-list",
       "prompt-shortcuts",
       "mention-picker",
       "slash-command-palette",
@@ -165,8 +219,6 @@ describe("template preset groups", () => {
     // The region only owns whether it exists; its contents are event flow.
     expect(output?.options.map((option) => option.id)).toEqual([
       "output-visible",
-      "task-list",
-      "exec-progress",
       "workspace-files",
     ]);
     expect(delivery?.options.filter((option) => !option.id.startsWith("writing-")).map((option) => option.id)).toEqual([

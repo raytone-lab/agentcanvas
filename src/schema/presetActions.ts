@@ -12,9 +12,19 @@ import {
 } from "./agentuxConfig";
 import {
   isThemePresetId,
+  atlasThemePresetIds,
+  gameThemePresetIds,
   minimalThemePresetIds,
   nativeThemePresetIds,
+  pixelThemePresetIds,
+  pixeldeskThemePresetIds,
+  handdrawnThemePresetIds,
+  inkwashThemePresetIds,
+  techThemePresetIds,
+  retroThemePresetIds,
+  studioThemePresetIds,
   workbuddyThemePresetIds,
+  zineThemePresetIds,
   type ThemePresetId,
 } from "../theme/themeTokens";
 
@@ -103,7 +113,20 @@ const providerPresetIds: Partial<Record<string, ProviderCatalogId>> = Object.fro
 // entry, so a missing style here is a silently inert set of cards.
 const selectableThemePresetIds: readonly ThemePresetId[] = [
   ...nativeThemePresetIds,
+  ...atlasThemePresetIds,
   ...minimalThemePresetIds,
+  ...studioThemePresetIds,
+  ...zineThemePresetIds,
+  ...gameThemePresetIds,
+  ...pixelThemePresetIds,
+  ...pixeldeskThemePresetIds,
+  ...retroThemePresetIds,
+  // 手绘风's four were missing here too — adjacent to the line being added and
+  // the same one-line omission, so left inert they would have been a second
+  // set of cards that click and do nothing.
+  ...handdrawnThemePresetIds,
+  ...inkwashThemePresetIds,
+  ...techThemePresetIds,
   ...workbuddyThemePresetIds,
 ];
 
@@ -171,14 +194,38 @@ const presetPatches: Record<string, PresetPatch> = {
       project.conversation.messageActions.regenerate &&
       project.conversation.messageActions.edit
     );
+    /*
+     * All four of the agent row's actions, not just the generic three.
+     *
+     * The per-role flags fall back to the generic ones
+     * (`actions.agentCopy ?? actions.copy`), so copy / regenerate / edit lit up
+     * on their own — but `agentTime` has no generic twin, so 时间 was the one
+     * tile in 生成消息操作 that stayed off in every style. Asked for: 默认所有的
+     * 风格里的这块都是选中的, and every style's kit takes this option (its
+     * section has one member, so it is read as additive and taken whole).
+     */
     return {
       ...project,
       conversation: {
         ...project.conversation,
         messageActions: {
+          /*
+           * Replaced, not spread — and that is load-bearing.
+           *
+           * The per-role flags are `boolean | undefined` and the row reads
+           * `userCopy ?? copy`, so *absent* means "follow the generic one" while
+           * `false` means "off". Spreading the old object kept `userCopy: false`
+           * from the default project, which is not the same as leaving it out:
+           * the fallback stopped applying and the reader's own row disappeared.
+           * Caught by `renders conversation presets as message actions`.
+           */
           copy: enabled,
           regenerate: enabled,
           edit: enabled,
+          agentCopy: enabled,
+          agentRegenerate: enabled,
+          agentEdit: enabled,
+          agentTime: enabled,
         },
       },
     };
@@ -186,11 +233,48 @@ const presetPatches: Record<string, PresetPatch> = {
   "sidebar-visible": (project) => toggleSlotEnabled(project, "SessionSidebar"),
   "chat-visible": (project) => toggleSlotEnabled(project, "ChatFrame"),
   "composer-visible": (project) => toggleSlotEnabled(project, "ComposerFrame"),
+  /*
+   * Setters, not flips. `reasoning-done-timed` used to toggle between "timed"
+   * and "label", which reads as a checkbox — but the title is one of four
+   * values now, and a toggle in a four-way set gives no way to reach the other
+   * two. Each of these just assigns its own value; the exclusivity falls out of
+   * the field having one.
+   *
+   * None of them touches `doneRule` any more: the rule is its own option.
+   */
+  "reasoning-done-label": (project) => ({
+    ...project,
+    reasoning: { ...project.reasoning, doneStyle: "label" },
+  }),
+  "reasoning-done-counted": (project) => ({
+    ...project,
+    reasoning: { ...project.reasoning, doneStyle: "counted" },
+  }),
+  "reasoning-done-conclusion": (project) => ({
+    ...project,
+    reasoning: { ...project.reasoning, doneStyle: "conclusion" },
+  }),
+  "reasoning-done-expandable": (project) => ({
+    ...project,
+    reasoning: { ...project.reasoning, doneBody: "expandable" },
+  }),
+  "reasoning-done-title-only": (project) => ({
+    ...project,
+    reasoning: { ...project.reasoning, doneBody: "title-only" },
+  }),
+  "reasoning-done-first-line": (project) => ({
+    ...project,
+    reasoning: { ...project.reasoning, doneBody: "first-line" },
+  }),
+  "reasoning-done-rule": (project) => ({
+    ...project,
+    reasoning: { ...project.reasoning, doneRule: !project.reasoning.doneRule },
+  }),
   "reasoning-done-timed": (project) => ({
     ...project,
     reasoning: {
       ...project.reasoning,
-      doneStyle: project.reasoning.doneStyle === "timed" ? "label" : "timed",
+      doneStyle: "timed",
     },
   }),
   "reasoning-writing-smooth": (project) => ({
@@ -225,6 +309,10 @@ const presetPatches: Record<string, PresetPatch> = {
     ...project,
     sidebar: { ...project.sidebar, sessionList: !project.sidebar.sessionList },
   }),
+  "sidebar-row-icon": (project) => ({
+    ...project,
+    sidebar: { ...project.sidebar, rowIcon: !project.sidebar.rowIcon },
+  }),
   "sidebar-grouping": (project) => ({
     ...project,
     sidebar: {
@@ -243,17 +331,17 @@ const presetPatches: Record<string, PresetPatch> = {
   "thinking-wave": (project) => ({
     ...project,
     theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "wave" } },
-    reasoning: { ...project.reasoning, show: "summary", collapse: "summary-first" },
+    reasoning: { ...project.reasoning, show: "summary" },
   }),
   "thinking-pulse": (project) => ({
     ...project,
     theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "pulse" } },
-    reasoning: { ...project.reasoning, show: "summary", collapse: "summary-first" },
+    reasoning: { ...project.reasoning, show: "summary" },
   }),
   "thinking-terminal": (project) => ({
     ...project,
     theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "terminal" } },
-    reasoning: { ...project.reasoning, show: "summary", collapse: "expanded" },
+    reasoning: { ...project.reasoning, show: "summary" },
   }),
   "thinking-minimal": (project) => ({
     ...project,
@@ -263,32 +351,185 @@ const presetPatches: Record<string, PresetPatch> = {
   "thinking-shimmer": (project) => ({
     ...project,
     theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "shimmer" } },
-    reasoning: { ...project.reasoning, show: "summary", collapse: "summary-first" },
+    reasoning: { ...project.reasoning, show: "summary" },
   }),
+  /*
+   * Its own field, and a toggle rather than a motion assignment.
+   *
+   * It used to set `theme.motion.reasoning = "bars"`, which made it mutually
+   * exclusive with every glyph: picking the dots and then the text cycle lost
+   * the dots. They are not alternatives — one is the mark beside the words, the
+   * other is what the words do — so it composes now. The glyph the reader
+   * chose stays, and `reasoning-done-timed` can add the elapsed on top of
+   * either.
+   */
   "thinking-bars": (project) => ({
     ...project,
-    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "bars" } },
-    reasoning: { ...project.reasoning, show: "summary", collapse: "summary-first" },
+    reasoning: {
+      ...project.reasoning,
+      textCycle: !project.reasoning.textCycle,
+      show: "summary",
+    },
+  }),
+  "thinking-comic-halftone": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "comic-halftone" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-comic-inkblot": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "comic-inkblot" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-comic-bubble": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "comic-bubble" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-comic-flip": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "comic-flip" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-quest-torch": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "quest-torch" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-quest-rune": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "quest-rune" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-quest-coins": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "quest-coins" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-pixel-cursor": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "pixel-cursor" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-pixel-bars": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "pixel-bars" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-pixel-spin": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "pixel-spin" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-sketch-bubble": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "sketch-bubble" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-sketch-pencil": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "sketch-pencil" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-sketch-blot": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "sketch-blot" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-sketch-page": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "sketch-page" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-tech-matrix": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "tech-matrix" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-tech-signal": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "tech-signal" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-tech-scan": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "tech-scan" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-tech-segments": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "tech-segments" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-ink-drop": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "ink-drop" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-ink-stroke": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "ink-stroke" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-ink-ripple": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "ink-ripple" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-ink-seal": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "ink-seal" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-retro-watch": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "retro-watch" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-retro-record": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "retro-record" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-retro-metronome": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "retro-metronome" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-retro-telegraph": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "retro-telegraph" } },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-pixel-bricks": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "pixel-bricks" } },
+    reasoning: { ...project.reasoning, show: "summary" },
   }),
   "thinking-orbit": (project) => ({
     ...project,
     theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "orbit" } },
-    reasoning: { ...project.reasoning, show: "summary", collapse: "summary-first" },
+    reasoning: { ...project.reasoning, show: "summary" },
   }),
   "thinking-orb-s1": (project) => ({
     ...project,
     theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "orb-s1" } },
-    reasoning: { ...project.reasoning, show: "summary", collapse: "summary-first" },
+    reasoning: { ...project.reasoning, show: "summary" },
   }),
   "thinking-orb-b5": (project) => ({
     ...project,
     theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "orb-b5" } },
-    reasoning: { ...project.reasoning, show: "summary", collapse: "summary-first" },
+    reasoning: { ...project.reasoning, show: "summary" },
   }),
   "thinking-orb-m2": (project) => ({
     ...project,
     theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "orb-m2" } },
-    reasoning: { ...project.reasoning, show: "summary", collapse: "summary-first" },
+    reasoning: { ...project.reasoning, show: "summary" },
+  }),
+  "thinking-hourglass": (project) => ({
+    ...project,
+    theme: { ...project.theme, motion: { ...project.theme.motion, reasoning: "hourglass" } },
+    reasoning: { ...project.reasoning, show: "summary" },
   }),
   "summary-first": (project) => ({
     ...project,
@@ -308,7 +549,10 @@ const presetPatches: Record<string, PresetPatch> = {
   }),
   "reasoning-public-summary": (project) => ({
     ...project,
-    reasoning: { ...project.reasoning, show: "summary", collapse: "summary-first", expandable: true },
+    /* Visibility only. It used to set `collapse: "summary-first"` too, which is
+       the one mode with no fold control — so choosing what the block *says*
+       also decided that it could not be folded. */
+    reasoning: { ...project.reasoning, show: "summary" },
   }),
   /**
    * The only option that sets `show: "thinking"`.
@@ -320,7 +564,7 @@ const presetPatches: Record<string, PresetPatch> = {
    */
   "reasoning-model-thinking": (project) => ({
     ...project,
-    reasoning: { ...project.reasoning, show: "thinking", collapse: "summary-first", expandable: true },
+    reasoning: { ...project.reasoning, show: "thinking" },
   }),
   "command-cards": (project) => ({
     ...project,
@@ -381,8 +625,19 @@ const presetPatches: Record<string, PresetPatch> = {
   }),
   "error-collapse": (project) => ({
     ...project,
+    /*
+     * Error copy only, which is all this option claims to be ("user-safe error
+     * copy with debug detail kept out of the main chat") and all
+     * `isPresetOptionActive` reads back for it.
+     *
+     * It also wrote `reasoning.collapse: "summary-first"`, and because it is an
+     * additive toggle the kit takes it for *every* style — so every style's
+     * thinking block ended up in the one disclosure mode with no fold control,
+     * however the Disclosure section had been set. That was the last of three
+     * options writing this field from outside its own axis (the motions and the
+     * visibility pair were the others).
+     */
     blocks: { ...project.blocks, errorCollapse: !project.blocks.errorCollapse },
-    reasoning: { ...project.reasoning, collapse: "summary-first", expandable: true },
   }),
   "tool-log-tail": (project) => ({
     ...project,
@@ -428,6 +683,27 @@ const presetPatches: Record<string, PresetPatch> = {
   "output-source-console": (project) => ({
     ...project,
     output: { ...project.output, source: "console" },
+  }),
+  /*
+   * The three panel contents, and each one writes only its own field.
+   *
+   * Deliberately not touching `source` the way the two above do: the source is
+   * which document the panel shows, and these sit beside the document. An
+   * option that reset the source would have made ticking 任务列表 throw away the
+   * reader's choice of renderer — the mistake this file has made four times
+   * (see the motions, the visibility pair and `error-collapse`).
+   */
+  "task-list": (project) => ({
+    ...project,
+    output: { ...project.output, taskList: !project.output.taskList },
+  }),
+  "exec-progress": (project) => ({
+    ...project,
+    output: { ...project.output, execProgress: !project.output.execProgress },
+  }),
+  "workspace-files": (project) => ({
+    ...project,
+    output: { ...project.output, workspaceFiles: !project.output.workspaceFiles },
   }),
   "renderer-auto": (project) => ({
     ...project,
@@ -515,7 +791,7 @@ export function hasPresetAction(optionId: string): boolean {
 const base = defaultCodingAgentProject;
 const revertMotion = (key: "writing" | "reasoning" | "toolCall"): PresetPatch =>
   (project) => ({ ...project, theme: { ...project.theme, motion: { ...project.theme.motion, [key]: base.theme.motion[key] } } });
-const revertReasoning = (key: "show" | "collapse" | "writing" | "doneStyle"): PresetPatch =>
+const revertReasoning = (key: "show" | "collapse" | "writing" | "doneStyle" | "doneBody"): PresetPatch =>
   (project) => ({ ...project, reasoning: { ...project.reasoning, [key]: base.reasoning[key] } });
 const revertToolCalls = (key: "detail" | "progress" | "approval" | "timelineRail"): PresetPatch =>
   (project) => ({ ...project, toolCalls: { ...project.toolCalls, [key]: base.toolCalls[key] } });
@@ -531,6 +807,16 @@ const mediaGenerationPresetDeactivators: Record<string, PresetPatch> = Object.fr
 );
 
 const presetDeactivators: Record<string, PresetPatch> = {
+  /* The settled-block axes. Each single-select value reverts its own field to
+     the baseline, which is what makes a second click cancel it — the toggle
+     audit checks exactly this, and without these entries "已思考 · 3 段" could
+     be turned on and never off. `reasoning-done-rule` needs none: it is a
+     boolean and its own patch already flips it. */
+  "reasoning-done-timed": revertReasoning("doneStyle"),
+  "reasoning-done-counted": revertReasoning("doneStyle"),
+  "reasoning-done-conclusion": revertReasoning("doneStyle"),
+  "reasoning-done-title-only": revertReasoning("doneBody"),
+  "reasoning-done-first-line": revertReasoning("doneBody"),
   "writing-smooth": revertMotion("writing"),
   "writing-typewriter": revertMotion("writing"),
   "writing-chunked": revertMotion("writing"),
@@ -539,11 +825,38 @@ const presetDeactivators: Record<string, PresetPatch> = {
   "thinking-terminal": revertMotion("reasoning"),
   "thinking-minimal": revertMotion("reasoning"),
   "thinking-shimmer": revertMotion("reasoning"),
-  "thinking-bars": revertMotion("reasoning"),
   "thinking-orbit": revertMotion("reasoning"),
+  "thinking-comic-halftone": revertMotion("reasoning"),
+  "thinking-comic-inkblot": revertMotion("reasoning"),
+  "thinking-comic-bubble": revertMotion("reasoning"),
+  "thinking-comic-flip": revertMotion("reasoning"),
+  "thinking-quest-torch": revertMotion("reasoning"),
+  "thinking-quest-rune": revertMotion("reasoning"),
+  "thinking-quest-coins": revertMotion("reasoning"),
+  "thinking-pixel-cursor": revertMotion("reasoning"),
+  "thinking-pixel-bars": revertMotion("reasoning"),
+  "thinking-pixel-spin": revertMotion("reasoning"),
+  "thinking-pixel-bricks": revertMotion("reasoning"),
+  "thinking-sketch-bubble": revertMotion("reasoning"),
+  "thinking-sketch-pencil": revertMotion("reasoning"),
+  "thinking-sketch-blot": revertMotion("reasoning"),
+  "thinking-sketch-page": revertMotion("reasoning"),
+  "thinking-tech-matrix": revertMotion("reasoning"),
+  "thinking-tech-signal": revertMotion("reasoning"),
+  "thinking-tech-scan": revertMotion("reasoning"),
+  "thinking-tech-segments": revertMotion("reasoning"),
+  "thinking-ink-drop": revertMotion("reasoning"),
+  "thinking-ink-stroke": revertMotion("reasoning"),
+  "thinking-ink-ripple": revertMotion("reasoning"),
+  "thinking-ink-seal": revertMotion("reasoning"),
+  "thinking-retro-watch": revertMotion("reasoning"),
+  "thinking-retro-record": revertMotion("reasoning"),
+  "thinking-retro-metronome": revertMotion("reasoning"),
+  "thinking-retro-telegraph": revertMotion("reasoning"),
   "thinking-orb-s1": revertMotion("reasoning"),
   "thinking-orb-b5": revertMotion("reasoning"),
   "thinking-orb-m2": revertMotion("reasoning"),
+  "thinking-hourglass": revertMotion("reasoning"),
   "reasoning-writing-smooth": revertReasoning("writing"),
   "reasoning-writing-typewriter": revertReasoning("writing"),
   "reasoning-writing-chunked": revertReasoning("writing"),
@@ -630,6 +943,20 @@ export function isPresetOptionActive(project: AgentFrontendProject, optionId: st
       return slotEnabled(project, "GitFrame");
     case "reasoning-done-timed":
       return project.reasoning.doneStyle === "timed";
+    case "reasoning-done-label":
+      return project.reasoning.doneStyle === "label";
+    case "reasoning-done-counted":
+      return project.reasoning.doneStyle === "counted";
+    case "reasoning-done-conclusion":
+      return project.reasoning.doneStyle === "conclusion";
+    case "reasoning-done-expandable":
+      return project.reasoning.doneBody === "expandable";
+    case "reasoning-done-title-only":
+      return project.reasoning.doneBody === "title-only";
+    case "reasoning-done-first-line":
+      return project.reasoning.doneBody === "first-line";
+    case "reasoning-done-rule":
+      return project.reasoning.doneRule;
     case "reasoning-writing-smooth":
       return project.reasoning.writing === "smooth-stream";
     case "reasoning-writing-typewriter":
@@ -646,6 +973,8 @@ export function isPresetOptionActive(project: AgentFrontendProject, optionId: st
       return project.sidebar.search;
     case "sidebar-sessions":
       return project.sidebar.sessionList;
+    case "sidebar-row-icon":
+      return project.sidebar.rowIcon;
     case "sidebar-grouping":
       return project.sidebar.grouping;
     case "sidebar-footer":
@@ -661,15 +990,71 @@ export function isPresetOptionActive(project: AgentFrontendProject, optionId: st
     case "thinking-shimmer":
       return project.theme.motion.reasoning === "shimmer";
     case "thinking-bars":
-      return project.theme.motion.reasoning === "bars";
+      return project.reasoning.textCycle;
     case "thinking-orbit":
       return project.theme.motion.reasoning === "orbit";
+    case "thinking-comic-halftone":
+      return project.theme.motion.reasoning === "comic-halftone";
+    case "thinking-comic-inkblot":
+      return project.theme.motion.reasoning === "comic-inkblot";
+    case "thinking-comic-bubble":
+      return project.theme.motion.reasoning === "comic-bubble";
+    case "thinking-comic-flip":
+      return project.theme.motion.reasoning === "comic-flip";
+    case "thinking-quest-torch":
+      return project.theme.motion.reasoning === "quest-torch";
+    case "thinking-quest-rune":
+      return project.theme.motion.reasoning === "quest-rune";
+    case "thinking-quest-coins":
+      return project.theme.motion.reasoning === "quest-coins";
+    case "thinking-pixel-cursor":
+      return project.theme.motion.reasoning === "pixel-cursor";
+    case "thinking-pixel-bars":
+      return project.theme.motion.reasoning === "pixel-bars";
+    case "thinking-pixel-spin":
+      return project.theme.motion.reasoning === "pixel-spin";
+    case "thinking-pixel-bricks":
+      return project.theme.motion.reasoning === "pixel-bricks";
+    case "thinking-sketch-bubble":
+      return project.theme.motion.reasoning === "sketch-bubble";
+    case "thinking-sketch-pencil":
+      return project.theme.motion.reasoning === "sketch-pencil";
+    case "thinking-sketch-blot":
+      return project.theme.motion.reasoning === "sketch-blot";
+    case "thinking-sketch-page":
+      return project.theme.motion.reasoning === "sketch-page";
+    case "thinking-tech-matrix":
+      return project.theme.motion.reasoning === "tech-matrix";
+    case "thinking-tech-signal":
+      return project.theme.motion.reasoning === "tech-signal";
+    case "thinking-tech-scan":
+      return project.theme.motion.reasoning === "tech-scan";
+    case "thinking-tech-segments":
+      return project.theme.motion.reasoning === "tech-segments";
+    case "thinking-ink-drop":
+      return project.theme.motion.reasoning === "ink-drop";
+    case "thinking-ink-stroke":
+      return project.theme.motion.reasoning === "ink-stroke";
+    case "thinking-ink-ripple":
+      return project.theme.motion.reasoning === "ink-ripple";
+    case "thinking-ink-seal":
+      return project.theme.motion.reasoning === "ink-seal";
+    case "thinking-retro-watch":
+      return project.theme.motion.reasoning === "retro-watch";
+    case "thinking-retro-record":
+      return project.theme.motion.reasoning === "retro-record";
+    case "thinking-retro-metronome":
+      return project.theme.motion.reasoning === "retro-metronome";
+    case "thinking-retro-telegraph":
+      return project.theme.motion.reasoning === "retro-telegraph";
     case "thinking-orb-s1":
       return project.theme.motion.reasoning === "orb-s1";
     case "thinking-orb-b5":
       return project.theme.motion.reasoning === "orb-b5";
     case "thinking-orb-m2":
       return project.theme.motion.reasoning === "orb-m2";
+    case "thinking-hourglass":
+      return project.theme.motion.reasoning === "hourglass";
     case "summary-first":
       return project.reasoning.collapse === "summary-first";
     case "reasoning-auto-collapse":
@@ -728,6 +1113,12 @@ export function isPresetOptionActive(project: AgentFrontendProject, optionId: st
       return project.output.source === "artifact";
     case "output-source-console":
       return project.output.source === "console";
+    case "task-list":
+      return project.output.taskList;
+    case "exec-progress":
+      return project.output.execProgress;
+    case "workspace-files":
+      return project.output.workspaceFiles;
     case "renderer-auto":
       return project.output.source === "artifact" && project.output.artifactRenderer === "auto";
     case "renderer-code":

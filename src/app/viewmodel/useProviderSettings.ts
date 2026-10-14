@@ -20,6 +20,12 @@ import { formatCopy } from "../projection/previewDefaults";
  * run-mode aware `saveProviderSettings` lives in the workspace controller so
  * this hook stays testable with just a project updater.
  */
+/** What a test or a model fetch came back with. */
+export type ProviderCheckResult =
+  | { status: "ok"; models: number }
+  | { status: "error"; message: string }
+  | { status: "needs-key" };
+
 export function useProviderSettings({
   copy,
   updateActiveProject,
@@ -87,10 +93,15 @@ export function useProviderSettings({
     );
   }
 
-  async function testProvider(provider: ProviderConnection, sessionKey?: string) {
+  /*
+   * Both checks also answer with what happened, so the 模型 panel can keep the
+   * outcome on the provider it belongs to instead of only in a toast that
+   * times out. The toasts are unchanged.
+   */
+  async function testProvider(provider: ProviderConnection, sessionKey?: string): Promise<ProviderCheckResult> {
     if (provider.auth.mode !== "none" && !sessionKey?.trim()) {
       toast.error(formatCopy(copy.shell.toast.enterDevSessionKeyBeforeTesting, { provider: provider.label }));
-      return;
+      return { status: "needs-key" };
     }
 
     try {
@@ -98,33 +109,39 @@ export function useProviderSettings({
       toast.success(
         `${formatCopy(copy.shell.toast.providerKeyWorks, { provider: provider.label })}${models.length ? ` · ${models.length} ${copy.shell.toast.modelsCountSuffix}` : ""}`,
       );
+      return { status: "ok", models: models.length };
     } catch (error) {
+      const message = error instanceof Error ? error.message : copy.shell.toast.unknownError;
       toast.error(formatCopy(copy.shell.toast.providerTestFailed, {
         provider: provider.label,
-        message: error instanceof Error ? error.message : copy.shell.toast.unknownError,
+        message,
       }));
+      return { status: "error", message };
     }
   }
 
-  async function fetchProviderModels(provider: ProviderConnection, sessionKey?: string) {
+  async function fetchProviderModels(provider: ProviderConnection, sessionKey?: string): Promise<ProviderCheckResult> {
     if (provider.auth.mode !== "none" && !sessionKey?.trim()) {
       toast.error(formatCopy(copy.shell.toast.enterDevSessionKeyBeforeFetchingModels, { provider: provider.label }));
-      return;
+      return { status: "needs-key" };
     }
 
     try {
       const models = await requestProviderModels(provider, sessionKey);
       if (models.length === 0) {
         toast.info(formatCopy(copy.shell.toast.providerReturnedNoModels, { provider: provider.label }));
-        return;
+        return { status: "ok", models: 0 };
       }
       updateProviderConnection(provider.id, { models, defaultModel: models[0] });
       toast.success(formatCopy(copy.shell.toast.fetchedModelsForProvider, { count: models.length, provider: provider.label }));
+      return { status: "ok", models: models.length };
     } catch (error) {
+      const message = error instanceof Error ? error.message : copy.shell.toast.unknownError;
       toast.error(formatCopy(copy.shell.toast.providerModelFetchFailed, {
         provider: provider.label,
-        message: error instanceof Error ? error.message : copy.shell.toast.unknownError,
+        message,
       }));
+      return { status: "error", message };
     }
   }
 

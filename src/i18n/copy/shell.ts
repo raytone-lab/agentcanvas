@@ -12,7 +12,24 @@ const en = {
   },
   topbar: {
     workspaceViewAria: "Workspace view",
-    viewPreview: "Preview",
+    /**
+     * The two previews, named so the pair reads as a choice.
+     *
+     * Both used to be "Preview", which is what got the interface one pulled
+     * from the topbar: one label, two controls, no way to tell from the row
+     * which was which. "Run" is the snapshot-and-play surface; "Interface" is
+     * the editor with its furniture folded away.
+     */
+    viewPreview: "Run preview",
+    viewUiPreview: "Interface preview",
+    /**
+     * The second line of each preview's hint bubble: what it will do before it
+     * is clicked. The two glyphs alone were read as unlabelled mysteries; the
+     * bubble's first line is the name above.
+     */
+    viewPreviewHint: "Play a sample conversation through this setup",
+    viewUiPreviewHint: "Hide the editor panels and see only the canvas · Esc to exit",
+    exitUiPreview: "Exit interface preview",
     viewDebug: "Debug",
     editUiUx: "Edit UI/UX",
     runModeLabel: "Run mode",
@@ -53,8 +70,13 @@ const en = {
   },
   preferences: {
     title: "Preferences",
+    description: "How the editor looks to you. Changes apply straight away.",
     language: "Language",
+    languageHint: "The editor's interface language.",
     background: "Canvas background",
+    backgroundHint: "What the canvas is painted with, behind your agent.",
+    backgroundPlain: "Plain",
+    backgroundPattern: "Pattern",
   },
   presetRail: {
     title: "UX Presets",
@@ -72,7 +94,7 @@ const en = {
         description: "Message chrome and recovery: avatars, speaker labels, copy, edit and rerun.",
       },
       "media-generation": {
-        label: "Progress",
+        label: "Loading",
         description: "What the agent reports while it works: named stages, structured progress, and the wait while an image, audio clip, or video is generated.",
       },
       sidebar: {
@@ -154,14 +176,28 @@ const en = {
     eventStreamAria: "Select event stream",
     eventStreamWelcome: "Welcome (no events)",
     styleSwitch: {
+      colorRoles: { canvas: "Canvas", panel: "Panel", accent: "Accent", ink: "Text" },
+      colorEditHint: "click a dot to change its colour",
+      colorSuggested: "Suggested",
+      colorHex: "HEX",
+      colorContrast: "Contrast {ratio}:1 · reads clearly",
+      colorContrastLow: "Contrast {ratio}:1 · text may be hard to read",
+      colorReset: "Restore this colourway",
+      colorClose: "Close",
       gotIt: "Got it",
       cancel: "Cancel",
       confirm: "Switch",
+      /* The card's own button: hovering a style opens its colourways, and this
+         applies the style and the picked colourway in one step. What used to
+         take a confirm sheet — see `useStyleSwitch.applyStyle`. */
+      apply: "Apply",
+      palette: "Colours",
+      inUse: "In use",
       unbuiltTitle: "{style} is under construction",
       unbuiltDescription: "This style is still being built and can't be switched to yet.",
       confirmTitle: "Switch to {style}?",
       confirmDescription:
-        "Your configuration and functionality stay intact — only the visual style changes to {style}.",
+        "{style} comes with its own starting set of components, which replaces what is selected now. Your model and Git settings stay as they are.",
     },
     messageActions: {
       sentTitle: "Sent message actions",
@@ -205,6 +241,7 @@ const en = {
     saveBeforeLiveLlm: "Save UI/UX before running Live LLM.",
     liveLlmStopped: "Live LLM request stopped",
     liveLlmFailed: "Live LLM preview failed",
+    liveNeedsSessionKey: "Live LLM needs a key for {provider}. Add one in the model settings, or switch the run mode to Replay.",
     enterDevSessionKeyBeforeTesting: "Enter a dev session key for {provider} before testing.",
     providerKeyWorks: "{provider} key works",
     modelsCountSuffix: "models",
@@ -230,7 +267,11 @@ const zh: typeof en = {
   },
   topbar: {
     workspaceViewAria: "工作区视图",
-    viewPreview: "预览",
+    viewPreview: "运行预览",
+    viewUiPreview: "界面预览",
+    viewPreviewHint: "用一段示例对话，把当前配置真正跑一遍",
+    viewUiPreviewHint: "收起编辑面板，只看画布效果 · Esc 退出",
+    exitUiPreview: "退出界面预览",
     viewDebug: "调试",
     editUiUx: "编辑 UI/UX",
     runModeLabel: "运行模式",
@@ -265,8 +306,13 @@ const zh: typeof en = {
   },
   preferences: {
     title: "偏好设置",
-    language: "语言切换",
-    background: "背景设置",
+    description: "调整编辑器的显示方式，改动即时生效。",
+    language: "界面语言",
+    languageHint: "编辑器界面使用的语言。",
+    background: "画布背景",
+    backgroundHint: "Agent 界面背后的画布底色与纹理。",
+    backgroundPlain: "纯色",
+    backgroundPattern: "纹理",
   },
   presetRail: {
     title: "UX 预设",
@@ -283,7 +329,7 @@ const zh: typeof en = {
         description: "消息外观与恢复操作：头像、名称标签、复制、修改重发。",
       },
       "media-generation": {
-        label: "进度",
+        label: "加载",
         description: "agent 干活时报出来的东西：命名阶段、结构化进度，以及图片／音频／视频生成时的等待。",
       },
       sidebar: {
@@ -303,7 +349,7 @@ const zh: typeof en = {
         description: "读取文件、编辑、验证、搜索和运行命令等工具动作。",
       },
       approval: {
-        label: "人机协作",
+        label: "审批",
         description: "运行把球交回给你的地方：工具审批、要填的表单、要给的确认。这一轮 run 会关闭，答案由下一轮带回来。",
       },
       blocks: {
@@ -361,13 +407,24 @@ const zh: typeof en = {
     eventStreamAria: "选择事件流",
     eventStreamWelcome: "欢迎页(无事件)",
     styleSwitch: {
+      colorRoles: { canvas: "画布底色", panel: "面板色", accent: "强调色", ink: "文字色" },
+      colorEditHint: "点圆点可调整颜色",
+      colorSuggested: "推荐",
+      colorHex: "HEX",
+      colorContrast: "对比度 {ratio}:1 · 清晰可读",
+      colorContrastLow: "对比度 {ratio}:1 · 文字可能看不清",
+      colorReset: "恢复此配色默认",
+      colorClose: "关闭",
       gotIt: "知道了",
       cancel: "取消",
       confirm: "确认更换",
+      apply: "应用",
+      palette: "配色",
+      inUse: "使用中",
       unbuiltTitle: "「{style}」正在搭建中",
       unbuiltDescription: "该风格还在搭建中,暂时无法切换,敬请期待。",
       confirmTitle: "确定切换为「{style}」?",
-      confirmDescription: "切换后不影响任何功能和已有配置,只有界面视觉风格会变为「{style}」。",
+      confirmDescription: "「{style}」自带一套默认组件，会替换你当前已选的组件。大模型与 Git 设置保持不变。",
     },
     messageActions: {
       sentTitle: "发送内容操作",
@@ -410,6 +467,7 @@ const zh: typeof en = {
     saveBeforeLiveLlm: "运行实时 LLM 前请先保存 UI/UX。",
     liveLlmStopped: "实时 LLM 请求已停止",
     liveLlmFailed: "实时 LLM 预览失败",
+    liveNeedsSessionKey: "实时 LLM 需要 {provider} 的密钥。请在模型设置里填写，或把运行模式切换为回放模拟。",
     enterDevSessionKeyBeforeTesting: "测试 {provider} 前请先输入开发会话密钥。",
     providerKeyWorks: "{provider} 密钥可用",
     modelsCountSuffix: "个模型",
@@ -444,7 +502,11 @@ const ja: typeof en = {
   },
   topbar: {
     workspaceViewAria: "ワークスペース表示",
-    viewPreview: "プレビュー",
+    viewPreview: "実行プレビュー",
+    viewUiPreview: "画面プレビュー",
+    viewPreviewHint: "サンプルの会話でこの設定を実際に動かします",
+    viewUiPreviewHint: "編集パネルを隠してキャンバスだけを表示 · Esc で終了",
+    exitUiPreview: "画面プレビューを終了",
     viewDebug: "デバッグ",
     editUiUx: "UI/UX を編集",
     runModeLabel: "実行モード",
@@ -479,8 +541,13 @@ const ja: typeof en = {
   },
   preferences: {
     title: "環境設定",
-    language: "言語切り替え",
-    background: "背景設定",
+    description: "エディタの表示を調整します。変更はすぐに反映されます。",
+    language: "表示言語",
+    languageHint: "エディタのインターフェース言語。",
+    background: "キャンバス背景",
+    backgroundHint: "エージェント画面の背後にあるキャンバスの色と模様。",
+    backgroundPlain: "単色",
+    backgroundPattern: "模様",
   },
   presetRail: {
     title: "UX プリセット",
@@ -497,7 +564,7 @@ const ja: typeof en = {
         description: "メッセージの外観と復帰操作：アバター、話者ラベル、コピー、修正して再実行。",
       },
       "media-generation": {
-        label: "進捗",
+        label: "読み込み",
         description: "エージェントが作業中に報告するもの：名前付きの段階、構造化された進捗、そして画像・音声・動画の生成待ち。",
       },
       sidebar: {
@@ -575,13 +642,24 @@ const ja: typeof en = {
     eventStreamAria: "イベントストリームを選択",
     eventStreamWelcome: "ウェルカム（イベントなし）",
     styleSwitch: {
+      colorRoles: { canvas: "キャンバス", panel: "パネル", accent: "アクセント", ink: "文字" },
+      colorEditHint: "ドットをクリックして色を変更",
+      colorSuggested: "おすすめ",
+      colorHex: "HEX",
+      colorContrast: "コントラスト {ratio}:1 · 読みやすい",
+      colorContrastLow: "コントラスト {ratio}:1 · 文字が読みにくい可能性",
+      colorReset: "この配色を元に戻す",
+      colorClose: "閉じる",
       gotIt: "了解",
       cancel: "キャンセル",
       confirm: "切り替える",
+      apply: "適用",
+      palette: "配色",
+      inUse: "使用中",
       unbuiltTitle: "「{style}」は準備中です",
       unbuiltDescription: "このスタイルはまだ準備中のため、切り替えられません。",
       confirmTitle: "「{style}」に切り替えますか？",
-      confirmDescription: "設定や機能はそのまま保たれ、変わるのは見た目のスタイルだけです（「{style}」になります）。",
+      confirmDescription: "「{style}」には既定のコンポーネント一式があり、現在の選択を置き換えます。モデルと Git の設定はそのままです。",
     },
     messageActions: {
       sentTitle: "送信メッセージの操作",
@@ -624,6 +702,7 @@ const ja: typeof en = {
     saveBeforeLiveLlm: "ライブ LLM を実行する前に UI/UX を保存してください。",
     liveLlmStopped: "ライブ LLM のリクエストを停止しました",
     liveLlmFailed: "ライブ LLM のプレビューに失敗しました",
+    liveNeedsSessionKey: "ライブ LLM には {provider} のキーが必要です。モデル設定で入力するか、実行モードをリプレイに切り替えてください。",
     enterDevSessionKeyBeforeTesting: "{provider} をテストする前に開発用セッションキーを入力してください。",
     providerKeyWorks: "{provider} のキーは有効です",
     modelsCountSuffix: "件のモデル",

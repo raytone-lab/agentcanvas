@@ -1,9 +1,18 @@
 import { providerCatalog, type AgentCanvasTemplate, type AgentFrontendProject } from "./agentuxConfig";
 import {
+  atlasThemePresetIds,
+  gameThemePresetIds,
   minimalThemePresetIds,
   nativeThemePresetIds,
+  pixelThemePresetIds,
+  pixeldeskThemePresetIds,
+  retroThemePresetIds,
+  handdrawnThemePresetIds,
+  inkwashThemePresetIds,
+  studioThemePresetIds,
   themeTokens,
   workbuddyThemePresetIds,
+  zineThemePresetIds,
   type ThemePresetId,
 } from "../theme/themeTokens";
 
@@ -66,6 +75,49 @@ const themeDirections: Record<ThemePresetId, string> = {
   "polar-mono": "Very cold white-gray surface with deep navy accent.",
   "wb-light": "White canvas, neutral grays, near-black action.",
   "wb-dark": "Indigo-tinted panels on near-black canvas.",
+  "swiss-international": "Pure white, one signal red, grotesque type.",
+  "editorial-press": "Newsprint cream and ink black with vermilion, in serif.",
+  "clay-pastel": "Pastel lavender and peach with rounded type.",
+  "marble-gold": "Off-white stone with antique gold, in serif.",
+  "wabi-sabi": "Muted warm greige with moss green.",
+  "dev-terminal": "Phosphor green on near-black, mono throughout.",
+  "scifi-hud": "Deep instrument navy with a cyan trace.",
+  "oled-black": "True black with pure white action.",
+  "arcade-crt": "Cabinet black under magenta and cyan neon.",
+  "brutalist-concrete": "Raw concrete gray with safety yellow, in mono.",
+  "studio-grape": "Violet columns on near-white, yellow chips, pure black outlines.",
+  "zine-butter": "Kraft board, torn cream paper, tape accent, fibre texture.",
+  "game-campfire": "Warm near-black lit by one gold, serif titles, parchment turns.",
+  "pixel-slate": "Cool slate with phosphor green, monospace throughout, zero radius.",
+  "studio-citrus": "White canvas, yellow columns, magenta chips at full brightness.",
+  "studio-cobalt": "Cool blue columns with orange chips.",
+  "studio-ink": "Near-black canvas with the outlines flipped to white.",
+  "game-moonlit": "The same hall lit cold: blue-black with silver ornament.",
+  "game-scriptorium": "Parchment board, brown ink ornament, rubric red.",
+  "game-emberfall": "Deep red-black with copper ornament.",
+  "pixel-gameboy": "The DMG's four olive tones, nothing else.",
+  "pixel-amber": "Monochrome amber tube on near-black.",
+  "pixel-overworld": "Overworld: warm cream ramp, black outlines, coin gold, pipe green.",
+  "retro-paper": "Warm ivory paper, ink serif, fine grid and muted blue file states.",
+  "ink-rice": "Unbleached rice paper, blue-black ink, one cinnabar seal.",
+  "ink-mist": "A cooler sheet, as if the mountains had not cleared yet.",
+  "ink-tea": "Paper steeped in tea: warmer pulp, browner ink.",
+  "ink-night": "A stone rubbing — slate where the paper was, pale wash where the ink was.",
+  "tech-glacier": "Ice behind a glass sheet, one bright blue.",
+  "tech-steel": "Steel greys with the avatar shell's deep blue.",
+  "tech-paper": "White sheet, #F6F6F6 rail, one black accent.",
+  "tech-deep": "Navy screen, LED-white ink, a cyan status light.",
+  "retro-linen": "A cooler, greyer stock — the same press, a different ream.",
+  "retro-sepia": "Older paper, warmed through, with brown-black ink.",
+  "retro-dusk": "Blue-grey paper and near-black ink: the darkest this style's fixed artwork takes.",
+  "sketch-paper": "Cream paper, black ink outlines and one pale blue wash.",
+  "sketch-grid": "A cooler sheet with biro-blue ink.",
+  "sketch-kraft": "Brown pad, sepia ink, warm as a parcel.",
+  "sketch-slate": "A blackboard: chalk lines on slate, the ink inverted.",
+  "desk-bluegrey": "Blue-grey chrome, warm white document, navy ink.",
+  "desk-steel": "Cooler grey chrome for the same desk.",
+  "desk-parchment": "Beige-box era: warm chrome, brown ink.",
+  "desk-night": "Night shift — pale ink on dark chrome.",
 };
 
 // Every style's schemes live in one section under a single header; the rail
@@ -74,7 +126,22 @@ const themeDirections: Record<ThemePresetId, string> = {
 // no new CSS, which is what the old hardcoded hide-lists cost.
 const themeOptions = [
   ...nativeThemePresetIds.map((id) => [id, "native"] as const),
+  // The atlas schemes ride with Native rather than getting a style of their
+  // own: `PresetStyleId` is a closed union of four, each with its own component
+  // CSS, and "studio" is still a placeholder — so a fifth would be a style with
+  // no rules behind it. Native is also the style the editor opens in, which
+  // makes these reachable without a style switch first. Moving them is one line
+  // here if they turn out to belong with Minimal's cooler geometry.
+  ...atlasThemePresetIds.map((id) => [id, "native"] as const),
   ...minimalThemePresetIds.map((id) => [id, "illustrated"] as const),
+  ...studioThemePresetIds.map((id) => [id, "studio"] as const),
+  ...zineThemePresetIds.map((id) => [id, "zine"] as const),
+  ...gameThemePresetIds.map((id) => [id, "game"] as const),
+  ...pixelThemePresetIds.map((id) => [id, "pixel"] as const),
+  ...pixeldeskThemePresetIds.map((id) => [id, "pixeldesk"] as const),
+  ...inkwashThemePresetIds.map((id) => [id, "inkwash"] as const),
+  ...retroThemePresetIds.map((id) => [id, "retro"] as const),
+  ...handdrawnThemePresetIds.map((id) => [id, "handdrawn"] as const),
   ...workbuddyThemePresetIds.map((id) => [id, "workbuddy"] as const),
 ].map(([id, style]) => ({
   id,
@@ -109,6 +176,7 @@ export const presetGroups: PresetGroup[] = [
       { id: "sidebar-new-button", label: "New chat", description: "Show the new-chat action at the top of the sidebar.", section: "Content" },
       { id: "sidebar-search", label: "Search", description: "Show a search field for filtering conversations.", section: "Content" },
       { id: "sidebar-sessions", label: "Conversation list", description: "Show the list of recent conversations.", section: "Content" },
+      { id: "sidebar-row-icon", label: "Row marks", description: "Put an icon in front of every conversation in the list.", section: "Content" },
       { id: "sidebar-grouping", label: "Date groups", description: "Group sessions under Today and Earlier headers.", section: "Content" },
       { id: "sidebar-footer", label: "Version", description: "Show the current version at the bottom of the sidebar.", section: "Content" },
       { id: "workspace-switcher", label: "Workspace switcher", description: "Switch between workspaces from the sidebar.", section: "Content", pending: true },
@@ -136,6 +204,8 @@ export const presetGroups: PresetGroup[] = [
       { id: "mic", label: "Mic", description: "Add an optional voice input affordance without changing text flow.", section: "Features" },
       { id: "budget", label: "Thinking budget", description: "Keep reasoning budget visible for high-variance coding runs.", section: "Features" },
       { id: "model-config", label: "Model config", description: "Show the model selector in the composer toolbar.", section: "Features" },
+      { id: "exec-progress", label: "Execution progress", description: "Dock the run's overall progress above the composer.", section: "Run status" },
+      { id: "task-list", label: "Task list", description: "List the run's steps above the composer, foldable.", section: "Run status" },
       { id: "prompt-shortcuts", label: "Prompt chips", description: "Offer reusable prompts without turning the composer into a library.", section: "Shortcuts" },
       { id: "mention-picker", label: "@ mentions", description: "Typing @ opens a picker for files and connectors.", section: "Shortcuts", pending: true },
       { id: "slash-command-palette", label: "/ commands", description: "Typing / opens a palette of skills and commands.", section: "Shortcuts", pending: true },
@@ -146,9 +216,7 @@ export const presetGroups: PresetGroup[] = [
     label: "Right panel",
     options: [
       { id: "output-visible", label: "Show output panel", description: "Show the output/artifact panel in the product shell.", section: "Layout" },
-      { id: "task-list", label: "Task list", description: "List the run's current tasks in the right panel.", section: "Panel content", pending: true },
-      { id: "exec-progress", label: "Execution progress", description: "Show overall run progress in the right panel.", section: "Panel content", pending: true },
-      { id: "workspace-files", label: "Workspace files", description: "Show the workspace file tree in the right panel.", section: "Panel content", pending: true },
+      { id: "workspace-files", label: "Workspace files", description: "Show the files the run touched in the right panel.", section: "Panel content" },
     ],
   },
   // ---- Event flow, in turn order ------------------------------------------
@@ -159,14 +227,55 @@ export const presetGroups: PresetGroup[] = [
       { id: "thinking-wave", label: "Dots", description: "Animated thinking dots in the chat flow.", section: "Motion" },
       { id: "thinking-pulse", label: "Infinity trail", description: "An infinity-path motion for active reasoning.", section: "Motion" },
       { id: "thinking-shimmer", label: "Shimmer text", description: "A light sweep across the Thinking text.", section: "Motion" },
-      // Renamed with its glyph: the indicator is the words now, cycling through
-      // the stages of the wait. The id stays — in this codebase ids are stable
-      // internal names and the reader sees `presetGroupNameZh`'s neighbours.
-      { id: "thinking-bars", label: "Text cycle", description: "No glyph: the status text itself cycles through the stages of the wait.", section: "Motion" },
       { id: "thinking-orbit", label: "Orbit dot", description: "A compact dot orbit inspired by ring loaders.", section: "Motion" },
       { id: "thinking-orb-s1", label: "Lattice wave", description: "A 3 by 3 lattice that radiates from the center.", section: "Motion" },
       { id: "thinking-orb-b5", label: "Focus handoff", description: "Layered dots crossing the focal plane in a soft handoff.", section: "Motion" },
       { id: "thinking-orb-m2", label: "Expanding ring", description: "Eight dots expanding and collapsing through a rotating ring.", section: "Motion" },
+      // Appended, not inserted: `styleKitOptionIds` takes the Nth option of
+      // each exclusive section, so a new entry earlier in the list would
+      // change what every style opens with.
+      /* The id says hourglass and the drawing is a cogwheel, which is
+         deliberate: the id is persisted in saved projects and in every export,
+         and renaming it would be a migration for a picture change. The Game
+         style now draws this as its painted cog turning — the hourglass SVG is
+         still the fallback for any other surface that asks for this motion. */
+      { id: "thinking-hourglass", label: "Turning cog", description: "The painted cogwheel turns while the span is open.", section: "Motion" },
+      /*
+       * The per-style motions, appended for the same reason the hourglass was:
+       * the kit takes the Nth option of an exclusive section, so inserting
+       * earlier would change what every style opens with.
+       *
+       * Each is offered only in the style it was drawn for — see
+       * `STYLE_MOTION_OPTIONS`. Listed here in one place because this is the
+       * schema, and the schema is not per style.
+       */
+      { id: "thinking-comic-halftone", label: "Halftone swell", description: "Four halftone dots swelling left to right, the way a comic fills a panel.", section: "Motion" },
+      { id: "thinking-comic-inkblot", label: "Ink blot", description: "One heavy ink blot beating against its own outline.", section: "Motion" },
+      { id: "thinking-comic-bubble", label: "Speech balloon", description: "A balloon whose three dots fill in turn, before anyone speaks.", section: "Motion" },
+      { id: "thinking-comic-flip", label: "Flip panel", description: "A square turning a quarter at a time, showing its filled face.", section: "Motion" },
+      { id: "thinking-quest-torch", label: "Torch", description: "A flame that leans and recovers, with a core that lags behind it.", section: "Motion" },
+      { id: "thinking-quest-rune", label: "Rune circle", description: "Eight ticks on a ring, lighting one at a time as the circle is read.", section: "Motion" },
+      { id: "thinking-quest-coins", label: "Coin stack", description: "Coins dropping onto a pile that settles under each one.", section: "Motion" },
+      { id: "thinking-pixel-cursor", label: "Block cursor", description: "A block cursor blinking on the grid, on and off with no fade.", section: "Motion" },
+      { id: "thinking-pixel-bars", label: "Loading bars", description: "Three bars filling cell by cell, then starting over.", section: "Motion" },
+      { id: "thinking-pixel-spin", label: "Cell spin", description: "Four cells lighting round a square, one whole cell per step.", section: "Motion" },
+      { id: "thinking-pixel-bricks", label: "Brick fill", description: "Five bricks laying themselves left to right.", section: "Motion" },
+      { id: "thinking-sketch-bubble", label: "Thought balloon", description: "A drawn balloon whose three dots fill in turn.", section: "Motion" },
+      { id: "thinking-sketch-pencil", label: "Pencil stroke", description: "A pencil drawing one line across, over and over.", section: "Motion" },
+      { id: "thinking-sketch-blot", label: "Ink blot", description: "A blot of ink spreading into the paper.", section: "Motion" },
+      { id: "thinking-sketch-page", label: "Page turn", description: "A page corner lifting and falling back.", section: "Motion" },
+      { id: "thinking-tech-matrix", label: "LED matrix", description: "A 3×3 LED matrix lighting cell by cell, like the avatar's face.", section: "Motion" },
+      { id: "thinking-tech-signal", label: "Signal bars", description: "Four bars rising and falling like a signal meter.", section: "Motion" },
+      { id: "thinking-tech-scan", label: "Scan line", description: "A short cursor sweeping a hairline baseline, back and forth.", section: "Motion" },
+      { id: "thinking-tech-segments", label: "Segment load", description: "Four segments filling in turn, then clearing — the progress rail's language.", section: "Motion" },
+      { id: "thinking-ink-drop", label: "Ink drop", description: "A drop of ink spreading into the paper, then the next one.", section: "Motion" },
+      { id: "thinking-ink-stroke", label: "Brush stroke", description: "One brush stroke written across and left to dry.", section: "Motion" },
+      { id: "thinking-ink-ripple", label: "Ripple", description: "Ink rings spreading outward, as on water in a landscape.", section: "Motion" },
+      { id: "thinking-ink-seal", label: "Seal", description: "A cinnabar seal pressed down, with a little give.", section: "Motion" },
+      { id: "thinking-retro-watch", label: "Pocket watch", description: "A watch hand stepping round its dial, one mark at a time.", section: "Motion" },
+      { id: "thinking-retro-record", label: "Record", description: "A grooved record turning, its label and one glint going round.", section: "Motion" },
+      { id: "thinking-retro-metronome", label: "Metronome", description: "A metronome arm swinging over its base, weight and all.", section: "Motion" },
+      { id: "thinking-retro-telegraph", label: "Telegraph tape", description: "Morse marks — dash, dot, dash, dot — punched along a tape.", section: "Motion" },
       /*
        * How the block behaves once the span closes, and how its text arrives.
        *
@@ -182,7 +291,25 @@ export const presetGroups: PresetGroup[] = [
       // The first of a set: one presentation for the closed block, with room
       // for more. It names the wait it replaced rather than the activity that
       // is over — 已思考（用时 11 秒）, not 思考中.
-      { id: "reasoning-done-timed", label: "Thought for N seconds", description: "Title the closed block with how long the thinking took, and rule the body off down its left edge.", section: "Done style" },
+      // `reasoning-done-timed` was here, as the lone "Done style" card. It has
+      // moved to the 思考完成 group, where the rest of the settled-block axes
+      // now live — and it no longer carries the left rule with it, which is its
+      // own option there.
+      { id: "thinking-bars", label: "Text cycle", description: "No glyph: the status text itself cycles through the stages of the wait.", section: "Done style" },
+      /*
+       * Moved out of Motion, which is now glyphs only.
+       *
+       * Its own description gives the reason: "no glyph — the status text
+       * itself cycles". It was the one entry in a list of indicators that was
+       * not an indicator, so Motion answers "which mark shows the wait" and
+       * this answers "what the block does instead", which is the question Done
+       * style asks.
+       *
+       * It still writes `theme.motion.reasoning`, the same field the glyphs
+       * write, so picking it replaces whichever glyph was set — which is the
+       * intended meaning of choosing it. That overlap is also why it is in
+       * `KIT_EXCLUDED_OPTION_IDS`: see styleKit.ts.
+       */
       // How the reasoning text arrives. The answer's own rhythm is in Delivery;
       // this is the same choice for the thinking, which had none.
       { id: "reasoning-writing-smooth", label: "Smooth stream", description: "Fade the reasoning in as one steady stream.", section: "Text loading" },
@@ -209,7 +336,29 @@ export const presetGroups: PresetGroup[] = [
     id: "thinking-done",
     label: "Thought process",
     options: [
-      { id: "reasoning-done-summary-row", label: "Summary row", description: "One line the reader can scan without opening the block: what the thinking concluded.", section: "Done style", pending: true },
+      /*
+       * Three axes, which is what this group was missing — it held one dimmed
+       * card and nothing else, and the schema comment on `doneStyle` said as
+       * much ("more to come; this is the first of the set").
+       *
+       * `reasoning-done-summary-row` was that dimmed card. It is gone rather
+       * than built: an extra line summarising the block is the same information
+       * the *title* can carry, and "Conclusion" below does it without spending
+       * a second row on it.
+       */
+      // What the closed title says. Single-select: one title.
+      { id: "reasoning-done-label", label: "Plain label", description: "Title the settled block with a word — 已思考 — and nothing about the wait.", section: "Done title" },
+      { id: "reasoning-done-timed", label: "Thought for N seconds", description: "Name the wait the title replaced: 已思考（用时 11 秒）.", section: "Done title" },
+      { id: "reasoning-done-counted", label: "Segment count", description: "Count the passes instead of the seconds: 已思考 · 3 段. How much it considered, rather than how long it took.", section: "Done title" },
+      { id: "reasoning-done-conclusion", label: "Conclusion", description: "Make the title the conclusion itself, so the block can be read without opening it.", section: "Done title" },
+
+      // What is left on screen. Single-select.
+      { id: "reasoning-done-expandable", label: "Keep, foldable", description: "The thinking stays, behind the chevron.", section: "Settled body" },
+      { id: "reasoning-done-title-only", label: "Title only", description: "Drop the thinking once the span closes; the title is all that remains.", section: "Settled body" },
+      { id: "reasoning-done-first-line", label: "Peek one line", description: "Leave the first line showing, faded, so the gist reads without a click.", section: "Settled body" },
+
+      // Additive.
+      { id: "reasoning-done-rule", label: "Left rule", description: "Rule the settled thinking off down its left edge, marking it as quoted rather than said.", section: "Settled body" },
     ],
   },
   {

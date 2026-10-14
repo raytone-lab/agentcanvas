@@ -10,6 +10,7 @@
  * only maps states -> icon component options; tone/color lives in CSS tokens.
  */
 
+import { TechNodeIcon } from "./techIcons";
 import {
   Activity,
   AlertCircle,
@@ -35,6 +36,8 @@ import {
   CreditCard,
   Diff,
   DollarSign,
+  Eye,
+  FileCheck,
   FileDiff,
   FilePen,
   FilePlus,
@@ -67,6 +70,7 @@ import {
   Power,
   Radio,
   RefreshCw,
+  Replace,
   RotateCcw,
   Rss,
   Search,
@@ -85,6 +89,7 @@ import {
   SquareTerminal,
   Terminal,
   ThumbsDown,
+  ThumbsUp,
   Timer,
   TimerReset,
   TrafficCone,
@@ -108,6 +113,237 @@ import {
   UserCircle as PhUserCircle,
   type Icon as PhosphorIconType,
 } from "@phosphor-icons/react";
+import {
+  SketchBinocularsIcon,
+  SketchBookIcon,
+  SketchBookmarkIcon,
+  SketchBotIcon,
+  SketchBrushIcon,
+  SketchBulbIcon,
+  SketchBunIcon,
+  SketchCapIcon,
+  SketchCatIcon,
+  SketchChatIcon,
+  SketchChevronIcon,
+  SketchClipboardIcon,
+  SketchCloudIcon,
+  SketchCogIcon,
+  SketchConsoleIcon,
+  SketchCopyIcon,
+  SketchDoubleTickIcon,
+  SketchEditIcon,
+  SketchEraserIcon,
+  SketchEyeIcon,
+  SketchFaceIcon,
+  SketchFileIcon,
+  SketchHammerIcon,
+  SketchLanternIcon,
+  SketchLetterIcon,
+  SketchMicIcon,
+  SketchNoteIcon,
+  SketchOwlIcon,
+  SketchPersonIcon,
+  SketchPinIcon,
+  SketchPlusIcon,
+  SketchQuillIcon,
+  SketchQuoteIcon,
+  SketchRefreshIcon,
+  SketchSearchIcon,
+  SketchSendIcon,
+  SketchShieldIcon,
+  SketchSparkleIcon,
+  SketchSpecsIcon,
+  SketchSpeedIcon,
+  SketchSpiralIcon,
+  SketchStackIcon,
+  SketchTagIcon,
+  SketchThoughtIcon,
+  SketchTickIcon,
+  SketchTrailIcon,
+  SketchWrenchIcon,
+} from "./sketchIcons";
+import {
+  RetroAbacusIcon,
+  RetroApprovedIcon,
+  RetroBalloonIcon,
+  RetroBalloonLinesIcon,
+  RetroBarrelIcon,
+  RetroBarrierIcon,
+  RetroBellIcon,
+  RetroBulbIcon,
+  RetroCabinetIcon,
+  RetroCandleIcon,
+  RetroClipboardIcon,
+  RetroClosedBookIcon,
+  RetroCloudIcon,
+  RetroCratesIcon,
+  RetroCrossIcon,
+  RetroCubeIcon,
+  RetroCycleIcon,
+  RetroDoorOpenIcon,
+  RetroDoorShutIcon,
+  RetroDotIcon,
+  RetroDoubleTickIcon,
+  RetroEnvelopeIcon,
+  RetroEraserIcon,
+  RetroFolderIcon,
+  RetroFrameIcon,
+  RetroGaugeIcon,
+  RetroGearIcon,
+  RetroHourglassIcon,
+  RetroHourglassSpentIcon,
+  RetroIndexIcon,
+  RetroInkpotIcon,
+  RetroKeyIcon,
+  RetroLedgerIcon,
+  RetroLensIcon,
+  RetroLeverIcon,
+  RetroMetronomeIcon,
+  RetroPadlockIcon,
+  RetroPadlockOpenIcon,
+  RetroPauseIcon,
+  RetroPlugIcon,
+  RetroPocketWatchIcon,
+  RetroQuillIcon,
+  RetroReturnIcon,
+  RetroRosetteIcon,
+  RetroScissorsIcon,
+  RetroSealIcon,
+  RetroSheetIcon,
+  RetroSheetLensIcon,
+  RetroSheetPenIcon,
+  RetroSheetRuledIcon,
+  RetroSheetsIcon,
+  RetroSignpostIcon,
+  RetroSpannerIcon,
+  RetroStampIcon,
+  RetroStopSignIcon,
+  RetroStruckSheetIcon,
+  RetroTagIcon,
+  RetroTelescopeIcon,
+  RetroTerminalIcon,
+  RetroTicketIcon,
+  RetroTornTicketIcon,
+  RetroUnplugIcon,
+} from "./retroIcons";
+import {
+  ComicBellIcon,
+  ComicChatNewIcon,
+  ComicChevronIcon,
+  ComicCogIcon,
+  ComicCycleIcon,
+  ComicDocIcon,
+  ComicDocSearchIcon,
+  ComicDocsIcon,
+  ComicFolderIcon,
+  ComicMessageIcon,
+  ComicMicIcon,
+  ComicPanelsIcon,
+  ComicPencilIcon,
+  ComicPlusIcon,
+  ComicSearchIcon,
+  ComicSendIcon,
+  ComicShieldIcon,
+  ComicSparkleIcon,
+  ComicThoughtIcon,
+  ComicWrenchIcon,
+} from "./comicIcons";
+import {
+  InkAlertIcon,
+  InkBloomIcon,
+  InkBrushIcon,
+  InkBubbleIcon,
+  InkChatNewIcon,
+  InkCheckIcon,
+  InkCopyIcon,
+  InkCrossIcon,
+  InkCycleIcon,
+  InkDiscIcon,
+  InkDocEditIcon,
+  InkDocReadIcon,
+  InkDocSearchIcon,
+  InkDocsIcon,
+  InkDropIcon,
+  InkEmptyRingIcon,
+  InkFileIcon,
+  InkFolderIcon,
+  InkGlobeIcon,
+  InkImageIcon,
+  InkListIcon,
+  InkMicIcon,
+  InkHourglassIcon,
+  InkPanelsIcon,
+  InkPauseIcon,
+  InkQuestionIcon,
+  InkReturnIcon,
+  InkSelectIcon,
+  InkPlusIcon,
+  InkSearchIcon,
+  InkShieldIcon,
+  InkStampIcon,
+  InkTerminalIcon,
+  InkThoughtIcon,
+} from "./inkIcons";
+import {
+  GameArtBell,
+  GameArtCharter,
+  GameArtChest,
+  GameArtChronicle,
+  GameArtCog,
+  GameArtCompass,
+  GameArtCrest,
+  GameArtCycle,
+  GameArtKeep,
+  GameArtPack,
+  GameArtSwords,
+  GameCompassIcon,
+  GameCrossedSwordsIcon,
+  GameEditIcon,
+  GameFileIcon,
+  GameInspectIcon,
+  GameNoteIcon,
+  GamePaintBarrel,
+  GamePaintBrokenSword,
+  GamePaintCoin,
+  GamePaintCrates,
+  GamePaintCrossBars,
+  GamePaintCrossShield,
+  GamePaintGauntlet,
+  GamePaintHammer,
+  GamePaintHourglass,
+  GamePaintHourglassSpent,
+  GamePaintKey,
+  GamePaintPadlock,
+  GamePaintPadlockOpen,
+  GamePaintPause,
+  GamePaintPortcullis,
+  GamePaintPotionOnce,
+  GamePaintReturn,
+  GamePaintRing,
+  GamePaintSealedLetter,
+  GamePaintShatteredGem,
+  GamePaintSkull,
+  GamePaintSnappedChain,
+  GamePaintTombstone,
+  GamePaintTorchOut,
+  GamePaintTornScroll,
+  GameReadingFileIcon,
+  GameScrollIcon,
+  GameSearchIcon,
+  GameShieldIcon,
+  GameTaskIcon,
+  GameWrenchIcon,
+} from "./gameIcons";
+import {
+  PixelCrystalAvatar,
+  PixelDiverAvatar,
+  PixelExplorerAvatar,
+  PixelKnightAvatar,
+  PixelMachineAvatar,
+  PixelMushroomAvatar,
+  PixelRangerAvatar,
+  PixelSlimeAvatar,
+} from "./CustomAvatars";
 
 /** Icon rendering weight: line (lucide, the default) or bold (Phosphor, native style). */
 /**
@@ -119,7 +355,204 @@ import {
  * answers with a lucide component for it, which is what `StateIcon` falls back
  * to if a slot has no codicon mapping.
  */
-export type IconStyle = "line" | "bold" | "codicon";
+export type IconStyle = "line" | "bold" | "codicon" | "pixel" | "game" | "comic" | "retro" | "ink";
+
+/**
+ * Which icon style a visual style preset draws with.
+ *
+ * One function because there are two callers that must never disagree: the
+ * configurator (`App.tsx`) and the generated entry point
+ * (`scaffoldManifest.ts`, inside a template string). They were two copies of
+ * the same ternary, so adding a style meant remembering both — and a mismatch
+ * only shows up after running an export, which is the worst place to find it.
+ *
+ * Typed as a plain string rather than `PresetStyleId` so `agentmatrix` does not
+ * have to import from `schema` — this module is copied into the exported
+ * scaffold, and the default covers any style not named here.
+ */
+export function iconStyleForStylePreset(stylePreset: string): IconStyle {
+  if (stylePreset === "workbuddy") return "codicon";
+  /* Both pixel styles draw from pixelarticons. The set is about resolution —
+     orthogonal paths on a grid, no curves — which is as true of 90s office
+     software as of a platformer; what separated the two styles was the
+     sprites and the colour, not the icons. */
+  if (stylePreset === "pixel" || stylePreset === "pixeldesk") return "pixel";
+  /* The Game style draws every slot from its own set (`gameSlots.ts`). It used
+     to be "line" — the twelve marks it ships were registered as options for
+     nine slots and the other fifty-six rendered lucide, which is a dark theme
+     with a few props in it rather than a quest log. */
+  if (stylePreset === "game") return "game";
+  /* 漫画风 draws from its own sheet (`comicSlots.ts`). It used to be "line",
+     which is the same mistake the Game style made: a heavy-contour comic set
+     next to fifty-odd 1.4px lucide outlines. */
+  if (stylePreset === "studio") return "comic";
+  /* 复古风 draws from its own set (`retroSlots.ts`). Its failure mode was the
+     mirror image of the other two: rather than lucide leaking *in*, the style's
+     CSS painted one exported SVG over the tool row and hid the React icon
+     beneath it, so four galleries in the left rail changed nothing at all. */
+  if (stylePreset === "retro") return "retro";
+  /* 水墨风 draws from its own set (`inkSlots.ts`): the supplied sheet redrawn,
+     plus the eight marks it does not answer. Its failure mode was the first
+     one again — a page of washes with 1.4px lucide outlines on it — and it is
+     worse in this style than in any other, because the wash *is* the style. */
+  if (stylePreset === "inkwash") return "ink";
+  if (stylePreset === "native") return "bold";
+  return "line";
+}
+
+/**
+ * The mark a conversation row wears, one per style.
+ *
+ * The sidebar's rows all carry the same glyph: the slot means "a saved
+ * conversation", and a per-row mark would need a field on the session that no
+ * protocol carries. The reference varies its marks, but that is art direction
+ * on five fixed sample rows, not data.
+ *
+ * It used to be the reader's pick, through a gallery of eleven glyphs in the
+ * 左栏 group. That was the wrong kind of choice — every other mark in a style is
+ * fixed by the style, and this one asked the reader to hand-match a glyph to a
+ * skin that already has an answer, with ten of the eleven tiles wrong for
+ * whatever was on screen. So the toggle stays and the glyph follows the style.
+ *
+ * `pixel` and `workbuddy` are absent on purpose: both draw their icons from
+ * their own set (`pixelIconForSlot`, `codiconForSlot`) before an option id is
+ * ever consulted, so naming one here would be a value that never renders.
+ *
+ * A plain string in and out, like `iconStyleForStylePreset` above, so this
+ * module still needs nothing from `schema` — it is copied into the exported
+ * scaffold. 空白 is named rather than aliased for the same reason.
+ */
+export function rowMarkOptionForStyle(stylePreset: string): string {
+  // Its own quill-drawn scroll: a saved record, which is what a row is.
+  if (stylePreset === "game") return "game-scroll";
+  // The drawn balloon from the style's own set.
+  if (stylePreset === "handdrawn") return "sketch-balloon";
+  // Likewise: the inked balloon, the shape this style already draws for 新建对话.
+  if (stylePreset === "retro") return "retro-dot";
+  /* The washed balloon. Named even though the rows in this style currently
+     carry no mark by default: the moment 内容模块 and Row marks are both on,
+     this is what the row wears, and leaving it out would put one lucide
+     outline on five rows of a painting. */
+  if (stylePreset === "inkwash") return "ink-bubble";
+  /* The plate's glass ring with its sphere: a session as a node on an orbit,
+     where every other style's default is a speech balloon. */
+  if (stylePreset === "tech") return "tech-node";
+  /* A sheet rather than a balloon: this style's list is set as an index, and a
+     speech bubble in it would be the only rounded thing on the page. */
+  if (stylePreset === "zine") return "file";
+  // 空白 / 原生风 / 漫画风 / 复古风 and anything new: a conversation.
+  return "message";
+}
+
+/** Decorative portraits share the swappable avatar contract. */
+function portraitIcon({ src }: { src: string }): LucideIcon {
+  const Portrait = ({ size = 32, className }: { size?: number | string; className?: string }) =>
+    createElement("img", {
+      src,
+      alt: "",
+      "aria-hidden": true,
+      width: size,
+      height: size,
+      draggable: false,
+      className: ["game-portrait", className].filter(Boolean).join(" "),
+    });
+  return Portrait as unknown as LucideIcon;
+}
+
+/* The pixel style's sprites live in `CustomAvatars` — the file named for
+   exactly this — and are cast here the same way the in-file avatars are. */
+const PixelExplorerAvatarIcon = PixelExplorerAvatar as unknown as LucideIcon;
+const PixelKnightAvatarIcon = PixelKnightAvatar as unknown as LucideIcon;
+const PixelRangerAvatarIcon = PixelRangerAvatar as unknown as LucideIcon;
+const PixelDiverAvatarIcon = PixelDiverAvatar as unknown as LucideIcon;
+const PixelCrystalAvatarIcon = PixelCrystalAvatar as unknown as LucideIcon;
+const PixelSlimeAvatarIcon = PixelSlimeAvatar as unknown as LucideIcon;
+const PixelMachineAvatarIcon = PixelMachineAvatar as unknown as LucideIcon;
+const PixelMushroomAvatarIcon = PixelMushroomAvatar as unknown as LucideIcon;
+
+/*
+ * 游戏风's avatars: four framed creatures for the reader, four constructs for
+ * the agent, supplied as art.
+ *
+ * They replace the two `campfire-*` portraits the style shipped with — one a
+ * side, which meant the avatar gallery in this style was a row of four tiles
+ * with one choice in it. The two old files stay registered: `game-campfire`
+ * was the style's first colourway and a saved project may still name them.
+ *
+ * Creatures for the reader, constructs for the agent, said explicitly this
+ * time ("youxi1-4 是我的头像，剩下的是 agent 的"). Named for what they are
+ * rather than for their file numbers — `youxi33` tells nobody that it is a
+ * sprout, and the next person to touch this list should not have to open the
+ * PNG to find out.
+ */
+const CampfireTravelerIcon = portraitIcon({ src: "/game/traveler.webp" });
+const CampfireCompanionIcon = portraitIcon({ src: "/game/companion.webp" });
+const GameWolfIcon = portraitIcon({ src: "/game/avatars/wolf.png" });
+const GameCatIcon = portraitIcon({ src: "/game/avatars/cat.png" });
+const GameEagleIcon = portraitIcon({ src: "/game/avatars/eagle.png" });
+const GameGolemIcon = portraitIcon({ src: "/game/avatars/golem.png" });
+const GameOrbBotIcon = portraitIcon({ src: "/game/avatars/orb-bot.png" });
+const GameMageIcon = portraitIcon({ src: "/game/avatars/mage.png" });
+const GameSproutIcon = portraitIcon({ src: "/game/avatars/sprout.png" });
+const GameTomeIcon = portraitIcon({ src: "/game/avatars/tome.png" });
+
+/*
+ * 手绘风's own avatars: four drawn animals for the reader, four drawn robots for
+ * the agent, supplied as art.
+ *
+ * Painted rather than drawn in code, which is why they arrive as files: the set
+ * has pencil shading, halftone paper and a wash behind each head, and the SVG
+ * faces this style shipped with (`SketchFaceIcon` and the seven beside it)
+ * cannot carry any of that — the same conclusion the Game style's portraits
+ * reached.
+ *
+ * Robots for the agent, animals for the reader. The supplied note put the
+ * label the other way round on the sheet of robots, and this is the reading
+ * every other style in the product already takes: the machine is the machine.
+ * One line each to swap if that was meant literally.
+ *
+ * Resized from 1254px to 192 on the way in: these render at 15–32px in the
+ * canvas and 56px in the rail, and eight 1.7MB plates would have been 13MB of
+ * export for 24px of screen.
+ */
+const SketchCatPortrait = portraitIcon({ src: "/handdrawn/avatars/cat.png" });
+const SketchRabbitIcon = portraitIcon({ src: "/handdrawn/avatars/rabbit.png" });
+const SketchPandaIcon = portraitIcon({ src: "/handdrawn/avatars/panda.png" });
+const SketchFoxIcon = portraitIcon({ src: "/handdrawn/avatars/fox.png" });
+const SketchBotClassicIcon = portraitIcon({ src: "/handdrawn/avatars/bot-classic.png" });
+const SketchBotSprintIcon = portraitIcon({ src: "/handdrawn/avatars/bot-sprint.png" });
+const SketchBotWarmIcon = portraitIcon({ src: "/handdrawn/avatars/bot-warm.png" });
+const SketchBotHeadsetIcon = portraitIcon({ src: "/handdrawn/avatars/bot-headset.png" });
+
+/*
+ * 水墨风's own avatars: four washes for the reader, four painted robot heads for
+ * the agent, supplied as art.
+ *
+ * Files rather than drawn marks, and this is the one place in this style where
+ * that is right. Its icon set is deliberately *not* the supplied bitmaps —
+ * those render at 15px, where a photographed watercolour is four grey pixels,
+ * and the slate colourway needs `currentColor` (see `inkIcons.tsx`). An avatar
+ * is the opposite case on both counts: it renders at 34px, where granulation is
+ * most of what you see, and it is a picture rather than a mark, so it has no
+ * business taking the palette's ink.
+ *
+ * What the reader gets is the landscape and what the agent gets is a machine —
+ * as told ("shuimo11/22/33/44 是 agent 头像，剩下的就是我的头像") and as the rest
+ * of the product already reads it.
+ *
+ * WebP at 320px, from 1254px PNGs. The same eight as PNG were 746KB against
+ * 82KB here, and the format is already in the export (游戏风's two portraits).
+ * 320 is ~2.4× the 34px they render at, which the wash needs and the ring does
+ * not.
+ */
+const InkPeaksIcon = portraitIcon({ src: "/ink/avatars/peaks.webp" });
+const InkBridgeIcon = portraitIcon({ src: "/ink/avatars/bridge.webp" });
+const InkBambooIcon = portraitIcon({ src: "/ink/avatars/bamboo.webp" });
+const InkSunIcon = portraitIcon({ src: "/ink/avatars/sun.webp" });
+const InkBotLeafIcon = portraitIcon({ src: "/ink/avatars/bot-leaf.webp" });
+const InkBotHatIcon = portraitIcon({ src: "/ink/avatars/bot-hat.webp" });
+const InkBotBambooIcon = portraitIcon({ src: "/ink/avatars/bot-bamboo.webp" });
+const InkBotCloudIcon = portraitIcon({ src: "/ink/avatars/bot-cloud.webp" });
 
 /** Wrap a Phosphor icon so it renders at bold weight with the usual size/className. */
 function boldIcon(Ph: PhosphorIconType): LucideIcon {
@@ -770,6 +1203,24 @@ const AgentSparkAvatarIcon = AgentSparkAvatar as unknown as LucideIcon;
 const AgentWorkBotAvatarIcon = AgentWorkBotAvatar as unknown as LucideIcon;
 import { OrbFace } from "./OrbFace";
 import { RobotFace } from "./RobotFace";
+import {
+  RobotHeadHexIcon,
+  RobotHeadRoundIcon,
+  RobotHeadSquareIcon,
+  RobotHeadTvIcon,
+} from "./robotHeadAvatars";
+import {
+  TechUserBlockIcon,
+  TechUserCloudIcon,
+  TechUserGummyIcon,
+  TechUserHexIcon,
+} from "./techUserAvatars";
+import {
+  DefaultUserApricotIcon,
+  DefaultUserInkIcon,
+  DefaultUserSageIcon,
+  DefaultUserSkyIcon,
+} from "./defaultUserAvatars";
 
 export type IconSlot =
   // session lifecycle
@@ -780,6 +1231,15 @@ export type IconSlot =
   | "session.rescheduling"
   | "session.terminated"
   | "session.deleted"
+  /**
+   * The mark on a conversation row in the sidebar.
+   *
+   * New, and added because 游戏风's reference gives every row one — a compass,
+   * a scroll, a shield, a ticked box, crossed swords — and they are how that
+   * list reads as a quest log rather than as titles. Every other style leaves
+   * it off, which is what the `sidebar.rowIcon` toggle is for.
+   */
+  | "session.item"
   // tool lifecycle
   | "tool.pending_approval"
   | "tool.in_progress"
@@ -893,23 +1353,100 @@ export const ICON_OPTIONS: Record<IconSlot, IconOption[]> = {
     { id: "ban", label: "Ban", Icon: Ban },
     { id: "slash", label: "Slash", Icon: CircleSlash },
   ],
+  "session.item": [
+    { id: "message", label: "Message", Icon: MessageSquare },
+    { id: "file", label: "File", Icon: FileText },
+    { id: "sketch-balloon", label: "Balloon", Icon: SketchChatIcon },
+    { id: "sketch-bookmark", label: "Bookmark", Icon: SketchBookmarkIcon },
+    { id: "sketch-pin", label: "Pin", Icon: SketchPinIcon },
+    { id: "sketch-tag", label: "Tag", Icon: SketchTagIcon },
+    { id: "game-compass", label: "Compass", Icon: GameCompassIcon },
+    { id: "game-scroll", label: "Scroll", Icon: GameScrollIcon },
+    { id: "game-shield", label: "Shield", Icon: GameShieldIcon },
+    { id: "game-task", label: "Ticked box", Icon: GameTaskIcon },
+    { id: "game-swords", label: "Crossed swords", Icon: GameCrossedSwordsIcon },
+    { id: "comic-message", label: "Balloon", Icon: ComicMessageIcon },
+    { id: "comic-chat-new", label: "New balloon", Icon: ComicChatNewIcon },
+    { id: "comic-doc", label: "Page", Icon: ComicDocIcon },
+    { id: "comic-sparkle", label: "Sparkle", Icon: ComicSparkleIcon },
+    /* The dot leads, so it is what this style opens on: `styleSlotDefaults`
+       takes the first of a style's own ids in registry order. A balloon in
+       front of every row made the column five drawings of one object. */
+    { id: "retro-dot", label: "Dot", Icon: RetroDotIcon },
+    { id: "retro-balloon", label: "Balloon", Icon: RetroBalloonIcon },
+    { id: "retro-index", label: "Card index", Icon: RetroIndexIcon },
+    { id: "retro-folder", label: "Folder", Icon: RetroFolderIcon },
+    { id: "ink-bubble", label: "Balloon", Icon: InkBubbleIcon },
+    { id: "ink-chat-new", label: "New balloon", Icon: InkChatNewIcon },
+    { id: "ink-file", label: "Sheet", Icon: InkFileIcon },
+    { id: "ink-drop", label: "Ink drop", Icon: InkDropIcon },
+    /* 科技风's ring-and-sphere node, from its style plate. */
+    { id: "tech-node", label: "Node", Icon: TechNodeIcon },
+  ],
   "tool.pending_approval": [
     { id: "clock", label: "Clock", Icon: Clock3 },
     { id: "shield-q", label: "Shield", Icon: ShieldQuestion },
     { id: "hand", label: "Hand", Icon: Hand },
     { id: "hourglass", label: "Hourglass", Icon: Hourglass },
+    { id: "ink-shield", label: "Shield", Icon: InkShieldIcon },
+    { id: "ink-thought", label: "Thought", Icon: InkThoughtIcon },
+    { id: "ink-alert", label: "Mark", Icon: InkAlertIcon },
+    { id: "ink-hourglass", label: "Glass", Icon: InkHourglassIcon },
+    /* 复古风's four. Ten galleries — the five confirmation replies and the
+       five run outcomes — had no retro marks, so the style drew its one
+       slot mark on all four tiles. Appended, so no style's default moves. */
+    { id: "retro-stamp", label: "Stamp", Icon: RetroStampIcon },
+    { id: "retro-pocket-watch", label: "Pocket watch", Icon: RetroPocketWatchIcon },
+    { id: "retro-clipboard", label: "Clipboard", Icon: RetroClipboardIcon },
+    { id: "retro-bell", label: "Bell", Icon: RetroBellIcon },
+    /* 游戏风's four for the ten galleries the painted sheet had nothing for.
+       The first of each is the sheet's own icon the slot already drew, so the
+       canvas opens unchanged; the rest are `GamePaint*`. Appended, so no
+       style's default moves. */
+    { id: "game-crest", label: "Crest", Icon: GameArtCrest },
+    { id: "game-hourglass", label: "Hourglass", Icon: GamePaintHourglass },
+    { id: "game-sealed-letter", label: "Sealed letter", Icon: GamePaintSealedLetter },
+    { id: "game-chronicle", label: "Chronicle", Icon: GameArtChronicle },
   ],
   "tool.in_progress": [
     { id: "wrench", label: "Wrench", Icon: Wrench },
     { id: "hammer", label: "Hammer", Icon: Hammer },
     { id: "file-read-action", label: "Read file", Icon: FileReadAction },
     { id: "file-modified-action", label: "Modified file", Icon: FileModifiedAction },
+    { id: "sketch-dial", label: "Dial", Icon: SketchSpeedIcon },
+    { id: "ink-brush", label: "Brush", Icon: InkBrushIcon },
+    { id: "ink-cycle", label: "Turning", Icon: InkCycleIcon },
+    { id: "ink-terminal", label: "Prompt", Icon: InkTerminalIcon },
+    { id: "ink-drop", label: "Ink drop", Icon: InkDropIcon },
   ],
   "tool.file_read": [
+    // Reading a file and reading an image were two cards with two galleries,
+    // and the reader was picking twice for one idea. Merged: the two worth
+    // keeping from Read file, the one worth keeping from Read image
+    // (`layers`), and an eye — the glyph the merged label ("view / read")
+    // actually asks for, which neither gallery had.
     { id: "file-read-action", label: "Read file", Icon: FileReadAction },
     { id: "file-text", label: "File", Icon: FileText },
-    { id: "search-file", label: "Search file", Icon: FileText },
-    { id: "info", label: "Info", Icon: Info },
+    { id: "layers", label: "Layers", Icon: Layers },
+    { id: "eye", label: "View", Icon: Eye },
+    { id: "sketch-sheet", label: "Sheet", Icon: SketchFileIcon },
+    { id: "sketch-book", label: "Open book", Icon: SketchBookIcon },
+    { id: "sketch-eye", label: "Eye", Icon: SketchEyeIcon },
+    { id: "sketch-stack", label: "Stack", Icon: SketchStackIcon },
+    { id: "game-reading-file", label: "Vellum, read", Icon: GameReadingFileIcon },
+    { id: "game-vellum", label: "Vellum", Icon: GameFileIcon },
+    { id: "comic-doc", label: "Page", Icon: ComicDocIcon },
+    { id: "comic-docs", label: "Pages", Icon: ComicDocsIcon },
+    { id: "comic-doc-search", label: "Page search", Icon: ComicDocSearchIcon },
+    { id: "comic-panels", label: "Panels", Icon: ComicPanelsIcon },
+    { id: "retro-sheet", label: "Sheet", Icon: RetroSheetIcon },
+    { id: "retro-sheets", label: "Two sheets", Icon: RetroSheetsIcon },
+    { id: "retro-sheet-lens", label: "Sheet, read", Icon: RetroSheetLensIcon },
+    { id: "retro-index", label: "Card index", Icon: RetroIndexIcon },
+    { id: "ink-doc-read", label: "Page, read", Icon: InkDocReadIcon },
+    { id: "ink-file", label: "Sheet", Icon: InkFileIcon },
+    { id: "ink-docs", label: "Two sheets", Icon: InkDocsIcon },
+    { id: "ink-doc-search", label: "Page, searched", Icon: InkDocSearchIcon },
   ],
   "tool.file_modified": [
     { id: "file-plus", label: "Modify file", Icon: FilePlus },
@@ -918,34 +1455,132 @@ export const ICON_OPTIONS: Record<IconSlot, IconOption[]> = {
     { id: "hammer", label: "Patch", Icon: Hammer },
   ],
   "tool.file_edit": [
+    // Modify file and Edit file were the same idea twice. This is the merged
+    // gallery: Modify's second glyph plus Edit's first three.
+    // `file-modified-action` was in both lists, so the merge de-duplicates it
+    // rather than offering it twice.
+    { id: "file-modified-action", label: "Marked file", Icon: FileModifiedAction },
     { id: "file-pen", label: "Edit file", Icon: FilePen },
     { id: "pencil", label: "Pencil", Icon: Pencil },
-    { id: "file-modified-action", label: "Marked file", Icon: FileModifiedAction },
-    { id: "file-diff", label: "Diff", Icon: FileDiff },
+    // Deliberately not a fourth pen. Three of these are already pen-shaped and
+    // read alike at 16px; the card is "edit / modify", and this is the only
+    // glyph in it that carries the *modify* half — a substitution rather than a
+    // hand holding a tool.
+    { id: "replace", label: "Replace", Icon: Replace },
+    { id: "sketch-pencil", label: "Pencil", Icon: SketchEditIcon },
+    { id: "sketch-quill", label: "Quill", Icon: SketchQuillIcon },
+    { id: "sketch-eraser", label: "Eraser", Icon: SketchEraserIcon },
+    { id: "sketch-brush", label: "Brush", Icon: SketchBrushIcon },
+    { id: "game-quill", label: "Quill", Icon: GameEditIcon },
+    { id: "game-note", label: "Illuminated note", Icon: GameNoteIcon },
+    { id: "comic-pencil", label: "Pencil", Icon: ComicPencilIcon },
+    { id: "comic-cycle", label: "Cycle", Icon: ComicCycleIcon },
+    { id: "comic-doc", label: "Page", Icon: ComicDocIcon },
+    { id: "comic-docs", label: "Pages", Icon: ComicDocsIcon },
+    { id: "retro-quill", label: "Quill", Icon: RetroQuillIcon },
+    { id: "retro-inkpot", label: "Inkpot", Icon: RetroInkpotIcon },
+    { id: "retro-sheet-pen", label: "Sheet, nib", Icon: RetroSheetPenIcon },
+    { id: "retro-eraser", label: "Eraser", Icon: RetroEraserIcon },
+    { id: "ink-doc-edit", label: "Page, brushed", Icon: InkDocEditIcon },
+    { id: "ink-brush", label: "Brush", Icon: InkBrushIcon },
+    { id: "ink-file", label: "Sheet", Icon: InkFileIcon },
+    { id: "ink-copy", label: "Two squares", Icon: InkCopyIcon },
   ],
   "tool.validate": [
-    { id: "list-checks", label: "Validate", Icon: ListChecks },
+    // `list-checks` and `bug` out; `diff` and `hammer` in, inherited from the
+    // Modify file gallery the merge above retired. Those two would otherwise
+    // have been orphaned — this is the only place a diff or a patch glyph is
+    // offered.
     { id: "search-check", label: "Check search", Icon: SearchCheck },
     { id: "check", label: "Check", Icon: CircleCheck },
-    { id: "bug", label: "Test", Icon: Bug },
+    // `diff` was here to avoid orphaning it when the Modify file gallery
+    // retired, but lucide's `Diff` is a bare plus-over-minus — at 16px it reads
+    // as a ± sign, not as verification. `diff` survives in four other slots
+    // (`content.diff` among them), so nothing is lost by dropping it here.
+    // `FileCheck` keeps the document shape the neighbouring glyphs have and is
+    // still distinct from the two ticks above it.
+    { id: "file-check", label: "Checked file", Icon: FileCheck },
+    { id: "hammer", label: "Patch", Icon: Hammer },
+    { id: "sketch-shield", label: "Shield", Icon: SketchShieldIcon },
+    { id: "sketch-tick", label: "Tick", Icon: SketchTickIcon },
+    { id: "sketch-clipboard", label: "Clipboard", Icon: SketchClipboardIcon },
+    { id: "sketch-double-tick", label: "Two ticks", Icon: SketchDoubleTickIcon },
+    { id: "game-task", label: "Ticked box", Icon: GameTaskIcon },
+    { id: "game-shield", label: "Shield", Icon: GameShieldIcon },
+    { id: "comic-shield", label: "Shield", Icon: ComicShieldIcon },
+    { id: "comic-cog", label: "Cog", Icon: ComicCogIcon },
+    { id: "comic-sparkle", label: "Sparkle", Icon: ComicSparkleIcon },
+    { id: "comic-doc", label: "Page", Icon: ComicDocIcon },
+    { id: "retro-seal", label: "Seal", Icon: RetroSealIcon },
+    { id: "retro-ledger", label: "Ledger", Icon: RetroLedgerIcon },
+    { id: "retro-rosette", label: "Rosette", Icon: RetroRosetteIcon },
+    { id: "retro-double-tick", label: "Two ticks", Icon: RetroDoubleTickIcon },
+    { id: "ink-shield", label: "Shield", Icon: InkShieldIcon },
+    { id: "ink-check", label: "Tick", Icon: InkCheckIcon },
+    { id: "ink-stamp", label: "Seal", Icon: InkStampIcon },
+    { id: "ink-bloom", label: "Bloom", Icon: InkBloomIcon },
   ],
   "tool.search": [
     { id: "file-search", label: "Search file", Icon: FileSearch },
     { id: "search", label: "Search", Icon: Search },
     { id: "waypoints", label: "References", Icon: Waypoints },
     { id: "layers", label: "Locations", Icon: Layers },
+    { id: "sketch-glass", label: "Magnifier", Icon: SketchSearchIcon },
+    { id: "sketch-binoculars", label: "Binoculars", Icon: SketchBinocularsIcon },
+    { id: "sketch-lantern", label: "Lantern", Icon: SketchLanternIcon },
+    { id: "sketch-trail", label: "Trail", Icon: SketchTrailIcon },
+    { id: "game-lens", label: "Lens", Icon: GameInspectIcon },
+    { id: "game-glass", label: "Glass", Icon: GameSearchIcon },
+    { id: "comic-search", label: "Magnifier", Icon: ComicSearchIcon },
+    { id: "comic-folder", label: "Folder", Icon: ComicFolderIcon },
+    { id: "comic-doc-search", label: "Page search", Icon: ComicDocSearchIcon },
+    { id: "comic-panels", label: "Panels", Icon: ComicPanelsIcon },
+    { id: "retro-lens", label: "Magnifier", Icon: RetroLensIcon },
+    { id: "retro-telescope", label: "Telescope", Icon: RetroTelescopeIcon },
+    { id: "retro-signpost", label: "Signpost", Icon: RetroSignpostIcon },
+    { id: "retro-folder", label: "Folder", Icon: RetroFolderIcon },
+    { id: "ink-search", label: "Glass", Icon: InkSearchIcon },
+    { id: "ink-doc-search", label: "Page, searched", Icon: InkDocSearchIcon },
+    { id: "ink-folder", label: "Folder", Icon: InkFolderIcon },
+    { id: "ink-globe", label: "Globe", Icon: InkGlobeIcon },
   ],
   "tool.completed": [
     { id: "check", label: "Check", Icon: CircleCheck },
     { id: "check-big", label: "Bold check", Icon: CircleCheckBig },
     { id: "badge", label: "Badge", Icon: BadgeCheck },
     { id: "shield", label: "Shield", Icon: ShieldCheck },
+    { id: "sketch-sparkle", label: "Sparkle", Icon: SketchSparkleIcon },
+    { id: "comic-sparkle", label: "Sparkle", Icon: ComicSparkleIcon },
+    { id: "comic-shield", label: "Shield", Icon: ComicShieldIcon },
+    { id: "comic-cycle", label: "Cycle", Icon: ComicCycleIcon },
+    { id: "comic-bell", label: "Bell", Icon: ComicBellIcon },
+    { id: "retro-seal", label: "Seal", Icon: RetroSealIcon },
+    { id: "retro-rosette", label: "Rosette", Icon: RetroRosetteIcon },
+    { id: "retro-double-tick", label: "Two ticks", Icon: RetroDoubleTickIcon },
+    { id: "retro-stamp", label: "Stamp", Icon: RetroStampIcon },
+    { id: "ink-check", label: "Tick", Icon: InkCheckIcon },
+    { id: "ink-bloom", label: "Bloom", Icon: InkBloomIcon },
+    { id: "ink-shield", label: "Shield", Icon: InkShieldIcon },
+    { id: "ink-drop", label: "Ink drop", Icon: InkDropIcon },
   ],
   "tool.failed": [
     { id: "alert", label: "Alert", Icon: AlertCircle },
     { id: "x", label: "Cross", Icon: CircleX },
     { id: "octagon", label: "Octagon", Icon: OctagonAlert },
     { id: "bug", label: "Bug", Icon: Bug },
+    { id: "game-swords", label: "Crossed swords", Icon: GameCrossedSwordsIcon },
+    { id: "comic-bell", label: "Bell", Icon: ComicBellIcon },
+    { id: "comic-panels", label: "Panels", Icon: ComicPanelsIcon },
+    { id: "comic-cycle", label: "Cycle", Icon: ComicCycleIcon },
+    { id: "comic-wrench", label: "Spanner", Icon: ComicWrenchIcon },
+    { id: "retro-cross", label: "Cross", Icon: RetroCrossIcon },
+    { id: "retro-bell", label: "Bell", Icon: RetroBellIcon },
+    { id: "retro-hourglass", label: "Hourglass", Icon: RetroHourglassIcon },
+    { id: "retro-spanner", label: "Spanner", Icon: RetroSpannerIcon },
+    { id: "ink-alert", label: "Mark", Icon: InkAlertIcon },
+    { id: "ink-cross", label: "Crossed strokes", Icon: InkCrossIcon },
+    { id: "ink-empty-ring", label: "Broken ring", Icon: InkEmptyRingIcon },
+    { id: "ink-cycle", label: "Turning", Icon: InkCycleIcon },
   ],
   "tool.cancelled": [
     { id: "ban", label: "Ban", Icon: Ban },
@@ -963,31 +1598,83 @@ export const ICON_OPTIONS: Record<IconSlot, IconOption[]> = {
     { id: "check", label: "Check", Icon: CircleCheck },
     { id: "shield", label: "Shield", Icon: ShieldCheck },
     { id: "badge", label: "Badge", Icon: BadgeCheck },
-    { id: "thumb", label: "Thumb", Icon: BadgeCheck },
+    { id: "thumb", label: "Thumb", Icon: ThumbsUp },
+    { id: "ink-check", label: "Tick", Icon: InkCheckIcon },
+    { id: "ink-shield", label: "Shield", Icon: InkShieldIcon },
+    { id: "ink-bloom", label: "Bloom", Icon: InkBloomIcon },
+    { id: "ink-stamp", label: "Seal", Icon: InkStampIcon },
+    { id: "retro-ticket", label: "Ticket", Icon: RetroTicketIcon },
+    { id: "retro-key", label: "Key", Icon: RetroKeyIcon },
+    { id: "retro-seal", label: "Seal", Icon: RetroSealIcon },
+    { id: "retro-approved", label: "Approved stamp", Icon: RetroApprovedIcon },
+    { id: "game-charter", label: "Charter", Icon: GameArtCharter },
+    { id: "game-key", label: "Key", Icon: GamePaintKey },
+    { id: "game-coin", label: "Coin", Icon: GamePaintCoin },
+    { id: "game-potion", label: "Potion", Icon: GamePaintPotionOnce },
   ],
   "permission.allow_always": [
     { id: "shield", label: "Shield", Icon: ShieldCheck },
     { id: "lock", label: "Lock", Icon: Lock },
     { id: "badge", label: "Badge", Icon: BadgeCheck },
     { id: "sparkles", label: "Sparkles", Icon: Sparkles },
+    { id: "ink-bloom", label: "Bloom", Icon: InkBloomIcon },
+    { id: "ink-check", label: "Tick", Icon: InkCheckIcon },
+    { id: "ink-stamp", label: "Seal", Icon: InkStampIcon },
+    { id: "ink-shield", label: "Shield", Icon: InkShieldIcon },
+    { id: "retro-rosette", label: "Rosette", Icon: RetroRosetteIcon },
+    { id: "retro-door-open", label: "Open door", Icon: RetroDoorOpenIcon },
+    { id: "retro-padlock-open", label: "Open padlock", Icon: RetroPadlockOpenIcon },
+    { id: "retro-double-tick", label: "Two ticks", Icon: RetroDoubleTickIcon },
+    { id: "game-crest", label: "Crest", Icon: GameArtCrest },
+    { id: "game-padlock-open", label: "Open padlock", Icon: GamePaintPadlockOpen },
+    { id: "game-ring", label: "Ring", Icon: GamePaintRing },
+    { id: "game-keep", label: "Keep", Icon: GameArtKeep },
   ],
   "permission.deny": [
     { id: "shield-x", label: "Shield", Icon: ShieldX },
     { id: "thumbs-down", label: "Thumb", Icon: ThumbsDown },
     { id: "ban", label: "Ban", Icon: Ban },
     { id: "x", label: "Cross", Icon: CircleX },
+    { id: "ink-cross", label: "Crossed strokes", Icon: InkCrossIcon },
+    { id: "ink-empty-ring", label: "Broken ring", Icon: InkEmptyRingIcon },
+    { id: "ink-alert", label: "Mark", Icon: InkAlertIcon },
+    { id: "ink-pause", label: "Two strokes", Icon: InkPauseIcon },
+    { id: "retro-cross", label: "Cross", Icon: RetroCrossIcon },
+    { id: "retro-padlock", label: "Padlock", Icon: RetroPadlockIcon },
+    { id: "retro-barrier", label: "Barrier", Icon: RetroBarrierIcon },
+    { id: "retro-door-shut", label: "Shut door", Icon: RetroDoorShutIcon },
+    { id: "game-swords", label: "Crossed swords", Icon: GameArtSwords },
+    { id: "game-padlock", label: "Padlock", Icon: GamePaintPadlock },
+    { id: "game-cross-shield", label: "Barred shield", Icon: GamePaintCrossShield },
+    { id: "game-portcullis", label: "Portcullis", Icon: GamePaintPortcullis },
   ],
   "permission.cancel": [
     { id: "x", label: "Cross", Icon: X },
     { id: "ban", label: "Ban", Icon: Ban },
     { id: "slash", label: "Slash", Icon: CircleSlash },
     { id: "hand", label: "Hand", Icon: Hand },
+    { id: "ink-cross", label: "Crossed strokes", Icon: InkCrossIcon },
+    { id: "ink-pause", label: "Two strokes", Icon: InkPauseIcon },
+    { id: "ink-return", label: "Back round", Icon: InkReturnIcon },
+    { id: "ink-empty-ring", label: "Broken ring", Icon: InkEmptyRingIcon },
+    { id: "retro-eraser", label: "Eraser", Icon: RetroEraserIcon },
+    { id: "retro-return", label: "Return", Icon: RetroReturnIcon },
+    { id: "retro-torn-ticket", label: "Torn ticket", Icon: RetroTornTicketIcon },
+    { id: "retro-struck-sheet", label: "Struck out", Icon: RetroStruckSheetIcon },
+    { id: "game-bell", label: "Bell", Icon: GameArtBell },
+    { id: "game-return", label: "Return", Icon: GamePaintReturn },
+    { id: "game-torn-scroll", label: "Torn charter", Icon: GamePaintTornScroll },
+    { id: "game-cross-bars", label: "Struck out", Icon: GamePaintCrossBars },
   ],
   "permission.pending": [
     { id: "shield-q", label: "Shield", Icon: ShieldQuestion },
     { id: "clock", label: "Clock", Icon: Clock3 },
     { id: "help", label: "Question", Icon: CircleHelp },
     { id: "shield-alert", label: "Alert", Icon: ShieldAlert },
+    { id: "ink-hourglass", label: "Glass", Icon: InkHourglassIcon },
+    { id: "ink-thought", label: "Thought", Icon: InkThoughtIcon },
+    { id: "ink-select", label: "Pill", Icon: InkSelectIcon },
+    { id: "ink-drop", label: "Ink drop", Icon: InkDropIcon },
   ],
   "runtime.booting": [
     { id: "power", label: "Power", Icon: Power },
@@ -1062,6 +1749,13 @@ export const ICON_OPTIONS: Record<IconSlot, IconOption[]> = {
     { id: "bug", label: "Bug", Icon: Bug },
   ],
   "author.user": [
+    /* The four every style offers (`STYLE_AVATAR_OPTIONS`), first so an unset
+       slot resolves to one of them. The rest stay registered for the agent's
+       galleries to reuse and for anything that still names them. */
+    { id: "default-sky", label: "晴", Icon: DefaultUserSkyIcon as unknown as LucideIcon },
+    { id: "default-sage", label: "禾", Icon: DefaultUserSageIcon as unknown as LucideIcon },
+    { id: "default-apricot", label: "杏", Icon: DefaultUserApricotIcon as unknown as LucideIcon },
+    { id: "default-ink", label: "墨", Icon: DefaultUserInkIcon as unknown as LucideIcon },
     { id: "user", label: "User", Icon: UserFirstAvatarIcon },
     { id: "assistant-second-avatar", label: "Avatar", Icon: AssistantSecondAvatarIcon },
     { id: "user-third-avatar", label: "Avatar", Icon: UserThirdAvatarIcon },
@@ -1083,6 +1777,33 @@ export const ICON_OPTIONS: Record<IconSlot, IconOption[]> = {
     { id: "golden-joy", label: "Golden joy", Icon: UserGoldenJoyAvatarIcon },
     { id: "green-calm", label: "Green calm", Icon: UserGreenCalmAvatarIcon },
     { id: "purple-bored", label: "Purple bored", Icon: UserPurpleBoredAvatarIcon },
+    { id: "campfire-traveler", label: "Traveler", Icon: CampfireTravelerIcon },
+    { id: "game-wolf", label: "Frost wolf", Icon: GameWolfIcon },
+    { id: "game-cat", label: "Hearth cat", Icon: GameCatIcon },
+    { id: "game-eagle", label: "Sky eagle", Icon: GameEagleIcon },
+    { id: "game-golem", label: "Moss golem", Icon: GameGolemIcon },
+    { id: "pixel-explorer", label: "Plumber", Icon: PixelExplorerAvatarIcon },
+    { id: "pixel-knight", label: "Knight", Icon: PixelKnightAvatarIcon },
+    { id: "pixel-ranger", label: "Ranger", Icon: PixelRangerAvatarIcon },
+    { id: "pixel-diver", label: "Diver", Icon: PixelDiverAvatarIcon },
+    /* 科技风's own four: gummy bots — lit, single-colour shapes with white
+       pill eyes, the reader's side of the robot heads. */
+    { id: "tech-user-cloud", label: "Cloud", Icon: TechUserCloudIcon as unknown as LucideIcon },
+    { id: "tech-user-gummy", label: "Gummy", Icon: TechUserGummyIcon as unknown as LucideIcon },
+    { id: "tech-user-block", label: "Block", Icon: TechUserBlockIcon as unknown as LucideIcon },
+    { id: "tech-user-hex", label: "Hex", Icon: TechUserHexIcon as unknown as LucideIcon },
+    { id: "sketch-cat-portrait", label: "Drawn cat", Icon: SketchCatPortrait },
+    { id: "sketch-rabbit", label: "Drawn rabbit", Icon: SketchRabbitIcon },
+    { id: "sketch-panda", label: "Drawn panda", Icon: SketchPandaIcon },
+    { id: "sketch-fox", label: "Drawn fox", Icon: SketchFoxIcon },
+    { id: "sketch-person", label: "Drawn person", Icon: SketchPersonIcon },
+    { id: "ink-peaks", label: "Ink peaks", Icon: InkPeaksIcon },
+    { id: "ink-bridge", label: "Ink bridge", Icon: InkBridgeIcon },
+    { id: "ink-bamboo", label: "Ink bamboo", Icon: InkBambooIcon },
+    { id: "ink-sun", label: "Ink sun", Icon: InkSunIcon },
+    { id: "sketch-cap", label: "Drawn cap", Icon: SketchCapIcon },
+    { id: "sketch-bun", label: "Drawn bun", Icon: SketchBunIcon },
+    { id: "sketch-specs", label: "Drawn glasses", Icon: SketchSpecsIcon },
   ],
   "author.agent": [
     { id: "orange-blob", label: "Orange blob", Icon: AgentOrangeBlobAvatarIcon },
@@ -1091,12 +1812,93 @@ export const ICON_OPTIONS: Record<IconSlot, IconOption[]> = {
     { id: "robot", label: "Robot", Icon: RobotFace as unknown as LucideIcon },
     { id: "spark-avatar", label: "Spark", Icon: AgentSparkAvatarIcon },
     { id: "work-bot", label: "Working Bot", Icon: AgentWorkBotAvatarIcon },
+    { id: "campfire-companion", label: "Companion", Icon: CampfireCompanionIcon },
+    { id: "game-orb-bot", label: "Orb construct", Icon: GameOrbBotIcon },
+    { id: "game-mage", label: "Staff mage", Icon: GameMageIcon },
+    { id: "game-sprout", label: "Sprout spirit", Icon: GameSproutIcon },
+    { id: "game-tome", label: "Watching tome", Icon: GameTomeIcon },
+    { id: "pixel-mushroom", label: "Mushroom", Icon: PixelMushroomAvatarIcon },
+    { id: "pixel-machine", label: "Machine", Icon: PixelMachineAvatarIcon },
+    { id: "pixel-crystal", label: "Crystal", Icon: PixelCrystalAvatarIcon },
+    { id: "pixel-slime", label: "Slime", Icon: PixelSlimeAvatarIcon },
+    { id: "sketch-bot-classic", label: "Drawn robot", Icon: SketchBotClassicIcon },
+    { id: "sketch-bot-sprint", label: "Drawn robot, moving", Icon: SketchBotSprintIcon },
+    { id: "sketch-bot-warm", label: "Drawn robot, warm", Icon: SketchBotWarmIcon },
+    { id: "sketch-bot-headset", label: "Drawn robot, headset", Icon: SketchBotHeadsetIcon },
+    { id: "sketch-face", label: "Drawn face", Icon: SketchFaceIcon },
+    { id: "sketch-bot", label: "Drawn robot", Icon: SketchBotIcon },
+    { id: "sketch-owl", label: "Drawn owl", Icon: SketchOwlIcon },
+    { id: "sketch-cat", label: "Drawn cat", Icon: SketchCatIcon },
+    { id: "ink-bot-leaf", label: "Washed robot, leaf", Icon: InkBotLeafIcon },
+    { id: "ink-bot-hat", label: "Washed robot, straw hat", Icon: InkBotHatIcon },
+    { id: "ink-bot-bamboo", label: "Washed robot, bamboo", Icon: InkBotBambooIcon },
+    { id: "ink-bot-cloud", label: "Washed robot, cloud", Icon: InkBotCloudIcon },
+    /* 科技风's own, one per outline `robot-heads` draws. Canvas rather than SVG
+       like the four above, which the slot does not care about — the avatar
+       branches in `IconSetContext` never reach these, so the component is
+       rendered as-is with `size` and nothing else. */
+    { id: "robot-head-tv", label: "TV head", Icon: RobotHeadTvIcon as unknown as LucideIcon },
+    { id: "robot-head-square", label: "TV head, square", Icon: RobotHeadSquareIcon as unknown as LucideIcon },
+    { id: "robot-head-round", label: "TV head, round", Icon: RobotHeadRoundIcon as unknown as LucideIcon },
+    { id: "robot-head-hex", label: "TV head, hex", Icon: RobotHeadHexIcon as unknown as LucideIcon },
+    /*
+     * The characters each style used to give the reader. The reader's side is
+     * the four fixed defaults now, so these joined the agent's gallery in the
+     * style they were drawn for — the same components, registered a second
+     * time because a gallery can only offer what its own slot lists. After the
+     * agent's own marks, so each style's gallery still opens on its robots.
+     */
+    { id: "blue-smile", label: "Blue smile", Icon: UserBlueSmileAvatarIcon },
+    { id: "heart-eyes", label: "Heart eyes", Icon: UserHeartEyesAvatarIcon },
+    { id: "golden-joy", label: "Golden joy", Icon: UserGoldenJoyAvatarIcon },
+    { id: "purple-bored", label: "Purple bored", Icon: UserPurpleBoredAvatarIcon },
+    { id: "mood-joyful", label: "Joyful", Icon: MoodJoyfulAvatarIcon },
+    { id: "mood-excited", label: "Excited", Icon: MoodExcitedAvatarIcon },
+    { id: "mood-grateful", label: "Grateful", Icon: MoodGratefulAvatarIcon },
+    { id: "mood-energized", label: "Energized", Icon: MoodEnergizedAvatarIcon },
+    { id: "game-wolf", label: "Frost wolf", Icon: GameWolfIcon },
+    { id: "game-cat", label: "Hearth cat", Icon: GameCatIcon },
+    { id: "game-eagle", label: "Sky eagle", Icon: GameEagleIcon },
+    { id: "game-golem", label: "Moss golem", Icon: GameGolemIcon },
+    { id: "pixel-explorer", label: "Plumber", Icon: PixelExplorerAvatarIcon },
+    { id: "pixel-knight", label: "Knight", Icon: PixelKnightAvatarIcon },
+    { id: "pixel-ranger", label: "Ranger", Icon: PixelRangerAvatarIcon },
+    { id: "pixel-diver", label: "Diver", Icon: PixelDiverAvatarIcon },
+    { id: "tech-user-cloud", label: "Cloud", Icon: TechUserCloudIcon as unknown as LucideIcon },
+    { id: "tech-user-gummy", label: "Gummy", Icon: TechUserGummyIcon as unknown as LucideIcon },
+    { id: "tech-user-block", label: "Block", Icon: TechUserBlockIcon as unknown as LucideIcon },
+    { id: "tech-user-hex", label: "Hex", Icon: TechUserHexIcon as unknown as LucideIcon },
+    { id: "sketch-cat-portrait", label: "Drawn cat", Icon: SketchCatPortrait },
+    { id: "sketch-rabbit", label: "Drawn rabbit", Icon: SketchRabbitIcon },
+    { id: "sketch-panda", label: "Drawn panda", Icon: SketchPandaIcon },
+    { id: "sketch-fox", label: "Drawn fox", Icon: SketchFoxIcon },
+    { id: "ink-peaks", label: "Ink peaks", Icon: InkPeaksIcon },
+    { id: "ink-bridge", label: "Ink bridge", Icon: InkBridgeIcon },
+    { id: "ink-bamboo", label: "Ink bamboo", Icon: InkBambooIcon },
+    { id: "ink-sun", label: "Ink sun", Icon: InkSunIcon },
   ],
   "content.thinking": [
     { id: "bulb", label: "Bulb", Icon: Lightbulb },
     { id: "sparkles", label: "Sparkles", Icon: Sparkles },
     { id: "loader", label: "Spinner", Icon: Loader },
     { id: "activity", label: "Pulse", Icon: Activity },
+    { id: "sketch-thought", label: "Thought balloon", Icon: SketchThoughtIcon },
+    { id: "sketch-bulb", label: "Bulb", Icon: SketchBulbIcon },
+    { id: "sketch-spiral", label: "Scribble", Icon: SketchSpiralIcon },
+    { id: "sketch-cloud", label: "Thought cloud", Icon: SketchCloudIcon },
+    { id: "game-compass", label: "Compass", Icon: GameCompassIcon },
+    { id: "comic-thought", label: "Thought cloud", Icon: ComicThoughtIcon },
+    { id: "comic-sparkle", label: "Sparkle", Icon: ComicSparkleIcon },
+    { id: "comic-cog", label: "Cog", Icon: ComicCogIcon },
+    { id: "comic-cycle", label: "Cycle", Icon: ComicCycleIcon },
+    { id: "retro-cloud", label: "Thought cloud", Icon: RetroCloudIcon },
+    { id: "retro-bulb", label: "Bulb", Icon: RetroBulbIcon },
+    { id: "retro-hourglass", label: "Hourglass", Icon: RetroHourglassIcon },
+    { id: "retro-abacus", label: "Abacus", Icon: RetroAbacusIcon },
+    { id: "ink-thought", label: "Thought", Icon: InkThoughtIcon },
+    { id: "ink-drop", label: "Ink drop", Icon: InkDropIcon },
+    { id: "ink-bloom", label: "Bloom", Icon: InkBloomIcon },
+    { id: "ink-cycle", label: "Turning", Icon: InkCycleIcon },
   ],
   "content.mcp": [
     { id: "plug", label: "Plug", Icon: Plug },
@@ -1109,6 +1911,23 @@ export const ICON_OPTIONS: Record<IconSlot, IconOption[]> = {
     { id: "square-terminal", label: "Square", Icon: SquareTerminal },
     { id: "cpu", label: "CPU", Icon: Cpu },
     { id: "server", label: "Server", Icon: Server },
+    { id: "sketch-wrench", label: "Wrench", Icon: SketchWrenchIcon },
+    { id: "sketch-console", label: "Console", Icon: SketchConsoleIcon },
+    { id: "sketch-cog", label: "Cog", Icon: SketchCogIcon },
+    { id: "sketch-hammer", label: "Hammer", Icon: SketchHammerIcon },
+    { id: "game-wrench", label: "Wrench", Icon: GameWrenchIcon },
+    { id: "comic-wrench", label: "Spanner", Icon: ComicWrenchIcon },
+    { id: "comic-plus", label: "Plus", Icon: ComicPlusIcon },
+    { id: "comic-cog", label: "Cog", Icon: ComicCogIcon },
+    { id: "comic-panels", label: "Panels", Icon: ComicPanelsIcon },
+    { id: "retro-terminal", label: "Terminal", Icon: RetroTerminalIcon },
+    { id: "retro-gear", label: "Gear", Icon: RetroGearIcon },
+    { id: "retro-spanner", label: "Spanner", Icon: RetroSpannerIcon },
+    { id: "retro-plug", label: "Plug", Icon: RetroPlugIcon },
+    { id: "ink-terminal", label: "Prompt", Icon: InkTerminalIcon },
+    { id: "ink-stamp", label: "Seal", Icon: InkStampIcon },
+    { id: "ink-panels", label: "Panes", Icon: InkPanelsIcon },
+    { id: "ink-plus", label: "Plus", Icon: InkPlusIcon },
   ],
   "content.diff": [
     { id: "file-diff", label: "File diff", Icon: FileDiff },
@@ -1121,24 +1940,64 @@ export const ICON_OPTIONS: Record<IconSlot, IconOption[]> = {
     { id: "file", label: "File", Icon: FileText },
     { id: "layers", label: "Layers", Icon: Layers },
     { id: "package", label: "Package", Icon: Package },
+    { id: "comic-panels", label: "Panels", Icon: ComicPanelsIcon },
+    { id: "retro-frame", label: "Framed picture", Icon: RetroFrameIcon },
+    { id: "retro-cube", label: "Cube", Icon: RetroCubeIcon },
+    { id: "retro-sheet", label: "Sheet", Icon: RetroSheetIcon },
+    { id: "retro-stamp", label: "Stamp", Icon: RetroStampIcon },
+    { id: "ink-image", label: "Picture", Icon: InkImageIcon },
+    { id: "ink-folder", label: "Folder", Icon: InkFolderIcon },
+    { id: "ink-file", label: "Sheet", Icon: InkFileIcon },
+    { id: "ink-panels", label: "Panes", Icon: InkPanelsIcon },
   ],
   "content.audio": [
     { id: "music", label: "Music", Icon: Music },
     { id: "radio", label: "Radio", Icon: Radio },
     { id: "rss", label: "Rss", Icon: Rss },
     { id: "file", label: "File", Icon: FileText },
+    { id: "comic-mic", label: "Microphone", Icon: ComicMicIcon },
+    { id: "ink-mic", label: "Microphone", Icon: InkMicIcon },
+    { id: "ink-drop", label: "Ink drop", Icon: InkDropIcon },
+    { id: "ink-disc", label: "Ink disc", Icon: InkDiscIcon },
+    { id: "ink-file", label: "Sheet", Icon: InkFileIcon },
   ],
   "content.text": [
     { id: "file", label: "File", Icon: FileText },
     { id: "message", label: "Message", Icon: MessageCircle },
     { id: "info", label: "Info", Icon: Info },
     { id: "layers", label: "Layers", Icon: Layers },
+    { id: "sketch-chat", label: "Balloon", Icon: SketchChatIcon },
+    { id: "sketch-note", label: "Ruled note", Icon: SketchNoteIcon },
+    { id: "sketch-quote", label: "Quote", Icon: SketchQuoteIcon },
+    { id: "sketch-letter", label: "Letter", Icon: SketchLetterIcon },
+    { id: "game-scroll", label: "Scroll", Icon: GameScrollIcon },
+    { id: "comic-message", label: "Balloon", Icon: ComicMessageIcon },
+    { id: "comic-doc", label: "Page", Icon: ComicDocIcon },
+    { id: "comic-docs", label: "Pages", Icon: ComicDocsIcon },
+    { id: "comic-folder", label: "Folder", Icon: ComicFolderIcon },
+    { id: "retro-balloon-lines", label: "Ruled balloon", Icon: RetroBalloonLinesIcon },
+    { id: "retro-sheet-ruled", label: "Ruled sheet", Icon: RetroSheetRuledIcon },
+    { id: "retro-envelope", label: "Envelope", Icon: RetroEnvelopeIcon },
+    { id: "retro-tag", label: "Tag", Icon: RetroTagIcon },
+    { id: "ink-file", label: "Sheet", Icon: InkFileIcon },
+    { id: "ink-bubble", label: "Balloon", Icon: InkBubbleIcon },
+    { id: "ink-list", label: "Index", Icon: InkListIcon },
+    { id: "ink-folder", label: "Folder", Icon: InkFolderIcon },
   ],
   "content.resource": [
     { id: "package", label: "Package", Icon: Package },
     { id: "file", label: "File", Icon: FileText },
     { id: "layers", label: "Layers", Icon: Layers },
     { id: "disk", label: "Disk", Icon: HardDrive },
+    { id: "comic-folder", label: "Folder", Icon: ComicFolderIcon },
+    { id: "retro-cube", label: "Cube", Icon: RetroCubeIcon },
+    { id: "retro-folder", label: "Folder", Icon: RetroFolderIcon },
+    { id: "retro-tag", label: "Tag", Icon: RetroTagIcon },
+    { id: "retro-index", label: "Card index", Icon: RetroIndexIcon },
+    { id: "ink-folder", label: "Folder", Icon: InkFolderIcon },
+    { id: "ink-docs", label: "Two sheets", Icon: InkDocsIcon },
+    { id: "ink-globe", label: "Globe", Icon: InkGlobeIcon },
+    { id: "ink-stamp", label: "Seal", Icon: InkStampIcon },
   ],
   "content.location": [
     { id: "waypoints", label: "Waypoints", Icon: Waypoints },
@@ -1163,18 +2022,54 @@ export const ICON_OPTIONS: Record<IconSlot, IconOption[]> = {
     { id: "timer", label: "Timer", Icon: Timer },
     { id: "hourglass", label: "Hourglass", Icon: Hourglass },
     { id: "rotate", label: "Rotate", Icon: RotateCcw },
+    { id: "ink-cycle", label: "Turning", Icon: InkCycleIcon },
+    { id: "ink-return", label: "Back round", Icon: InkReturnIcon },
+    { id: "ink-hourglass", label: "Glass", Icon: InkHourglassIcon },
+    { id: "ink-drop", label: "Ink drop", Icon: InkDropIcon },
+    { id: "retro-hourglass", label: "Hourglass", Icon: RetroHourglassIcon },
+    { id: "retro-cycle", label: "Round again", Icon: RetroCycleIcon },
+    { id: "retro-metronome", label: "Metronome", Icon: RetroMetronomeIcon },
+    { id: "retro-gear", label: "Gear", Icon: RetroGearIcon },
+    { id: "game-cycle", label: "Cycle", Icon: GameArtCycle },
+    { id: "game-hammer", label: "War hammer", Icon: GamePaintHammer },
+    { id: "game-cog", label: "Cog", Icon: GameArtCog },
+    { id: "game-compass", label: "Compass", Icon: GameArtCompass },
   ],
   "incident.exhausted": [
     { id: "alert", label: "Alert", Icon: AlertTriangle },
     { id: "gauge", label: "Gauge", Icon: Gauge },
     { id: "octagon", label: "Octagon", Icon: OctagonAlert },
     { id: "ban", label: "Ban", Icon: Ban },
+    { id: "ink-empty-ring", label: "Broken ring", Icon: InkEmptyRingIcon },
+    { id: "ink-hourglass", label: "Glass", Icon: InkHourglassIcon },
+    { id: "ink-alert", label: "Mark", Icon: InkAlertIcon },
+    { id: "ink-cross", label: "Crossed strokes", Icon: InkCrossIcon },
+    { id: "retro-abacus", label: "Abacus", Icon: RetroAbacusIcon },
+    { id: "retro-hourglass-spent", label: "Spent glass", Icon: RetroHourglassSpentIcon },
+    { id: "retro-candle", label: "Candle stub", Icon: RetroCandleIcon },
+    { id: "retro-gauge", label: "Gauge", Icon: RetroGaugeIcon },
+    { id: "game-chronicle", label: "Chronicle", Icon: GameArtChronicle },
+    { id: "game-hourglass-spent", label: "Spent glass", Icon: GamePaintHourglassSpent },
+    { id: "game-broken-sword", label: "Broken sword", Icon: GamePaintBrokenSword },
+    { id: "game-torch-out", label: "Snuffed torch", Icon: GamePaintTorchOut },
   ],
   "incident.terminal": [
     { id: "octagon", label: "Octagon", Icon: Octagon },
     { id: "stop", label: "Stop", Icon: CircleStop },
     { id: "skull", label: "Skull", Icon: Skull },
     { id: "shield-x", label: "Shield", Icon: ShieldX },
+    { id: "ink-cross", label: "Crossed strokes", Icon: InkCrossIcon },
+    { id: "ink-empty-ring", label: "Broken ring", Icon: InkEmptyRingIcon },
+    { id: "ink-pause", label: "Two strokes", Icon: InkPauseIcon },
+    { id: "ink-alert", label: "Mark", Icon: InkAlertIcon },
+    { id: "retro-cross", label: "Cross", Icon: RetroCrossIcon },
+    { id: "retro-stop-sign", label: "Stop sign", Icon: RetroStopSignIcon },
+    { id: "retro-lever", label: "Switch off", Icon: RetroLeverIcon },
+    { id: "retro-closed-book", label: "Closed book", Icon: RetroClosedBookIcon },
+    { id: "game-swords", label: "Crossed swords", Icon: GameArtSwords },
+    { id: "game-skull", label: "Skull", Icon: GamePaintSkull },
+    { id: "game-tombstone", label: "Headstone", Icon: GamePaintTombstone },
+    { id: "game-shattered-gem", label: "Shattered gem", Icon: GamePaintShatteredGem },
   ],
   "error.model": [
     { id: "cpu", label: "CPU", Icon: Cpu },
@@ -1205,6 +2100,22 @@ export const ICON_OPTIONS: Record<IconSlot, IconOption[]> = {
     { id: "package", label: "Package", Icon: Package },
     { id: "layers", label: "Layers", Icon: Layers },
     { id: "server", label: "Server", Icon: Server },
+    /* 水墨风's four. This gallery reached the rail when the canvas's failure row
+       stopped claiming to be an unknown error and started naming the domain it
+       is — a full disk — so the slot needs marks in every style's own hand.
+       Appended, so no style's default moves. */
+    { id: "ink-folder", label: "Folder", Icon: InkFolderIcon },
+    { id: "ink-docs", label: "Sheets", Icon: InkDocsIcon },
+    { id: "ink-disc", label: "Disc", Icon: InkDiscIcon },
+    { id: "ink-alert", label: "Alert", Icon: InkAlertIcon },
+    { id: "retro-cube", label: "Parcel", Icon: RetroCubeIcon },
+    { id: "retro-crates", label: "Crates", Icon: RetroCratesIcon },
+    { id: "retro-barrel", label: "Barrel", Icon: RetroBarrelIcon },
+    { id: "retro-cabinet", label: "Cabinet", Icon: RetroCabinetIcon },
+    { id: "game-pack", label: "Pack", Icon: GameArtPack },
+    { id: "game-chest", label: "Chest", Icon: GameArtChest },
+    { id: "game-barrel", label: "Barrel", Icon: GamePaintBarrel },
+    { id: "game-crates", label: "Crates", Icon: GamePaintCrates },
   ],
   "error.sandbox": [
     { id: "crash", label: "Crash", Icon: ServerCrash },
@@ -1223,6 +2134,10 @@ export const ICON_OPTIONS: Record<IconSlot, IconOption[]> = {
     { id: "alert", label: "Alert", Icon: AlertCircle },
     { id: "bug", label: "Bug", Icon: Bug },
     { id: "octagon", label: "Octagon", Icon: OctagonAlert },
+    { id: "ink-question", label: "Question", Icon: InkQuestionIcon },
+    { id: "ink-drop", label: "Ink drop", Icon: InkDropIcon },
+    { id: "ink-alert", label: "Mark", Icon: InkAlertIcon },
+    { id: "ink-empty-ring", label: "Broken ring", Icon: InkEmptyRingIcon },
   ],
   "surface.activity": [
     { id: "activity", label: "Activity", Icon: Activity },
@@ -1259,13 +2174,24 @@ export const ICON_OPTIONS: Record<IconSlot, IconOption[]> = {
     { id: "stop", label: "Stop", Icon: CircleStop },
     { id: "ban", label: "Ban", Icon: Ban },
     { id: "x", label: "Cross", Icon: X },
+    { id: "ink-pause", label: "Two strokes", Icon: InkPauseIcon },
+    { id: "ink-cross", label: "Crossed strokes", Icon: InkCrossIcon },
+    { id: "ink-empty-ring", label: "Broken ring", Icon: InkEmptyRingIcon },
+    { id: "ink-return", label: "Back round", Icon: InkReturnIcon },
+    { id: "retro-bell", label: "Bell", Icon: RetroBellIcon },
+    { id: "retro-pause", label: "Pause", Icon: RetroPauseIcon },
+    { id: "retro-scissors", label: "Scissors", Icon: RetroScissorsIcon },
+    { id: "retro-unplug", label: "Unplugged", Icon: RetroUnplugIcon },
+    { id: "game-bell", label: "Bell", Icon: GameArtBell },
+    { id: "game-pause", label: "Pause", Icon: GamePaintPause },
+    { id: "game-snapped-chain", label: "Snapped chain", Icon: GamePaintSnappedChain },
+    { id: "game-gauntlet", label: "Gauntlet", Icon: GamePaintGauntlet },
   ],
 };
 
 export type IconSet = Partial<Record<IconSlot, string>>;
 
 const ALL_SLOTS = Object.keys(ICON_OPTIONS) as IconSlot[];
-const NATIVE_USER_AVATAR_FALLBACK_IDS = new Set(["user", "assistant-second-avatar", "user-third-avatar", "green-calm"]);
 
 export function defaultIconSet(): IconSet {
   const set: IconSet = {};
@@ -1294,10 +2220,7 @@ export function iconSetFromPreset(preset: IconPresetId): IconSet {
 
 export function resolveIcon(set: IconSet, slot: IconSlot, style: IconStyle = "line"): LucideIcon {
   const options = ICON_OPTIONS[slot];
-  let chosen = set[slot];
-  if (style === "bold" && slot === "author.user" && (!chosen || NATIVE_USER_AVATAR_FALLBACK_IDS.has(chosen))) {
-    chosen = "blue-smile";
-  }
+  const chosen = set[slot];
   const option = options.find((o) => o.id === chosen) ?? options[0];
   if (style === "bold" && option.bold) {
     return option.bold;

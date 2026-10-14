@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { appVersion } from "../appVersion";
 import { defaultCodingAgentProject } from "../schema/agentuxConfig";
 import {
+  SCAFFOLD_LICENSE_ASSETS,
   SCAFFOLD_PUBLIC_ASSETS,
   createScaffoldExportSnapshot,
   createScaffoldPackageJson,
@@ -299,7 +300,12 @@ describe("export contract: packed assets", () => {
       }
     }
 
-    const stale = SCAFFOLD_PUBLIC_ASSETS.filter((asset) => !referenced.has(asset));
+    // Licence texts have no referent by nature — they ship to satisfy OFL 1.1,
+    // not because a stylesheet points at them. Excluded by name so the guard
+    // keeps biting for everything else.
+    const stale = SCAFFOLD_PUBLIC_ASSETS.filter(
+      (asset) => !referenced.has(asset) && !SCAFFOLD_LICENSE_ASSETS.includes(asset),
+    );
 
     expect(
       stale,

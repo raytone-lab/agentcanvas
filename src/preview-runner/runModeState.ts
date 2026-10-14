@@ -82,10 +82,20 @@ export function canUseLivePreview(input: {
   return provider.auth.mode === "none" || Boolean(input.sessionKeys?.[provider.id]?.trim());
 }
 
+/**
+ * Which mode the run preview opens in.
+ *
+ * Live only when live can actually answer. It used to be live whenever the
+ * provider *spoke* the protocol — keyed or not — so with no key entered, 运行
+ * opened on an empty transcript under 实时 LLM, the first prompt was refused by
+ * a toast, and the canvas fell back to the replay placeholder: a run preview
+ * that showed nothing that had been configured. Without a key it opens on the
+ * replay, which plays the configured interface and event flow through — what
+ * pressing 运行 is for — and live is one pick away once a key is in.
+ */
 export function initialSavedPreviewRunMode(input: {
   project: AgentFrontendProject;
   sessionKeys?: PreviewSessionKeys;
 }): "replay" | "live" {
-  const provider = defaultProviderConnection(input.project);
-  return provider.protocol === "openai-compatible" ? "live" : "replay";
+  return canUseLivePreview(input) ? "live" : "replay";
 }

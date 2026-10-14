@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 import { Box, Frame } from "lucide-react";
 
 import { layerContentsForProject } from "../projection/presetRailData";
@@ -69,16 +71,60 @@ export function LayersPanel({
                     <Frame size={14} />
                   </span>
                   <span className="layers-row-name">{layer.label[locale]}</span>
-                  {layer.children.length > 0 ? (
-                    <span className="layers-row-count">{layer.children.length}</span>
-                  ) : null}
+                  {/*
+                   * Always a count, zero included.
+                   *
+                   * It used to be hidden below one, which on an untouched
+                   * project left the three columns carrying no information at
+                   * all — three identical rows, no numbers, and a mark that
+                   * only means something once there is an axis under it. A
+                   * muted zero is the one thing that says "this column is
+                   * empty" rather than leaving the reader to infer it from
+                   * nothing being there.
+                   */}
+                  <span
+                    className="layers-row-count"
+                    data-empty={layer.children.length === 0 ? "true" : undefined}
+                  >
+                    {layer.children.length}
+                  </span>
                 </button>
                 {/* What is in this column. Nothing is rendered when a column is
                     empty rather than an "empty" placeholder per row: with every
                     column empty on first open, three placeholders would be the
                     loudest thing in the panel. */}
                 {layer.children.length > 0 ? (
-                  <ul className="layers-children">
+                  /*
+                   * `--axis-index` is how the axis down the left of this list
+                   * knows how long its solid segment is.
+                   *
+                   * The segment runs from the column's own mark to the picked
+                   * row and has to *animate* between two rows, so its height
+                   * cannot be a per-row border — a border-style flip is
+                   * instant, and there is no CSS expression for "the distance
+                   * to my selected sibling". The index is the one fact only
+                   * the component has; every length is derived from it in CSS
+                   * (`--axis-pitch`), so the two cannot drift.
+                   *
+                   * `data-axis` is separate from the index because 0 is a
+                   * real answer — the first row picked — and an unset axis
+                   * has to be distinguishable from it.
+                   */
+                  <ul
+                    className="layers-children"
+                    data-axis={
+                      layer.children.some((child) => child.id === selectedSlotId)
+                        ? "on"
+                        : undefined
+                    }
+                    style={
+                      {
+                        "--axis-index": String(
+                          layer.children.findIndex((child) => child.id === selectedSlotId),
+                        ),
+                      } as CSSProperties
+                    }
+                  >
                     {layer.children.map((child) => (
                       <li key={child.id}>
                         <button

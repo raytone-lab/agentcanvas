@@ -29,7 +29,17 @@ export function ToolCallCard({
 }) {
   const copy = useCopy();
   const { locale } = useLocale();
-  const desiredOpen = tool.open || tool.status === "running" || tool.status === "awaiting_approval";
+  /*
+   * Collapsed by default, including while the call is running.
+   *
+   * `status === "running"` used to open it, so a card arrived expanded and the
+   * reader watched it close itself — the disclosure was doing the opposite of
+   * what a disclosure is for. Two things still force it open and both are
+   * deliberate: `awaiting_approval`, because collapsing that hides the thing
+   * the reader has to answer, and `toolStyle === "expanded"` /
+   * `timelineRail` below, which are choices made in the rail.
+   */
+  const desiredOpen = tool.open || tool.status === "awaiting_approval";
   const [open, setOpen] = useState(desiredOpen);
   const userToggledRef = useRef(false);
   const spec = useMemo(() => buildToolDisplaySpec(tool), [tool]);
@@ -39,31 +49,76 @@ export function ToolCallCard({
   const titleParts = splitToolTitle(tool.title ?? tool.name, pathFromTool(tool));
   const toolAction = resolveToolAction(tool);
   const runningAction = toolAction;
-  const fileAction = resolveToolFileAction(tool, titleParts);
+  /*
+   * A call that failed or was cancelled has no file result, so it gets no file
+   * row.
+   *
+   * Measured on the canvas before the specimen was removed: a `write_file` that
+   * ended in `error` still rendered 已修改 notes.md under it — the row is
+   * labelled from the *action's* past tense with no reference to the outcome,
+   * so a failed write claimed the file had been modified.
+   * `outputPanelItemsFromTool` already refuses these two statuses for the same
+   * reason; this is the row agreeing with it.
+   */
+  const fileAction = tool.status === "error" || tool.status === "cancelled"
+    ? undefined
+    : resolveToolFileAction(tool, titleParts);
   const fileReferences = fileAction ? buildToolFileReferences(tool, fileAction, locale, titleParts) : [];
   const hasFileReferences = fileReferences.length > 0;
   const inputBlock = !hasFileReferences && detailMode === "full" ? spec.inputBlock : undefined;
   const outputBlock = !hasFileReferences && (detailMode === "full" || detailMode === "output-only") ? spec.outputBlock : undefined;
-  const shouldForceOpen = forceOpen || toolStyle === "expanded" || hasTimelineRail;
+  /* The rail is a spine down the left of the card, not a disclosure state. It
+     used to force the body open, so any style whose kit turned the rail on
+     shipped its tool calls expanded — the second half of "为什么有些风格里你是
+     展开的". `expanded` still forces open, because that option's whole text is
+     "expanded by default without a disclosure button". */
+  const shouldForceOpen = forceOpen || toolStyle === "expanded";
   const hideDisclosure = toolStyle === "expanded";
   const bodyHasContent = detailMode !== "summary" && Boolean(inputBlock || outputBlock || hasFileReferences);
   const renderedOpen = shouldForceOpen || open;
   const showProgress = project.toolCalls.progress === "bar";
   const hasExplicitRunningTitle = Boolean(tool.title && isExplicitRunningToolTitle(tool.title));
   const hasActiveRunningTitle = Boolean(tool.title && isActiveRunningToolTitle(tool.title));
-  const showHeaderPreview = !hasFileReferences && !hasExplicitRunningTitle;
+  /*
+   * The row names the action and stops there.
+   *
+   * It used to trail the call's value after the title — 正在验证 12 项检查通过,
+   * 正在搜索 SearchInput, 正在运行命令 npm test — which reads as a sentence with
+   * data spliced into it, and the data is already one click away in the body
+   * the disclosure opens. Asked for directly: 这些是不展示.
+   *
+   * The exception is a call waiting for approval, where the preview *is* the
+   * question — you cannot answer "allow this?" without seeing what `this` is.
+   */
+  const showHeaderPreview =
+    tool.status === "awaiting_approval" && !hasFileReferences && !hasExplicitRunningTitle;
   const headerPreview = tool.status === "awaiting_approval" && spec.inputBlock
     ? displayBlockSummary(spec.inputBlock, copy.chat.toolCard.fallbackTitle)
     : toolAction
       ? toolActionPreview(tool, toolAction)
     : tool.preview ?? tool.argsText ?? copy.chat.toolCard.fallbackTitle;
-  const headerTitle = hasExplicitRunningTitle && tool.title
-    ? tool.title
-    : runningAction
-      ? runningToolActionLabel(runningAction, locale)
-    : fileAction
-      ? tool.title ?? fileActionHeaderLabel(fileAction, locale)
-      : tool.title ?? tool.name;
+  /*
+   * A finished call reports its outcome, not the action it was in the middle of.
+   *
+   * `cancelled` read "正在修改文件" — present tense, beside a cancel mark, on a
+   * call the run had abandoned. The action label is still the right answer
+   * while the call is in flight and for a successful one (the file row under it
+   * carries the past tense: 已读取 notes.md), so only the two terminal failures
+   * are overridden here.
+   */
+  const outcomeTitle = tool.status === "cancelled"
+    ? copy.chat.toolCard.outcome.cancelled
+    : tool.status === "error"
+      ? copy.chat.toolCard.outcome.failed
+      : undefined;
+  const headerTitle = outcomeTitle
+    ?? (hasExplicitRunningTitle && tool.title
+      ? tool.title
+      : runningAction
+        ? runningToolActionLabel(runningAction, locale)
+      : fileAction
+        ? tool.title ?? fileActionHeaderLabel(fileAction, locale)
+        : tool.title ?? tool.name);
 
   useEffect(() => {
     userToggledRef.current = false;

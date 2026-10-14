@@ -32,6 +32,7 @@ import {
   scrollPreviewToAnchor,
   scrollPreviewToAnchorAfterPreviewUpdate,
   scrollPreviewToPreset,
+  scrollPreviewToSelectorAfterPreviewUpdate,
   scrollPreviewToToolActionAfterPreviewUpdate,
 } from "../projection/previewScroll";
 import type { ControllerContext } from "./controllerShared";
@@ -55,6 +56,11 @@ export function createPreviewActions(ctx: ControllerContext) {
   function enterWelcomeState() {
     refs.standardStreamRef.current?.cancel();
     dispatch({ type: "enterWelcome" });
+  }
+
+  /** Back to the conversation from the welcome screen, without starting a run. */
+  function leaveWelcomeState() {
+    dispatch({ type: "leaveWelcome" });
   }
 
   // Focusing the greeting field lights up the linked preview: switch the canvas
@@ -427,6 +433,26 @@ export function createPreviewActions(ctx: ControllerContext) {
     if (selectedPresetGroup.id === "media-generation" && isMediaGenerationPreset(optionId)) {
       const nextProject = keepSelected ? applyPresetOption(project, optionId) : togglePresetOption(project, optionId);
       setProject(nextProject);
+      /*
+       * On the canvas the three media blocks are always there (see
+       * `canvasTimelineEvents`), and the loader restarts whenever its variant
+       * changes. So a pick is a restyle and a scroll to the block, not a new
+       * scripted run: the scenario path below swapped in a whole
+       * media-generation reply and refreshed the surface, which replayed the
+       * canvas from the top and left the reader waiting through ten seconds of
+       * someone else's conversation before the loader they picked came round.
+       * A live or Pi session still gets the scenario, because there the canvas
+       * is showing the run's own events, which have no media in them.
+       */
+      if (state.runEventSource !== "live" && state.runEventSource !== "pi") {
+        dispatch({ type: "patch", patch: { surfaceMode: "builder", workspaceView: "preview" } });
+        scrollPreviewToSelectorAfterPreviewUpdate(
+          optionId.startsWith("media-image-") ? ".generated-image-inline"
+            : optionId.startsWith("media-audio-") ? ".generated-audio-inline"
+              : ".generated-video-inline",
+        );
+        return;
+      }
       void previewMediaGenerationOption(optionId, nextProject);
       return;
     }
@@ -503,6 +529,22 @@ export function createPreviewActions(ctx: ControllerContext) {
       bumpPreviewRefresh(refs, dispatch);
       scrollPreviewToAnchorAfterPreviewUpdate("tool-call");
       return;
+    }
+
+    /*
+     * A renderer restyles the *document*, so the panel has to be showing it.
+     * The panel opens on the last thing the run delivered, which is a media
+     * file since the canvas carries the audio and video loaders — so the four
+     * renderer cards changed a tab nobody could see and looked like they did
+     * nothing. Point the panel back at the first document before applying.
+     */
+    if (optionId.startsWith("renderer-")) {
+      const documentItem = state.outputPanelItems.find(
+        (item) => !item.imageSrc && !(item.body ?? "").includes("media-generation:"),
+      );
+      if (documentItem) {
+        dispatch({ type: "patch", patch: { activeOutputPanelItemId: documentItem.id, rightCollapsed: false } });
+      }
     }
 
     // Selecting a preset option always demos its effect live in the preview.
@@ -672,6 +714,7 @@ export function createPreviewActions(ctx: ControllerContext) {
   return {
     resetRunState,
     enterWelcomeState,
+    leaveWelcomeState,
     previewWelcomeState,
     selectFixture,
     streamStandardScenario,

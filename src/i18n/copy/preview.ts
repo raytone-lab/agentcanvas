@@ -75,31 +75,19 @@ const en = {
   /** The inline approval panel: a multiple-choice question the agent asks mid-run. */
   inlineApproval: {
     ariaLabel: "Inline approval",
-    kicker: "Icon too large",
-    question:
-      "I found that native avatar containers are 40px, but Bot fills 40px while Sparkles is only 15px. How should I adjust it?",
+    kicker: "Needs your call",
+    question: "Two assertions in the SearchInput test no longer match what the component does. How should I handle them?",
     hint: "Use Tab / arrow keys to choose, Enter or Space to select",
     ignore: "Ignore",
     continueLabel: "Continue",
     options: [
-      {
-        title: "Normalize to 28px",
-        body: "Avatar containers become 28x28px, linear icons stay around 16px centered, and custom avatars fill 28px.",
-      },
-      {
-        title: "Normalize to 30px",
-        body: "Avatar containers become 30x30px, with icon scale adjusted proportionally.",
-      },
-      {
-        title: "Keep 40px, fix consistency",
-        body: "Container size stays, while Bot / Sparkles and similar line icons share one centered size.",
-      },
-      {
-        title: "Type your answer...",
-        body: "",
-      },
+      { title: "Update the assertions", body: "Rewrite those two to the current behaviour; leave every other case alone." },
+      { title: "Fix the component", body: "Keep the test as written and change SearchInput until it passes again." },
+      { title: "Skip them for now", body: "Mark both cases skip and leave a note to come back to them." },
+      { title: "Type your answer...", body: "" },
     ],
   },
+
 
   /** Prompts that open the generated-media loader demos. */
   mediaPrompt: {
@@ -203,31 +191,19 @@ const zh: PreviewCopy = {
 
   inlineApproval: {
     ariaLabel: "内联审批",
-    kicker: "icon 太大",
-    question:
-      "我诊断发现：native 风格下头像容器是 40px，但 Bot（默认）被撑满到 40px，Sparkles 却只有 15px，尺寸严重不一致且偏大。你希望我怎么调？",
+    kicker: "需要你决定",
+    question: "SearchInput 的测试里有 2 处断言和组件现在的行为对不上，要怎么处理？",
     hint: "使用 Tab / 上下键选择，回车或空格选中",
     ignore: "忽略",
     continueLabel: "继续",
     options: [
-      {
-        title: "统一缩小为 28px",
-        body: "头像容器统一 28x28px，线性图标保持约 16px 居中，自定义大头像填满 28px。与整体紧凑密度一致。",
-      },
-      {
-        title: "统一缩小为 30px",
-        body: "头像容器 30x30px，图标按比例调整，保留一点呼吸感。",
-      },
-      {
-        title: "保持 40px 但修一致性",
-        body: "容器不变，只把 Bot / Sparkles 等线性图标统一成相同小尺寸居中，自定义大头像继续填满。",
-      },
-      {
-        title: "输入你的答案...",
-        body: "",
-      },
+      { title: "按现状改断言", body: "把这 2 处断言改成当前行为，其余用例不动。" },
+      { title: "修组件实现", body: "保留测试原样，改 SearchInput 直到重新通过。" },
+      { title: "先跳过", body: "把这 2 个用例标为 skip，并留一条待办。" },
+      { title: "输入你的答案...", body: "" },
     ],
   },
+
 
   mediaPrompt: {
     image: "生成一张产品发布会主视觉。",
@@ -318,31 +294,19 @@ const ja: PreviewCopy = {
 
   inlineApproval: {
     ariaLabel: "インライン承認",
-    kicker: "アイコンが大きすぎる",
-    question:
-      "native スタイルではアバターの器が 40px ですが、Bot は 40px いっぱいに広がる一方で Sparkles は 15px しかなく、サイズが揃っていません。どう調整しますか？",
+    kicker: "判断をお願いします",
+    question: "SearchInput のテストで、2 つのアサーションが今のコンポーネントの挙動と合っていません。どうしますか？",
     hint: "Tab / 矢印キーで選択、Enter または Space で決定",
     ignore: "無視",
     continueLabel: "続ける",
     options: [
-      {
-        title: "28px に統一",
-        body: "アバターの器を 28x28px にし、線アイコンは 16px 前後で中央に置き、カスタムアバターは 28px いっぱいに広げます。",
-      },
-      {
-        title: "30px に統一",
-        body: "アバターの器を 30x30px にし、アイコンの倍率も比例して調整します。",
-      },
-      {
-        title: "40px のまま揃えを直す",
-        body: "器の大きさは変えず、Bot / Sparkles などの線アイコンを同じサイズで中央に揃えます。",
-      },
-      {
-        title: "回答を入力…",
-        body: "",
-      },
+      { title: "アサーションを直す", body: "その 2 つを今の挙動に合わせ、ほかのケースはそのままにします。" },
+      { title: "コンポーネントを直す", body: "テストはそのままにして、SearchInput を通るまで修正します。" },
+      { title: "いったんスキップ", body: "2 ケースを skip にし、あとで戻るメモを残します。" },
+      { title: "回答を入力…", body: "" },
     ],
   },
+
 
   mediaPrompt: {
     image: "製品発表会のメインビジュアルを 1 枚生成してください。",

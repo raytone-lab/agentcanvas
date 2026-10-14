@@ -163,7 +163,23 @@ describe("preset-driven preview rendering", () => {
     const chatMarkup = render(<ChatFrame project={defaultCodingAgentProject} viewModel={viewModel} />, "zh");
 
     expect(chatMarkup).toContain("/output-previews/product-projector.png");
-    expect(chatMarkup).toContain("白色便携投影仪");
+    /*
+     * The description is behind the fold now, not gone: the settled block
+     * closes itself (`collapse: "auto"`) and renders its header alone. Asserted
+     * on an opened block rather than deleted, because "this scenario describes
+     * the image it generated" is what the line is here to protect.
+     */
+    const opened = render(
+      <ChatFrame
+        project={{
+          ...defaultCodingAgentProject,
+          reasoning: { ...defaultCodingAgentProject.reasoning, collapse: "expanded" },
+        }}
+        viewModel={viewModel}
+      />,
+      "zh",
+    );
+    expect(opened).toContain("白色便携投影仪");
     expect(chatMarkup).not.toContain("正在生成图片 GeneratedMoodboard.png");
     expect(chatMarkup).not.toContain("图片生成事件流已完成");
   });
@@ -343,7 +359,25 @@ describe("preset-driven preview rendering", () => {
     expect(statusMarkup).toContain('data-visibility="status"');
     expect(statusMarkup).not.toContain("Visible reasoning summary.");
     expect(publicSummaryMarkup).toContain('data-visibility="summary"');
-    expect(publicSummaryMarkup).toContain("Visible reasoning summary.");
+    /*
+     * Visible, not open. This option decides which words the block shows; how
+     * the block folds is the Disclosure section's business, and the default
+     * there is now `auto` — so a settled block is closed whatever the
+     * visibility. The summary is still reachable, which is the half this line
+     * protects: fold it open and the text is there.
+     */
+    expect(publicSummaryMarkup).not.toContain("Visible reasoning summary.");
+    expect(publicSummaryMarkup).toContain('data-toggleable="true"');
+    const publicSummaryOpened = renderReasoning(
+      applyPresetOption(
+        applyPresetOption(
+          applyPresetOption(defaultCodingAgentProject, "reasoning-status-only"),
+          "reasoning-public-summary",
+        ),
+        "reasoning-expanded",
+      ),
+    );
+    expect(publicSummaryOpened).toContain("Visible reasoning summary.");
   });
 
   it("renders the output source preset separately from artifact renderers", () => {
@@ -470,8 +504,22 @@ describe("preset-driven preview rendering", () => {
 
     expect(errorMarkup).toContain('data-collapse="true"');
     expect(errorMarkup).toContain('data-preview-anchor="chat"');
-    expect(errorMarkup).toContain("Debug detail hidden in dock");
+    /*
+     * The caption is gone, and that is the change: `error-collapse` decides
+     * *which* message the row shows, and it used to also print "Debug detail
+     * hidden in dock" beside it — a line of prose about the interface, laid out
+     * on the same line as the state word and the sentence. What the flag means
+     * is still asserted, by the two lines that matter: the reader's message is
+     * shown and the developer's is not.
+     */
+    expect(errorMarkup).not.toContain("Debug detail hidden in dock");
+    expect(errorMarkup).toContain("Could not write the file.");
     expect(errorMarkup).not.toContain("secret internal path");
+    // One card, one sentence: the state word and the code were restatements of
+    // it, and the state is carried by the glyph (`errorIconSlot`) and by the
+    // card's accessible name.
+    expect(errorMarkup).not.toContain('class="error-item-head"');
+    expect(errorMarkup).toContain('class="error-item"');
     expect(logMarkup).toContain("line 4");
     expect(logMarkup).toContain('data-preview-anchor="tool-call"');
     expect(logMarkup).toContain("line 6");
@@ -589,7 +637,9 @@ describe("preset-driven preview rendering", () => {
     expect(markup).not.toContain("Agent Component Composer");
     expect(markup).toContain("文件");
     expect(markup).not.toContain("网站");
-    expect(markup).toContain("打开方式");
+    // 打开, not 打开方式: the button opens the artifact, it offers no choice of how.
+    expect(markup).toContain(">打开<");
+    expect(markup).not.toContain("打开方式");
     expect(markup).not.toContain("撤销");
     expect(markup).not.toContain("审核");
     expect(markup).not.toContain("artifact-inline-status");
@@ -833,8 +883,9 @@ describe("preset-driven preview rendering", () => {
       />,
     );
 
-    expect(markup).toContain(">Send</button>");
-    expect(markup).not.toContain(">Stop</button>");
+    // An icon key in every style; its name lives on the label.
+    expect(markup).toContain('aria-label="Send"');
+    expect(markup).not.toContain('aria-label="Stop"');
     expect(markup).not.toContain("Send / Stop");
     expect(markup).not.toContain('class="stop-button"');
     expect(markup).not.toContain("data-stop-control");
@@ -876,7 +927,7 @@ describe("preset-driven preview rendering", () => {
       />,
     );
 
-    expect(markup).toContain(">Stop</button>");
+    expect(markup).toContain('aria-label="Stop"');
     expect(markup).not.toContain("Send / Stop");
   });
 

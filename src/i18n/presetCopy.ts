@@ -61,6 +61,7 @@ const presetGroupNameJa: PresetTextTable = {
 /** Section label (English schema text) → translated label. */
 const presetSectionZh: PresetTextTable = {
   "Panel content": "面板内容",
+  "Run status": "运行状态",
   "Plan mode": "计划模式",
   "Tool approval": "工具审批",
   "Decision point": "决策点",
@@ -74,6 +75,8 @@ const presetSectionZh: PresetTextTable = {
   Motion: "动效",
   Disclosure: "展开方式",
   "Done style": "展示样式",
+  "Done title": "标题写什么",
+  "Settled body": "收起后留什么",
   "Text loading": "文字加载方式",
   Visibility: "可见性",
   Layout: "布局",
@@ -108,6 +111,7 @@ const presetSectionZh: PresetTextTable = {
 /** PENDING NATIVE REVIEW — see the note in ./copy/shell.ts for the conventions used. */
 const presetSectionJa: PresetTextTable = {
   "Panel content": "パネルの内容",
+  "Run status": "実行状況",
   "Plan mode": "プランモード",
   "Tool approval": "ツールの承認",
   "Decision point": "判断が必要な場面",
@@ -121,6 +125,8 @@ const presetSectionJa: PresetTextTable = {
   Motion: "モーション",
   Disclosure: "開き方",
   "Done style": "完了時の見せ方",
+  "Done title": "タイトルの内容",
+  "Settled body": "閉じた後に残すもの",
   "Text loading": "テキストの出し方",
   Visibility: "表示",
   Layout: "レイアウト",
@@ -157,9 +163,6 @@ const presetOptionZh: PresetOptionTable = {
   "workspace-switcher": { label: "工作区切换", description: "在左导航里切换工作区。" },
   "mention-picker": { label: "@ 提及", description: "输入 @ 弹出文件与连接器的选择器。" },
   "slash-command-palette": { label: "/ 命令", description: "输入 / 弹出技能与命令面板。" },
-  "task-list": { label: "任务列表", description: "在右面板里列出本次运行的任务。" },
-  "exec-progress": { label: "执行进度", description: "在右面板里显示整体运行进度。" },
-  "workspace-files": { label: "工作区文件", description: "在右面板里显示工作区文件树。" },
   "plan-card": { label: "计划卡片", description: "计划模式下列出步骤，等你确认或修改后再开始执行。" },
   "choice-card-modal": { label: "选择卡片", description: "阻塞式弹窗，2~4 个选项、一个推荐默认项，外加自由输入的逃生舱。" },
   "sandbox-permission": { label: "沙箱权限", description: "命令执行前的阻塞确认，显示命令原文与风险等级。" },
@@ -187,6 +190,7 @@ const presetOptionZh: PresetOptionTable = {
   "sidebar-new-button": { label: "新建对话", description: "在侧边栏顶部显示新建对话操作。" },
   "sidebar-search": { label: "搜索功能", description: "显示用于筛选会话的搜索框。" },
   "sidebar-sessions": { label: "内容模块", description: "显示最近会话列表。" },
+  "sidebar-row-icon": { label: "行图标", description: "在会话列表的每一行前加一个图标。" },
   "sidebar-grouping": { label: "日期分组", description: "把会话按「今天 / 更早」分组显示。" },
   "sidebar-footer": { label: "版本号", description: "在侧边栏底部显示当前版本号。" },
   "output-visible": { label: "显示输出面板", description: "在产品外壳中显示输出／产物面板。" },
@@ -196,8 +200,22 @@ const presetOptionZh: PresetOptionTable = {
     description: "在消息级别提供按角色区分的复制、重新生成和编辑重跑控件。",
   },
 
-  // Thinking · the closed block
-  "reasoning-done-timed": { label: "已思考（用时 11 秒）", description: "已完成的思考块用「已思考（用时 xx 秒）」做标题，正文左侧加一条竖线。" },
+  // Thinking · the closed block · what the title says
+  //
+  // The 竖线 clause is gone from the timed description: the rule is its own
+  // option now, so leaving it here would describe a coupling that no longer
+  // exists. Labels kept to four characters or so — the cards are 78px wide and
+  // a wrapping label stretches its whole grid row.
+  "reasoning-done-label": { label: "只写已思考", description: "标题就一个词——已思考——不提等了多久。" },
+  "reasoning-done-timed": { label: "思考时间", description: "标题带上已经思考的时长，并随等待逐秒累加。" },
+  "reasoning-done-counted": { label: "思考段数", description: "数想了几段，而不是花了多少秒：已思考 · 3 段。说的是考虑了多少，不是等了多久。" },
+  "reasoning-done-conclusion": { label: "结论当标题", description: "标题直接就是那句结论，不展开也能读完。" },
+
+  // Thinking · the closed block · what survives underneath
+  "reasoning-done-expandable": { label: "可展开", description: "思考内容留着，收在箭头后面。" },
+  "reasoning-done-title-only": { label: "只留标题", description: "思考结束就丢掉正文，只剩标题——箭头也一并收掉，否则点开是个空块。" },
+  "reasoning-done-first-line": { label: "露一行", description: "收起时露出第一行并渐隐，不用点也能看个大意。" },
+  "reasoning-done-rule": { label: "左侧竖线", description: "给收起后的思考内容左边加一条竖线，读作引述而不是发言。" },
   "reasoning-writing-smooth": { label: "平滑流式", description: "思考内容整段淡入，稳定成流。" },
   "reasoning-writing-typewriter": { label: "打字机", description: "思考内容逐字写出来。" },
   "reasoning-writing-chunked": { label: "分块", description: "思考内容按短语块逐步显示。" },
@@ -223,6 +241,18 @@ const presetOptionZh: PresetOptionTable = {
   "thinking-orb-s1": { label: "格点波", description: "3×3 格点从中心向外扩散的思考动效。" },
   "thinking-orb-b5": { label: "焦点传递", description: "多层圆点在焦平面间柔和交接。" },
   "thinking-orb-m2": { label: "扩张环", description: "八个圆点在收缩和扩张之间旋转变形。" },
+  "thinking-ink-drop": { label: "墨滴晕开", description: "一滴墨落在宣纸上慢慢晕开、变淡，再落下一滴。" },
+  "thinking-ink-stroke": { label: "一笔扫过", description: "毛笔从左到右写出一笔，停一停再淡去，像墨迹干了。" },
+  "thinking-ink-ripple": { label: "涟漪", description: "墨色细圈从中心一圈圈荡开，取山水画里的水面。" },
+  "thinking-ink-seal": { label: "落印", description: "一枚朱砂小印盖下去，带一点按压回弹。" },
+  "thinking-retro-watch": { label: "怀表", description: "表盘里一根指针一格一格走，顶上带表冠。" },
+  "thinking-retro-record": { label: "唱片", description: "带纹路的黑胶匀速旋转，中心标签和一道反光跟着转。" },
+  "thinking-retro-metronome": { label: "节拍器", description: "三角底座上的摆杆左右摆动，杆上带砝码。" },
+  "thinking-retro-telegraph": { label: "电报纸带", description: "纸带上依次打出「— · — ·」，打满后清空重来。" },
+  "thinking-tech-matrix": { label: "LED 点阵", description: "3×3 的 LED 方格逐格点亮，和头像的屏幕脸同一种语言。" },
+  "thinking-tech-signal": { label: "信号柱", description: "四根竖条高低起伏，像信号强度表。" },
+  "thinking-tech-scan": { label: "扫描线", description: "一小段光标沿着细基线来回扫过。" },
+  "thinking-tech-segments": { label: "分段读条", description: "四格依次填满再清空，和进度条是同一种语言。" },
   "summary-first": {
     label: "先摘要后详情",
     description: "在工具和代码详情之前显示一段安全可公开的推理摘要。这不是原始思维链。",
@@ -357,6 +387,19 @@ const presetOptionZh: PresetOptionTable = {
     label: "控制台日志",
     description: "使用运行和工具输出日志，而非产物内容。",
   },
+  // 运行状态：停靠在输入框上方，跟着对话走，不放在产物旁边。
+  "task-list": {
+    label: "任务列表",
+    description: "在输入框上方列出本次运行的每一步，带状态标记，可折叠。",
+  },
+  "exec-progress": {
+    label: "执行进度",
+    description: "在输入框上方用一条进度汇总这次运行走到了哪里。",
+  },
+  "workspace-files": {
+    label: "工作区文件",
+    description: "在右面板里索引本次运行读过、改过、校验过的文件。",
+  },
 
   // Render
   "renderer-auto": {
@@ -424,8 +467,8 @@ const presetOptionZh: PresetOptionTable = {
     description: "苹果感浅灰 + 深蓝",
   },
   "sand-workspace": {
-    label: "砂石工作台",
-    description: "温白 + 粘土橙",
+    label: "珊瑚工作台",
+    description: "白灰底 + 珊瑚红",
   },
   "apricot-agent": {
     label: "橙光助手",

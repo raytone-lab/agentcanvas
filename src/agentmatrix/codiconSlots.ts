@@ -34,6 +34,7 @@ export const codiconForSlot: Record<IconSlot, string> = {
   "session.rescheduling": "history",
   "session.terminated": "circle-slash",
   "session.deleted": "trash",
+  "session.item": "book",
 
   // ---- tool lifecycle ----------------------------------------------------
   "tool.pending_approval": "shield",

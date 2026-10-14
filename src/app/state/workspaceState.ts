@@ -68,11 +68,28 @@ export type WorkspaceState = {
   railCollapsed: boolean;
   /**
    * Whether the canvas's panel — the layer list, and the zoom readout under it
-   * — is open. Closed to start: the chrome over a canvas should be the controls
-   * you need to reach, and a list of what is on the canvas is something you ask
-   * for.
+   * — is open. Open to start: the panel is where the style cards live, and the
+   * cards are one of the two ways into this product — "pick a ready-made look"
+   * should be visible on arrival rather than behind a chevron. (It used to
+   * start closed, on the grounds that a list of what is on the canvas is
+   * something you ask for; the panel holds more than that list now.)
    */
   layersOpen: boolean;
+  /**
+   * Whether the canvas is being looked at as an interface rather than edited as
+   * a design.
+   *
+   * Distinct from `surfaceMode: "saved-preview"`, which is a *run* preview: it
+   * snapshots the project, builds an export snapshot, picks a scenario and
+   * plays a transcript through it, and it is gated behind the completeness
+   * dialog. This is the cheaper question the builder had no answer for — "what
+   * does what I have right now look like, without my furniture on top of it" —
+   * so it reads the live project, starts nothing, and gates on nothing.
+   *
+   * Session state: the chrome folds away, the canvas stops being inert, and
+   * neither of those is part of the agent being designed.
+   */
+  uiPreview: boolean;
   /**
    * The option the rail should scroll to and flash, set by the canvas
    * toolbar's Edit. Cleared once the rail has shown it, so re-selecting the
@@ -117,6 +134,8 @@ export type WorkspaceState = {
    * the panel group starts from, and dragging it does not write back either.
    */
   sidebarWidth: number | null;
+  /** The right column's dragged width; `null` is the style's default, the sidebar's. */
+  rightPanelWidth: number | null;
   selectedGroup: PresetGroupId;
   presetDrawerOpen: boolean;
   selectedFixtureId: PreviewFixtureId;
@@ -142,6 +161,22 @@ export type WorkspaceState = {
   sentPrompts: readonly string[];
   leftCollapsed: boolean;
   rightCollapsed: boolean;
+  /**
+   * The right column is mid-fold, in either direction.
+   *
+   * Transient, and it exists because that column cannot fold the way the left
+   * one does. The left is a fixed-width flex item, so `data-left-collapsed`
+   * slides it out on `margin-left` and the centre grows into the space for
+   * free. The right column is a `Panel` of a `react-resizable-panels` group
+   * whose width is an inline percentage, and closing it swapped the whole
+   * subtree for a solo stack — a remount, so there was nothing to transition
+   * and the centre snapped to full width in one frame.
+   *
+   * With this flag the panel stays mounted for `COLUMN_EXIT_MS` while CSS
+   * drives both tracks (right to 0%, centre to 100%), then the subtree swaps.
+   * Same two-phase idiom the left column's *delete* already uses.
+   */
+  rightCollapsing: boolean;
   autoHiddenRails: { left: boolean; right: boolean };
   piConversations: readonly EphemeralPiConversation[];
   activePiConversationId: string;
@@ -160,6 +195,7 @@ export type WorkspaceAction =
   | { type: "updateSavedProject"; mutator: (current: AgentFrontendProject) => AgentFrontendProject }
   | { type: "resetRun"; mode?: RunMode; prompt?: string }
   | { type: "enterWelcome" }
+  | { type: "leaveWelcome" }
   | { type: "fixtureSelected"; fixtureId: PreviewFixtureId }
   | { type: "optionPicked"; optionId: string }
   | { type: "iconSlotPicked"; slot: string }
@@ -175,6 +211,7 @@ export type WorkspaceAction =
   | { type: "mediaPreviewStarted"; events: AgentUXEvent[]; scenarioId: PreviewScenarioId; prompt: string }
   | { type: "replayCurrent"; fallback: AgentUXEvent[] }
   | { type: "presetGroupSelected"; groupId: PresetGroupId }
+  | { type: "uiPreviewToggled"; active: boolean }
   | { type: "savedPreviewEntered"; saved: AgentFrontendProject; snapshot: ScaffoldExportSnapshot; scenarioId: PreviewScenarioId; runMode: RunMode; live: boolean }
   | { type: "savedReplayStarted"; prompt: string; externalApproval: boolean }
   | { type: "liveTurnStarted"; prompt: string; messages: LiveLlmMessage[] }
@@ -205,15 +242,33 @@ export function createInitialWorkspaceState(locale: AppLocale): WorkspaceState {
     navSection: "structure",
     selectedLayerId: null,
     selectedSlotId: null,
+    /*
+     * 100, and it has to be.
+     *
+     * A previous pass set this to 110 to make the drawing bigger. It does — and
+     * the frame then renders larger than the surface, which collapses its
+     * `margin: auto` and pins it to the top left, so the canvas overflows and
+     * loses its bottom gap entirely. Measured: for 110% to still leave the
+     * 8px the floating cards leave, the surface would have to be under ~492px
+     * tall.
+     *
+     * The frame is already `min(100cqw, (100cqh - gutters) * ratio)` — as large
+     * as the free space allows inside its 16:10 cap — so "bigger and fully
+     * visible" is not available from zoom. What is available is the 16px the
+     * bottom padding was over-reserving, which `--canvas-pad-bottom` now gives
+     * back.
+     */
     canvasZoom: 100,
     canvasBackground: DEFAULT_CANVAS_BACKGROUND,
     railCollapsed: false,
-    layersOpen: false,
+    layersOpen: true,
+    uiPreview: false,
     pinnedOptionId: null,
     pickedOptionIds: [],
     pickedIconSlots: [],
     welcomeActive: false,
     sidebarWidth: null,
+    rightPanelWidth: null,
     // First group of the Structure destination, so opening 架构 shows 左栏
     // expanded rather than whichever group happened to be the old default.
     selectedGroup: "sidebar",
@@ -244,6 +299,7 @@ export function createInitialWorkspaceState(locale: AppLocale): WorkspaceState {
     selectedScenarioId: resolveDefaultPreviewScenario(defaultCodingAgentProject),
     sentPrompts: [],
     leftCollapsed: false,
+    rightCollapsing: false,
     /*
      * Folded on first entry. The right column is part of the structure — it is
      * there to be configured — but nothing has been put in it yet, and an empty
@@ -279,7 +335,13 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       }
       // Deduped and capped: re-sending the same text should move it to the top rather than add a
       // second identical row, and the sidebar is a preview surface, not a transcript store.
-      return { ...state, sentPrompts: [trimmed, ...state.sentPrompts.filter((entry) => entry !== trimmed)].slice(0, 12) };
+      return {
+        ...state,
+        // Typing into a new chat is how a reader leaves the welcome state; it
+        // is the one thing that screen is asking for.
+        welcomeActive: false,
+        sentPrompts: [trimmed, ...state.sentPrompts.filter((entry) => entry !== trimmed)].slice(0, 12),
+      };
     }
     case "updateSavedProject":
       return { ...state, savedProject: state.savedProject ? action.mutator(state.savedProject) : state.savedProject };
@@ -297,6 +359,17 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         ...(action.mode !== undefined ? { runMode: action.mode } : {}),
         ...(action.prompt !== undefined ? { previewPrompt: action.prompt } : {}),
       };
+    /*
+     * Back to the conversation, without starting a run.
+     *
+     * The sidebar's rows used to leave the welcome state by streaming a
+     * standard scenario, which the builder's canvas ignores — it shows the
+     * project's own reply, not a canned demo (see `usesCanvasTimeline`). So the
+     * click appeared to do nothing. Clearing the flag is the whole of it: the
+     * reply is already playing underneath.
+     */
+    case "leaveWelcome":
+      return state.welcomeActive ? { ...state, welcomeActive: false } : state;
     case "enterWelcome":
       return {
         ...state,
@@ -334,6 +407,18 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       const livesInRightColumn = groupId ? PRESET_GROUP_REGIONS[groupId] === "right-panel" : false;
       return {
         ...state,
+        /*
+         * And out of the welcome state, which is a canvas with no conversation
+         * in it — so a component picked while it is on would have nowhere to
+         * appear. A pick that changes nothing is the one thing this canvas must
+         * never do (same reasoning as the right column below).
+         *
+         * Editing the greeting does not come through here: that field
+         * re-enters the welcome state on focus (`previewWelcomeState`) and
+         * writes the project, not a pick. So the one case where the welcome
+         * state *is* the thing being configured keeps it.
+         */
+        welcomeActive: false,
         // Toggled, not appended: clicking the same option again un-picks it,
         // and the canvas has to follow that back down.
         pickedOptionIds: picking
@@ -362,6 +447,10 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         runEventSource: "replay",
         liveMessages: [],
         externalApprovalOverlayActive: action.externalApproval,
+        // One approval surface at a time: opening the permission card closes
+        // the inline question. Leaving it open put both above the composer,
+        // side by side in one grid row, and squeezed the column to half.
+        inlineApprovalOverlayActive: action.externalApproval ? false : state.inlineApprovalOverlayActive,
         dismissedApprovalId: null,
         gitPreviewStateOverride: undefined,
         forcePreviewToolsOpen: false,
@@ -378,6 +467,10 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         runEventSource: "replay",
         liveMessages: [],
         externalApprovalOverlayActive: action.externalApproval,
+        // One approval surface at a time: opening the permission card closes
+        // the inline question. Leaving it open put both above the composer,
+        // side by side in one grid row, and squeezed the column to half.
+        inlineApprovalOverlayActive: action.externalApproval ? false : state.inlineApprovalOverlayActive,
         dismissedApprovalId: null,
         gitPreviewStateOverride: undefined,
         forcePreviewToolsOpen: false,
@@ -489,10 +582,28 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         selectedGroup: action.groupId,
         surfaceMode: "builder",
         workspaceView: "preview",
+        // Opening a group is a request to edit, and the rail it opens in is
+        // folded away while the interface is being looked at.
+        uiPreview: false,
+      };
+    case "uiPreviewToggled":
+      return {
+        ...state,
+        uiPreview: action.active,
+        // Selection is an editor mark and it paints *on the canvas* — a ring
+        // round a module, a lit row in the layer list. Carrying it into a look
+        // at the interface would leave the design surface's annotations on the
+        // one view that is meant to be free of them. Not restored on the way
+        // out: a ring the reader has stopped thinking about is worse than one
+        // click to put it back.
+        ...(action.active ? { selectedLayerId: null, selectedSlotId: null } : {}),
       };
     case "savedPreviewEntered":
       return {
         ...state,
+        // The run preview is its own surface with its own chrome; the builder's
+        // folded-away state must not follow it in.
+        uiPreview: false,
         savedProject: action.saved,
         exportSnapshot: action.snapshot,
         selectedScenarioId: action.scenarioId,
@@ -512,6 +623,16 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
               dismissedApprovalId: null,
               forcePreviewToolsOpen: false,
               previewPrompt: "",
+              // Nothing the builder had open belongs to a session that has not
+              // produced anything yet.
+              outputPanelItems: [],
+              activeOutputPanelItemId: undefined,
+              // A live run has nothing to show until the reader sends something,
+              // so it opens on the product's own welcome screen — what the
+              // exported app opens on. Without it the empty transcript fell
+              // through to the replay placeholder, 未加载回放事件, under a run
+              // mode that said 实时 LLM.
+              welcomeActive: true,
             }
           : {}),
       };
@@ -526,6 +647,10 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         livePreviewState: "idle",
         gitPreviewStateOverride: undefined,
         externalApprovalOverlayActive: action.externalApproval,
+        // One approval surface at a time: opening the permission card closes
+        // the inline question. Leaving it open put both above the composer,
+        // side by side in one grid row, and squeezed the column to half.
+        inlineApprovalOverlayActive: action.externalApproval ? false : state.inlineApprovalOverlayActive,
         dismissedApprovalId: null,
         forcePreviewToolsOpen: false,
         writingReplayKey: state.writingReplayKey + 1,
@@ -617,7 +742,32 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         livePreviewState: "idle",
         gitPreviewStateOverride: undefined,
         ...(action.restoreEvents
-          ? { runEvents: [...action.restoreEvents], runEventSource: "pi" as const, liveMessages: [] }
+          ? {
+              runEvents: [...action.restoreEvents],
+              runEventSource: "pi" as const,
+              liveMessages: [],
+              // A Pi conversation with nothing in it yet is a new chat.
+              welcomeActive: action.restoreEvents.length === 0,
+            }
+          : {}),
+        /*
+         * Into live, the replay's transcript goes. It used to stay on screen
+         * under a control reading 实时 LLM — a canned conversation presented as
+         * the live one — and the first prompt sent was appended to it. Live
+         * starts where the exported app starts: an empty session, on the
+         * welcome screen.
+         */
+        ...(action.mode === "live"
+          ? {
+              activeStateCode: null,
+              runEvents: [],
+              runEventSource: "live" as const,
+              liveMessages: [],
+              previewPrompt: "",
+              welcomeActive: true,
+              outputPanelItems: [],
+              activeOutputPanelItemId: undefined,
+            }
           : {}),
       };
     case "gitOverrideCommitted":

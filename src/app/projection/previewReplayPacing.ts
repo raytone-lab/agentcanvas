@@ -1,6 +1,6 @@
 import type { AgentUXEvent } from "../../agentux";
 
-export function initialPreviewRevealCount(nextEvents: AgentUXEvent[]): number {
+export function initialPreviewRevealCount(nextEvents: readonly AgentUXEvent[]): number {
   const firstVisibleIndex = nextEvents.findIndex((event) => event.type !== "run.started");
   if (firstVisibleIndex < 0) {
     return Math.min(1, nextEvents.length);

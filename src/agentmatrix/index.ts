@@ -31,7 +31,8 @@ export {
 export { useAgentMatrixSession, type SessionControls } from "./useSession";
 export * from "./icons";
 export { ActiveRobotFace } from "./ActiveRobotFace";
-export { IconSetProvider, IconStyleProvider, StateIcon, useIconSet, useIconStyle } from "./IconSetContext";
+export { UPLOADED_AVATAR_ID, readAvatarFile } from "./defaultUserAvatars";
+export { IconSetProvider, IconStyleProvider, OptionIcon, StateIcon, useIconSet, useIconStyle } from "./IconSetContext";
 export { SCENARIOS, scenarioById, type Scenario, type ScenarioId } from "./fixtures";
 export { toAgentUXEvents, type LegacyEvent, type AdapterOptions } from "./legacyAdapter";
 export { stateDemoEvents } from "./stateDemo";

@@ -100,8 +100,18 @@
   color: var(--text-muted);
 }
 /* Keep long option lists inside the viewport. Eight compact rows are visible
-   before the menu scrolls, so controls below the trigger remain reachable. */
-.ui-select-menu-content {
+   before the menu scrolls, so controls below the trigger remain reachable.
+
+   Both class names, not just this one. The element carries
+   `ui-dropdown-menu ui-select-menu-content`, and `.ui-dropdown-menu`'s own
+   `min-width: 180px` has the same specificity as a single class here —
+   `select-menu.tsx` imports `select.css` *before* `dropdown-menu.css`, so that
+   180px won on source order alone and the line below did nothing for any
+   trigger wider than it. Measured: a 244px trigger opened a 180px menu, with
+   `--radix-dropdown-menu-trigger-width` correctly reporting 244px the whole
+   time. Qualifying with both classes states the intent — this dropdown, when
+   it is a select's menu — and stops the fix depending on import order. */
+.ui-dropdown-menu.ui-select-menu-content {
   width: max-content;
   min-width: var(--radix-dropdown-menu-trigger-width);
   max-width: calc(100vw - (var(--space-3) * 2));
@@ -129,4 +139,109 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ---- Motion -----------------------------------------------------------------
+   The menu used to appear and vanish in a frame. It opens from the trigger —
+   Radix gives the side and the transform origin — with a short drop and a
+   touch of overshoot, the rows arriving one after another; it closes faster
+   and without the bounce. Radix keeps the content mounted for the exit
+   animation on its own (`data-state="closed"`). The chevron turns with it. */
+.ui-dropdown-menu.ui-select-menu-content {
+  transform-origin: var(--radix-dropdown-menu-content-transform-origin);
+}
+
+.ui-dropdown-menu.ui-select-menu-content[data-state="open"] {
+  animation: ui-select-menu-in 240ms cubic-bezier(0.22, 1.18, 0.36, 1) both;
+}
+
+.ui-dropdown-menu.ui-select-menu-content[data-state="closed"] {
+  animation: ui-select-menu-out 130ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.ui-dropdown-menu.ui-select-menu-content[data-side="top"] {
+  --ui-select-menu-from: translateY(4px);
+}
+
+@keyframes ui-select-menu-in {
+  from {
+    opacity: 0;
+    transform: var(--ui-select-menu-from, translateY(-4px)) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ui-select-menu-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+.ui-select-menu-content[data-state="open"] .ui-dropdown-menu__item {
+  animation: ui-select-menu-row 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.ui-select-menu-content[data-state="open"] .ui-dropdown-menu__item:nth-child(2) { animation-delay: 20ms; }
+.ui-select-menu-content[data-state="open"] .ui-dropdown-menu__item:nth-child(3) { animation-delay: 40ms; }
+.ui-select-menu-content[data-state="open"] .ui-dropdown-menu__item:nth-child(4) { animation-delay: 60ms; }
+.ui-select-menu-content[data-state="open"] .ui-dropdown-menu__item:nth-child(5) { animation-delay: 80ms; }
+.ui-select-menu-content[data-state="open"] .ui-dropdown-menu__item:nth-child(n + 6) { animation-delay: 100ms; }
+
+@keyframes ui-select-menu-row {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ui-select-menu-content .ui-dropdown-menu__item {
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+/* The selected row's tick draws itself in when the menu opens. */
+.ui-select-menu-content[data-state="open"] .ui-dropdown-menu__indicator path {
+  stroke-dasharray: 16;
+  stroke-dashoffset: 16;
+  animation: ui-select-menu-tick 260ms 120ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@keyframes ui-select-menu-tick {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.ui-select-chevron {
+  transition: transform 280ms cubic-bezier(0.34, 1.4, 0.64, 1), color 140ms ease;
+}
+
+/* `translateY(-50%)` kept: it is what centres the chevron, and a bare rotate
+   would replace it and drop the chevron as it turned. */
+.ui-select-wrap:has(.ui-select-menu-trigger[data-state="open"]) .ui-select-chevron {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-dropdown-menu.ui-select-menu-content[data-state],
+  .ui-select-menu-content[data-state="open"] .ui-dropdown-menu__item,
+  .ui-select-menu-content[data-state="open"] .ui-dropdown-menu__indicator path {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+
+  .ui-select-chevron {
+    transition: none;
+  }
 }

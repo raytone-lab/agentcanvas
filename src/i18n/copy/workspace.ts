@@ -37,6 +37,44 @@ const en = {
     expandOutput: "Expand output",
     collapseOutput: "Collapse output",
     copyCode: "Copy code",
+    /*
+     * The three panel sections that sit beside the artifact. Each one has an
+     * empty line as well as a title, because every one of them can legitimately
+     * have nothing to show — a run that called no tools has no tasks and
+     * touched no files — and a section that renders as a bare heading reads as
+     * broken rather than as empty.
+     */
+    tasksTitle: "Tasks",
+    tasksEmpty: "This run has no steps to list yet.",
+    taskStatusLabels: {
+      done: "done",
+      running: "running",
+      pending: "pending",
+      failed: "failed",
+      cancelled: "cancelled",
+    },
+    progressTitle: "Progress",
+    /* Its own line rather than the task list's. The two sections sit one above
+       the other, and both borrowing one sentence printed it twice. */
+    progressEmpty: "Nothing to count yet.",
+    progressStepsSuffix: " steps",
+    /* The run dock above the composer folds its task list away; these name
+       the toggle for each direction. */
+    runDockLabel: "Run status",
+    tasksExpand: "Show steps",
+    tasksCollapse: "Hide steps",
+    progressStatusLabels: {
+      running: "running",
+      finished: "finished",
+      failed: "failed",
+    },
+    filesTitle: "Workspace files",
+    filesEmpty: "This run touched no files.",
+    fileActionLabels: {
+      read: "read",
+      modified: "modified",
+      checked: "checked",
+    },
   },
   gitFrame: {
     title: "Git",
@@ -139,6 +177,33 @@ const zh: typeof en = {
     expandOutput: "展开输出",
     collapseOutput: "收起输出",
     copyCode: "复制代码",
+    tasksTitle: "任务列表",
+    tasksEmpty: "本次运行还没有可列出的步骤。",
+    taskStatusLabels: {
+      done: "已完成",
+      running: "进行中",
+      pending: "待执行",
+      failed: "失败",
+      cancelled: "已取消",
+    },
+    progressTitle: "执行进度",
+    progressEmpty: "还没有可统计的步骤。",
+    progressStepsSuffix: " 步",
+    runDockLabel: "运行状态",
+    tasksExpand: "展开步骤",
+    tasksCollapse: "收起步骤",
+    progressStatusLabels: {
+      running: "运行中",
+      finished: "已完成",
+      failed: "有失败",
+    },
+    filesTitle: "工作区文件",
+    filesEmpty: "本次运行没有碰到文件。",
+    fileActionLabels: {
+      read: "读取",
+      modified: "修改",
+      checked: "校验",
+    },
   },
   gitFrame: {
     title: "Git",
@@ -242,6 +307,33 @@ const ja: typeof en = {
     expandOutput: "出力を広げる",
     collapseOutput: "出力を畳む",
     copyCode: "コードをコピー",
+    tasksTitle: "タスク",
+    tasksEmpty: "この実行にはまだ並べるステップがありません。",
+    taskStatusLabels: {
+      done: "完了",
+      running: "実行中",
+      pending: "待機中",
+      failed: "失敗",
+      cancelled: "キャンセル",
+    },
+    progressTitle: "進捗",
+    progressEmpty: "まだ数えるステップがありません。",
+    progressStepsSuffix: " ステップ",
+    runDockLabel: "実行状況",
+    tasksExpand: "ステップを表示",
+    tasksCollapse: "ステップを隠す",
+    progressStatusLabels: {
+      running: "実行中",
+      finished: "完了",
+      failed: "失敗あり",
+    },
+    filesTitle: "ワークスペースのファイル",
+    filesEmpty: "この実行はファイルに触れていません。",
+    fileActionLabels: {
+      read: "読み取り",
+      modified: "変更",
+      checked: "検証",
+    },
   },
   gitFrame: {
     title: "Git",

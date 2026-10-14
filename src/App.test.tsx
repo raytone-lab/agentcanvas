@@ -1,13 +1,21 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
 import { App, STYLE_AVATAR_DEFAULTS, selectedComponentItemsForProject } from "./App";
 import { ICON_OPTIONS, IconSetProvider } from "./agentmatrix";
-import { defaultCodingAgentProject, emptyStructureProject } from "./schema/agentuxConfig";
+import { defaultCodingAgentProject, emptyStructureProject, presetStyleIds } from "./schema/agentuxConfig";
 import { applyPresetOption, togglePresetOption } from "./schema/presetActions";
 import {
   FLOW_EXIT_GROUP_IDS,
+  DEFAULT_USER_AVATAR_IDS,
+  STYLE_AVATAR_OPTIONS,
+  selectablePresetStyleOptions,
+  styleAvatarOptionIds,
+  styleCardOptions,
+  styleCardThemeIds,
+  visibleStateCards,
+  visualStylePreset,
   RAIL_WITHHELD_GROUP_IDS,
   presetRailSections,
 } from "./app/projection/presetRailData";
@@ -48,9 +56,32 @@ describe("App shell controls", () => {
   it("keeps preview and export in the topbar, and nothing else", () => {
     const controls = topbarControls(renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>));
 
-    // Two controls: enter the preview surface, and export a project.
+    // Four controls: the style being worn, the two previews, and export.
+    //
+    // The interface-preview eye is back beside the play key. It was pulled for
+    // being a second control called "preview" — that was a naming problem, and
+    // the answers were never the same one: the eye folds the editor's furniture
+    // away and leaves the live project on screen, gating on nothing, while the
+    // play key snapshots the project and runs a transcript through it. So both
+    // are drawn, under labels that say which is which.
+    expect(controls).toContain("topbar-ui-preview-button");
     expect(controls).toContain("topbar-preview-button");
     expect(controls).toContain("Export");
+    // A bare "预览" on either of them is what made them one question, so
+    // neither label is allowed to be it any more. (zh: nothing wraps `App`
+    // here, and the locale context defaults to it.)
+    expect(controls).toContain('aria-label="界面预览"');
+    expect(controls).toContain('aria-label="运行预览"');
+    expect(controls).not.toContain('aria-label="预览"');
+    /*
+     * The panel is open on first paint now — it holds the style cards, and
+     * "pick a ready-made look" is one of the two ways into this product, so it
+     * should not open behind a chevron. Open, the chip is not drawn at all:
+     * the cards in the panel are the same list, and drawing both put the list
+     * on screen twice.
+     */
+    expect(controls).not.toContain("style-chip");
+    expect(createInitialWorkspaceState("zh").layersOpen).toBe(true);
     // The component count moved to File → Layers, which lists the same
     // components by the column they sit in.
     expect(controls).not.toContain("已选组件");
@@ -62,13 +93,60 @@ describe("App shell controls", () => {
     // The debug-view toggle is hidden for now.
     expect(controls).not.toContain("mode-toggle-button");
     // Still no preview *run* controls up here — run status, scenario picker and
-    // replay belong to the preview surface, not the editor chrome. (The two
-    // assertions that used to sit here, against `aria-label="预览"` and
-    // `topbar-preview-button`, were written when there was no preview control
-    // at all; they now contradict the one above.)
+    // replay belong to the preview surface, not the editor chrome. Entering a
+    // preview is a topbar control; driving one is not.
     expect(controls).not.toContain('run-status-line');
     expect(controls).not.toContain("<select");
     expect(controls).not.toContain("Run replay");
+  });
+
+  it("gives the interface preview a way in, and folds the furniture the way in promises", () => {
+    const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+
+    // The mode's plumbing was all here except the door: the reducer action, the
+    // Esc handler, the exit pill and the CSS below were wired while nothing
+    // dispatched `active: true`, so the mode was unreachable from the product.
+    expect(topbarControls(markup)).toContain("topbar-ui-preview-button");
+    expect(readFileSync(new URL("./App.tsx", import.meta.url), "utf8")).toContain(
+      'dispatch({ type: "uiPreviewToggled", active: !state.uiPreview })',
+    );
+
+    /*
+     * What the eye promises, held to the four pieces of chrome it hides.
+     *
+     * Asserted against the CSS because that is where the folding lives — the
+     * attribute on `.workspace-layout` is the whole mechanism, so renaming any
+     * one of these cards would leave the button on screen doing three quarters
+     * of nothing, with no test to say so.
+     */
+    const foldRule = cssRule(styles, '.workspace-layout[data-ui-preview="true"] :is(.preset-nav, .topbar, .style-bar, .region-labels)');
+    expect(foldRule).toContain("opacity: 0;");
+    // Not just faded: `visibility` is what takes the folded cards out of the
+    // tab order, which `pointer-events` alone would not do.
+    expect(foldRule).toContain("visibility: hidden;");
+    expect(foldRule).toContain("pointer-events: none;");
+    // The opacity leg wherever it sits in the shorthand, rather than the
+    // literal "transition: opacity". `.preset-nav` transitions `width` as well
+    // now — it folds to its icon column instead of away — and that leg is
+    // written first, so the old substring asserted declaration order and not
+    // the fade it was named for.
+    for (const selector of [".preset-nav", ".topbar"]) {
+      expect(cssRule(styles, selector), `${selector} should fade rather than snap`).toContain(
+        "opacity var(--motion-base)",
+      );
+    }
+    // The room the folded cards were holding comes back to the canvas, evenly:
+    // the asymmetric gutter existed only to clear the rail and the panel.
+    const padRule = cssRule(styles, '.workspace-layout[data-ui-preview="true"]');
+    for (const declaration of ["--canvas-pad-top: 24px;", "--canvas-pad-left: 24px;", "--canvas-pad-right: 24px;"]) {
+      expect(padRule).toContain(declaration);
+    }
+    // And the canvas loses its editing marks, which are pure CSS on the frame
+    // and so knew nothing about the mode until these two tokens were emptied.
+    const frameRule = cssRule(styles, '.workspace-layout[data-ui-preview="true"] .preview-frame');
+    expect(frameRule).toContain("--select-line: transparent;");
+    expect(frameRule).toContain("--select-fill: transparent;");
   });
 
   it("floats the chrome over a canvas that fills the window", () => {
@@ -88,8 +166,14 @@ describe("App shell controls", () => {
     // draws still centres in the part of it nothing is covering. The exported
     // shell shares the rule and has no chrome, hence the fallbacks.
     const surfaceRule = cssRule(styles, ".builder-surface,\n.exported-shell");
-    expect(surfaceRule).toContain("padding: var(--canvas-pad-top, 24px) var(--canvas-pad-right, 24px) 24px");
-    expect(surfaceRule).toContain("var(--canvas-pad-left, 24px);");
+    // All four sides come from a variable now. The bottom used to be a literal
+    // 24px, which was both larger than the gap the cards leave and not the same
+    // measurement — the rail and the canvas panel stop at
+    // `bottom: var(--fn-float-gap)`, so the canvas stops there too and the
+    // three line up along the bottom edge.
+    expect(surfaceRule).toContain("padding: var(--canvas-pad-top, 24px) var(--canvas-pad-right, 24px)");
+    expect(surfaceRule).toContain("var(--canvas-pad-bottom, 24px) var(--canvas-pad-left, 24px);");
+    expect(cssRule(styles, ".workspace-layout")).toContain("--canvas-pad-bottom: var(--fn-float-gap);");
     expect(cssRule(styles, ".workspace-layout")).toContain(
       "--canvas-pad-left: calc(var(--fn-float-gap) * 2 + var(--rail-col));",
     );
@@ -120,34 +204,79 @@ describe("App shell controls", () => {
     expect(canvasBackgroundColor(createInitialWorkspaceState("zh").canvasBackground)).toBe("#DDE1E9");
   });
 
-  it("folds the rail away to its wordmark row", () => {
+  it("folds the rail to its icon column rather than away", () => {
     const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
 
-    // Folded, the card stops at the row — `bottom: auto` is what lets it, since
-    // the card is pinned top and bottom when open — and the columns under it are
-    // gone rather than squeezed.
+    /*
+     * Folding is for giving the canvas width, not for giving up navigation.
+     *
+     * It used to fold to the wordmark row alone — `bottom: auto` plus a
+     * content width — which took the five destinations (图层 / 架构 / 组件 /
+     * 大模型 / Git) away with the panel, leaving no way to change destination
+     * without unfolding first. The card now narrows to exactly the icon
+     * column's own track and keeps its full height.
+     */
     const folded = cssRule(styles, '.workspace-layout[data-rail-collapsed="true"] .preset-nav');
-    expect(folded).toContain("bottom: auto;");
-    // Content-sized rather than a fixed width: the row carries the project's
-    // name, so its width is not knowable in advance.
-    expect(folded).toContain("width: max-content;");
-    expect(folded).toContain("max-width: var(--rail-col);");
-    expect(
-      cssRule(styles, '.workspace-layout[data-rail-collapsed="true"] .preset-columns'),
-    ).toContain("display: none;");
-    // And the canvas takes back the room that was being held for it, which is
-    // the point of folding it.
-    expect(cssRule(styles, '.workspace-layout[data-rail-collapsed="true"]')).toContain(
-      "--canvas-pad-left: 24px;",
+    expect(folded).toContain("width: var(--iconbar-col);");
+    // Full height: the base rule pins the card top and bottom, and the folded
+    // rule must not take that back.
+    expect(folded, "the folded card keeps its full height").not.toContain("bottom:");
+
+    // The two tracks survive folding. This is the regression guard: the icon
+    // column disappears the moment either track is removed or the columns grid
+    // is hidden, and the width animation would hide the breakage.
+    expect(cssRule(styles, ".preset-columns")).toContain(
+      "grid-template-columns: var(--iconbar-col) minmax(0, 1fr);",
     );
+    expect(
+      styles,
+      "nothing may hide the icon column when the rail is folded",
+    ).not.toContain('[data-rail-collapsed="true"] .preset-iconbar');
+
+    // Only the panel goes, and by fading — `display: none` cannot be
+    // transitioned, which is why the fold used to happen in a single frame.
+    const foldedPanel = cssRule(styles, '.workspace-layout[data-rail-collapsed="true"] .preset-panel');
+    expect(foldedPanel).toContain("opacity: 0;");
+    expect(foldedPanel).toContain("pointer-events: none;");
+
+    // Two curves, one per direction: the card eases back into the open width
+    // and plainly into the folded one. A panel springing past its folded width
+    // has nothing to its left to spring into.
+    expect(cssRule(styles, ".preset-nav")).toContain("width var(--motion-rail-out) var(--ease-back)");
+    expect(folded).toContain("width var(--motion-rail-in) var(--ease-out)");
+
+    // The canvas takes back the panel's width and no more — the rail is still
+    // beside it. Same shape as the open value with `--iconbar-col` for
+    // `--rail-col`: 72px against 288px, where it used to be a flat 24px.
+    expect(cssRule(styles, '.workspace-layout[data-rail-collapsed="true"]')).toContain(
+      "--canvas-pad-left: calc(var(--fn-float-gap) * 2 + var(--iconbar-col));",
+    );
+
+    // Folded, the mark's row is a column of two — the mark, then the control
+    // that unfolds it. The control stays visible: it is the only way back to
+    // the panel, so a hover-only affordance would leave touch and keyboard
+    // users with a rail that folds and does not unfold.
+    expect(cssRule(styles, '.workspace-layout[data-rail-collapsed="true"] .shell-brand')).toContain(
+      "flex-direction: column;",
+    );
+    expect(
+      cssRule(styles, '.workspace-layout[data-rail-collapsed="true"] .shell-brand-title'),
+    ).toContain("display: none;");
+    expect(
+      styles,
+      "the unfold control stays reachable while folded",
+    ).not.toContain('[data-rail-collapsed="true"] .rail-collapse');
 
     // The chrome is white paper on the canvas, and the rail's rows tint towards
     // the ink because a lift towards white would be invisible on it.
     expect(cssRule(styles, ".app-shell")).toContain("--fn-bg: #ffffff;");
     expect(cssRule(styles, ".preset-option-cell:hover")).toContain("background: var(--fn-row-wash);");
+    // Selected is its own state now, not a copy of hover: the editor's
+    // selection accent on the card's edge, so a column of cards reads at a
+    // glance.
     expect(
       cssRule(styles, '.preset-option-cell:has(.preset-option[data-active="true"])'),
-    ).toContain("background: var(--fn-row-wash);");
+    ).toContain("border-color: var(--select-line);");
   });
 
   it("keeps saved-preview pickers icon-free and matched to the zoom readout", () => {
@@ -161,11 +290,11 @@ describe("App shell controls", () => {
     // Every control in the topbar reads as the same control. These were 40px
     // tall with a visible border while the zoom readout beside them was 32px on
     // a plain inset fill, so the bar had two kinds of button in it.
-    const zoomRule = cssRule(styles, ".zoom-trigger");
     for (const declaration of ["height: 32px;", "border-radius: 8px;", "background: var(--surface-inset);"]) {
       expect(topbarControlRule, declaration).toContain(declaration);
-      expect(zoomRule, declaration).toContain(declaration.replace("border-radius: 8px;", "border-radius: 8px;"));
     }
+    // The zoom is a floating card of its own now, the same 32px tall.
+    expect(cssRule(styles, ".zoom-control")).toContain("height: 32px;");
     expect(topbarControlRule).toContain("border: 1px solid transparent;");
     expect(hoverRule).toContain("background: color-mix(in srgb, var(--text-primary) 8%, transparent);");
   });
@@ -268,10 +397,13 @@ describe("App shell controls", () => {
     expect(markup.indexOf('class="preview-stack')).toBeLessThan(
       markup.indexOf('data-side="right"'),
     );
-    // The side columns' presence toggles, which create columns without
-    // mounting anything, plus the composer — an agent frontend without a way to
-    // type is not one, so it is there from the start in its plainest form.
-    // `chat` stays off: a conversation is content, and content is picked.
+    // The side columns' presence toggles, which create columns without mounting
+    // anything, plus the composer.
+    //
+    // `chat` is off: a conversation is content, and content is the reader's to
+    // pick. It was briefly on, which broke once the configurator opened on 空白 —
+    // the replay streams one fixed full turn whatever is picked, so an enabled
+    // conversation put the whole exchange on a deliberately empty canvas.
     expect(emptyStructureProject.layout.slots.filter((slot) => slot.enabled).map((slot) => slot.id))
       .toEqual(["sessions", "composer", "output"]);
 
@@ -286,6 +418,8 @@ describe("App shell controls", () => {
       newButton: false,
       search: false,
       sessionList: false,
+      // New: a mark in front of each row, which only 游戏风 opens with.
+      rowIcon: false,
       grouping: false,
       footer: false,
     });
@@ -342,27 +476,45 @@ describe("App shell controls", () => {
     expect(emptied.layout.regions).toContain("main");
   });
 
-  it("opens the rail on Structure, with the layer list on the canvas's side", () => {
+  it("opens the rail on Structure, with the layer list a destination beside it", () => {
     const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
 
-    // File was the first destination and it showed the layer list. The list
-    // moved to the canvas's own panel — it answers "what is on the canvas",
-    // which is the canvas's question, not the rail's — so the rail opens on the
-    // first thing it can actually answer.
+    // 图层 is the first destination and Structure is the one that opens: the
+    // list is an inventory of what is on the canvas, so on an empty project it
+    // has the least to say.
     expect(markup).toContain('data-nav-section="structure" data-active="true"');
     expect(markup).not.toContain('data-nav-section="file"');
-    // Five destinations, not the thirteen preset groups that used to be here:
-    // Structure, Theme, Components, Model, Git. Structure and Components were
-    // two sections of one list; each is a destination now.
+    // Still five destinations, and Theme is not one of them: 图层, Structure,
+    // Components, Model, Git. The palettes went to the canvas's panel, next to
+    // the style they recolour.
     expect(markup.match(/class="nav-section-tile"/g)?.length).toBe(5);
-    for (const section of ["structure", "git"]) {
+    for (const section of ["layers", "structure", "git"]) {
       expect(markup).toContain(`data-nav-section="${section}"`);
     }
-    // And the list is not in the rail's panel any more.
-    expect(markup).not.toContain('class="preset-panel" data-nav-section="file"');
-    // The style picker moved into Theme; it is no longer always on screen (it
-    // was clipped there — 550px of cards in a 304px column).
-    expect(markup).not.toContain("选择风格");
+    expect(markup).not.toContain('data-nav-section="theme"');
+    // The style picker is in the canvas's panel, not the rail.
+    //
+    // It has had three homes: inside the rail's Theme destination, where
+    // picking a whole style sat three clicks inside "assemble one part at a
+    // time"; a floating card centred over the canvas, which put the product's
+    // second entry path on top of its output; and now the card at the top
+    // right, opposite the rail, with the palettes under it.
+    expect(markup).not.toContain('class="style-bar"');
+    // The panel is open on first paint and the cards are in it, so *it* is the
+    // picker's home now; the chip is the same list collapsed, for when the
+    // panel is closed.
+    expect(markup).toContain('class="topbar-panel"');
+    expect(markup).toContain('class="style-cards"');
+    const railStart = markup.indexOf('class="preset-nav"');
+    const panelStart = markup.indexOf('class="topbar-panel"');
+    expect(railStart).toBeGreaterThan(-1);
+    expect(panelStart).toBeGreaterThan(-1);
+    expect(panelStart).toBeLessThan(railStart);
+    // Hidden styles stay in the schema but out of the picker. Closed, the chip
+    // names one style and the rest are behind it, so this holds over the menu's
+    // markup once it is open — the list both shapes render is the same one.
+    expect(markup).not.toContain('data-style="workbuddy"');
+    expect(markup).not.toContain('data-style="illustrated"');
   });
 
   it("opens named, with the name editable and shown on the canvas", () => {
@@ -412,28 +564,742 @@ describe("App shell controls", () => {
     }
   });
 
+  it("keeps the conversation list rendering when Pi has nothing to list", () => {
+    const app = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+    const sidebar = readFileSync(
+      new URL("./components/agent-preview/SessionSidebar.tsx", import.meta.url),
+      "utf8",
+    );
+
+    /*
+     * 内容模块 and Row marks had no visible effect, and the reason was two
+     * steps away from either of them.
+     *
+     * `SessionSidebar` draws nothing for an empty list — `hasSessions` is
+     * `sessionList && sessions.length > 0` — and the list's data source used
+     * to switch on `runMode === "pi"` alone. Pi mode is entered by clicking
+     * 新建对话 or a conversation row, and a fresh conversation has no events
+     * yet, so it is filtered out of `piSessionItems`. One click put the canvas
+     * in a mode whose list was empty, and from then on the project said "show
+     * the list" while the canvas had no list to show. Row marks went with it:
+     * the marks are drawn per row, so no rows means no marks.
+     *
+     * The canvas is a design surface before it is a runtime one. A module the
+     * reader has switched on has to render.
+     */
+    expect(sidebar).toContain("const hasSessions = sessionList && sessions.length > 0;");
+    expect(app).toContain("const hasPiSessions = state.runMode === \"pi\" && piSessionItems.length > 0;");
+    for (const prop of [
+      "activeSessionPrompt: hasPiSessions ?",
+      "sessionPrompts: hasPiSessions ?",
+      "activeSessionId: hasPiSessions ?",
+      "sessionItems: hasPiSessions ?",
+    ]) {
+      expect(app, `${prop} must gate on listability, not on the run mode`).toContain(prop);
+    }
+
+    /*
+     * And the click routes on whether the row *is* a Pi conversation. While Pi
+     * has nothing to list the rows are demo rows, and handing one of their ids
+     * to `selectPiConversation` would select a conversation that does not
+     * exist — a row that looks live and does nothing, which is the failure
+     * this file already carries a note about further down.
+     */
+    expect(app).toContain("if (piSessionItems.some((item) => item.id === id)) {");
+  });
+
   it("keeps the closed card to the controls that cannot wait", () => {
     const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
     const controls = topbarControls(markup);
 
-    // Closed: the panel toggle, preview, export. Export is the last thing in
-    // the row, and the toggle the first.
+    // The row's order, open or closed: the panel toggle first, export last,
+    // and the two previews adjacent between them — cheap look before expensive
+    // run, which is also the order a reader reaches for them in.
     expect(controls).toContain("topbar-panel-toggle");
-    expect(controls.indexOf("topbar-panel-toggle")).toBeLessThan(controls.indexOf("topbar-preview-button"));
+    expect(controls.indexOf("topbar-panel-toggle")).toBeLessThan(controls.indexOf("topbar-ui-preview-button"));
+    expect(controls.indexOf("topbar-ui-preview-button")).toBeLessThan(controls.indexOf("topbar-preview-button"));
     expect(controls.indexOf("topbar-preview-button")).toBeLessThan(controls.indexOf("topbar-deploy-button"));
 
-    // The zoom readout is in the panel, under the layer list — so with the card
-    // closed it is not drawn at all. Every step still has a shortcut.
-    expect(markup).not.toContain('class="zoom-trigger"');
-    expect(markup).not.toContain('class="topbar-panel"');
-    expect(createInitialWorkspaceState("zh").layersOpen).toBe(false);
+    /*
+     * What the *closed* card owes, asserted at the source rather than by
+     * rendering it: the panel opens on first paint now, and `App` takes no
+     * props to override that — a prop that exists only so a test can close the
+     * card would be API invented for the test.
+     *
+     * Two contracts, both one line in `Topbar`: the chip is drawn only while
+     * the panel is closed (open, the cards in the panel are the same list, and
+     * drawing both put it on screen twice).
+     */
+    const topbarSource = readFileSync(new URL("./app/view/Topbar.tsx", import.meta.url), "utf8");
+    expect(topbarSource).toContain("{panelOpen ? null : styleChip}");
+    // The zoom left the panel for the canvas's top right, so folding the
+    // panel no longer takes it off screen.
+    expect(topbarSource).not.toContain("<ZoomControl");
+
+    /*
+     * And the panel is mounted in both states, hidden by CSS.
+     *
+     * It used to be `{panelOpen ? (…) : null}`, which is why the card snapped:
+     * there is no transition to run on an element that stops existing. The
+     * fold runs on `grid-template-rows` and `visibility` now, and both need
+     * the row present while it is closed — so the conditional mount is the
+     * thing this asserts the absence of.
+     */
+    expect(
+      topbarSource,
+      "the panel must stay mounted or the fold cannot animate",
+    ).not.toContain("{panelOpen ? (");
+    expect(topbarSource).toContain('aria-hidden={panelOpen ? undefined : true}');
+
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+    // Closed it is hidden rather than absent, and `visibility` — not opacity
+    // alone — is what keeps its cards and zoom control out of the tab order.
+    expect(cssRule(styles, ".topbar-panel")).toContain("visibility: hidden;");
+    expect(cssRule(styles, '.topbar[data-open="true"] .topbar-panel')).toContain(
+      "visibility: visible;",
+    );
+    // Two curves, one per direction, matching the rail across the canvas: the
+    // card eases back on the way open and plainly on the way closed.
+    expect(cssRule(styles, '.topbar[data-open="true"]')).toContain(
+      "grid-template-rows var(--motion-rail-out) var(--ease-back)",
+    );
+    expect(cssRule(styles, ".topbar")).toContain(
+      "grid-template-rows var(--motion-rail-in) var(--ease-out)",
+    );
+  });
+
+  it("lifts the picked colourway instead of ringing it", () => {
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+
+    /*
+     * The ring came out with a slice missing, and the reason was two rules
+     * apart.
+     *
+     * `outline: 2px` at `outline-offset: 1px` reaches 3px outside the pill,
+     * and the pill lives inside `.style-card-body-inner`, whose
+     * `overflow: hidden` is what lets the card fold — at `padding: 2px` it
+     * clipped the last pixel. Measured in the browser: 2px of room for a 3px
+     * ring.
+     */
+    const inner = cssRule(styles, ".style-card-body-inner");
+    expect(inner).toContain("overflow: hidden;");
+    expect(inner, "the clip must leave room for whatever the pick draws").toContain(
+      "padding: 4px 4px 0;",
+    );
+
+    /*
+     * And the pick is a lift now, not an outline — no `outline` at all, so
+     * there is nothing whose offset can be clipped again.
+     */
+    const picked = cssRule(styles, ".style-card-swatch[data-active]");
+    expect(picked, "the pick must not go back to an outline").not.toContain("outline:");
+    expect(picked).toContain("background: var(--fn-bg);");
+    expect(picked).toContain("box-shadow:");
+
+    /*
+     * The unselected chips carry a faint well, and that is load-bearing: the
+     * card is `#ffffff`, so a white selected chip is invisible as a *fill*
+     * and the whole selection would rest on its 1px hairline — the outline
+     * idiom again, one rule further down. Measured: card background
+     * `rgb(255,255,255)`, chip background the same, before this.
+     */
+    expect(
+      cssRule(styles, ".style-card-swatch"),
+      "without a well, the lifted chip has nothing to be lifted out of",
+    ).toContain("background: color-mix(in srgb, var(--text-primary) 3%, transparent);");
+  });
+
+  it("draws the layer tree as an axis, solid above the picked row", () => {
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+
+    const panel = readFileSync(new URL("./app/view/LayersPanel.tsx", import.meta.url), "utf8");
+
+    /*
+     * ─── The length comes from the component ───
+     *
+     * The solid stretch runs from a column's mark to the picked row and has to
+     * *grow* between picks. A per-row `border-style` flip — which is what this
+     * was first — cannot animate, and CSS has no expression for "the distance
+     * to my selected sibling". So the index crosses the boundary and every
+     * length is derived from it here.
+     *
+     * `data-axis` is separate from the index because 0 is a real answer: the
+     * first row picked. Without it an unset axis and a pick on row 0 would be
+     * the same declaration.
+     */
+    expect(panel).toContain('"--axis-index"');
+    expect(panel).toContain('data-axis={');
+    expect(cssRule(styles, '.layers-children[data-axis="on"]::after')).toContain(
+      "height: calc(var(--axis-index) * var(--axis-pitch) + var(--axis-row) / 2);",
+    );
+    // Half a row on the end is what lands the line on the bead's centre rather
+    // than at the top of its row. Verified in a browser: height 101px against
+    // a bead centre measured at 101px from the list's top.
+    expect(cssRule(styles, ".layers-children::after")).toContain("height: 0;");
+
+    /*
+     * ─── One curve for the line's end and the cursor ───
+     *
+     * Both are linear functions of the same `--axis-index`, so sharing the
+     * curve *and* the duration is what keeps them together through the
+     * overshoot — the whole point of the spring. Give the line
+     * `--motion-slow` and the cursor `--axis-slide` and the tip arrives while
+     * the bead is still springing, which reads as the line being broken.
+     */
+    expect(cssRule(styles, ".layers-children::after")).toContain(
+      "transition: height var(--axis-slide) var(--axis-spring);",
+    );
+    expect(cssRule(styles, ".layers-panel .layers-list")).toContain("--axis-slide: 340ms;");
+    expect(cssRule(styles, ".layers-panel .layers-list")).toContain("--axis-spring: cubic-bezier(");
+
+    /*
+     * ─── The rows are pinned, or the line misses ───
+     *
+     * `--axis-pitch` has to be exact: a content-sized row is a different
+     * height per font and per locale, and the error compounds down the list.
+     */
+    /*
+     * ─── A column and its rows are one block ───
+     *
+     * `--axis-gap` is the 1px between rows and `--axis-pitch` is built from
+     * it, so the air between *blocks* is a separate token: at 1px the last row
+     * of 左栏 sat against the 中栏 heading with nothing to say they were
+     * different things, and each axis's dotted tail had nowhere to end.
+     *
+     * Applied on `.layers-panel`'s rule only. The unscoped `.layers-list`
+     * keeps its 1px for the Structure and Components group lists, whose rows
+     * are a flat run rather than blocks — and whose `list-style: none` lives
+     * there too (see that rule's note).
+     */
+    expect(cssRule(styles, ".layers-panel .layers-list")).toContain("--axis-block-gap: 12px;");
+    expect(cssRule(styles, ".layers-panel .layers-list")).toContain("gap: var(--axis-block-gap);");
+    expect(cssRule(styles, ".layers-list"), "the shared list keeps its tight gap").toContain(
+      "gap: 1px;",
+    );
+    expect(cssRule(styles, ".layers-panel .layers-list")).toContain("--axis-row: 28px;");
+    expect(cssRule(styles, ".layers-panel .layers-list")).toContain(
+      "--axis-pitch: calc(var(--axis-row) + var(--axis-gap));",
+    );
+    // Asserted against the stylesheet rather than through `cssRule`: both
+    // levels are pinned by one declaration on a two-selector rule, and
+    // `cssRule` keys on "<selector> {".
+    expect(styles).toContain(
+      ".layers-panel .layers-list > li > .layers-row,\n.layers-row--child {\n  height: var(--axis-row);",
+    );
+
+    /*
+     * ─── The elbow ───
+     *
+     * Two borders and one corner radius: the stroke leaves the column's mark
+     * horizontally, rounds, and arrives vertical on the line. It reaches up out
+     * of the first row by half a row plus the gap, which is where the mark
+     * above it sits — both measured from `--axis-row`, so they cannot drift.
+     */
+    const elbow = cssRule(styles, ".layers-children > li:first-child::before");
+    expect(elbow).toContain("border-top-right-radius: var(--axis-r);");
+    // Half a row up, less half a pixel: that centres the 1px arm *on* the
+    // column row's middle instead of hanging it below the middle.
+    expect(elbow).toContain(
+      "top: calc(-1 * (var(--axis-row) / 2 + var(--axis-gap)) - 0.5px);",
+    );
+    // Its width is asserted further down, with the rest of the column's
+    // pixel arithmetic — the `border-right`-lands-inside-the-box problem.
+    // Dashed until the column holds the pick, like the line it feeds.
+    expect(elbow).toContain("border-top: 1px dashed var(--axis-line-faint);");
+    expect(
+      cssRule(styles, '.layers-children[data-axis="on"] > li:first-child::before'),
+    ).toContain("border-top: 1px solid var(--axis-line);");
+
+    /*
+     * ─── A column sits to the left of the rows it contains ───
+     *
+     * Two things fought over this. The elbow's arm runs at the row's middle,
+     * so a label too far left got its first glyph crossed — seen in a
+     * screenshot, not reasoned about. Pushing the label right past the line
+     * fixed that and lost the hierarchy: both levels landed on 58px and a
+     * parent read like its own children.
+     *
+     * Settled by moving the collision out of the type and into the geometry:
+     * the label sits at `--axis-x`, 14px left of the rows, and the elbow's
+     * radius is what keeps the stroke off it. The label may share the line's
+     * column because the line starts *below* this row.
+     *
+     * `--axis-pad` is scoped to the list rather than set on `.layers-row`,
+     * which the Components destination's group rows share and which keeps its
+     * own 22px.
+     */
+    const columnRow = cssRule(styles, ".layers-panel .layers-list > li > .layers-row");
+    expect(columnRow, "a column must sit left of its rows").toContain(
+      "padding-left: var(--axis-pad);",
+    );
+    expect(columnRow).toContain("gap: calc(var(--axis-x) + 14px - var(--axis-pad) - 14px);");
+    expect(cssRule(styles, ".layers-panel .layers-list")).toContain("--axis-pad: 22px;");
+    expect(cssRule(styles, ".layers-panel .layers-list")).toContain(
+      "--axis-stem: calc(var(--axis-pad) + 7px);",
+    );
+    /*
+     * The radius is load-bearing, not decoration: it is what gets the stroke
+     * below the label's glyphs before it reaches them. For the arc on a box
+     * ending at `--axis-x` + 1, the height at the label's own start is
+     * `rowMid − 0.5 + r − √(2r − 1)` — so r is the only dial, and CSS clamps
+     * it to the box, which is why `--axis-pad` is 4px: a mark further left
+     * makes the elbow wider and raises the cap.
+     *
+     *     r =  8  →  rowMid + 3.6
+     *     r = 10  →  rowMid + 5.1   ← grazed a 12px glyph (ink ≈ ±6)
+     *     r = 15  →  rowMid + 9.1   ← measured 8px of clearance
+     */
+    expect(cssRule(styles, ".layers-panel .layers-list")).toContain("--axis-r: 13px;");
+
+    /*
+     * ─── Paint order ───
+     *
+     * The lines are pseudo-elements on the list and the beads are
+     * pseudo-elements on the rows inside it — and a list's `::after` paints
+     * *after* every one of its real children. So the solid line was drawn
+     * over the beads and over the cursor: the beads read as sitting behind
+     * the axis and the cursor had a stroke through it. Reported from a
+     * screenshot, which is the only place a paint-order bug shows up.
+     */
+    expect(cssRule(styles, ".layers-panel .layers-list")).toContain("--axis-z-line: 0;");
+    expect(cssRule(styles, ".layers-panel .layers-list")).toContain("--axis-z-bead: 1;");
+    expect(cssRule(styles, ".layers-panel .layers-list")).toContain("--axis-z-cursor: 2;");
+    for (const [selector, token] of [
+      [".layers-children::before", "--axis-z-line"],
+      [".layers-children::after", "--axis-z-line"],
+      [".layers-children > li:first-child::before", "--axis-z-line"],
+      [".layers-children > li:first-child::after", "--axis-z-cursor"],
+      [".layers-row--child::before", "--axis-z-bead"],
+    ] as const) {
+      expect(cssRule(styles, selector), `${selector} must declare its layer`).toContain(
+        `z-index: var(${token});`,
+      );
+    }
+
+    // The dotted line is the full length, always; the solid one is over it.
+    // Its colour is asserted with the rest of the axis's tokens below.
+    expect(cssRule(styles, ".layers-children::before")).toContain("left: var(--axis-x);");
+    expect(cssRule(styles, ".layers-children::after")).toContain("left: var(--axis-x);");
+
+    // Beads replace both levels' icons rather than sitting beside them.
+    expect(cssRule(styles, ".layers-row--child .layers-row-icon")).toContain("display: none;");
+    /*
+     * The mark replaces the glyph **only on a column that has children**.
+     *
+     * It is the start of the elbow — it exists so the axis has something to
+     * descend from. On an untouched project there are no children and so no
+     * axis, and an unscoped rule left an orphaned tick sitting in the 22px
+     * gutter it had reserved for a line that was not there. An empty column
+     * keeps its own glyph; alignment does not move, since the glyph sits in
+     * the same 14px box.
+     */
+    expect(
+      cssRule(styles, ".layers-panel .layers-list > li:has(.layers-children) > .layers-row > .layers-row-icon > svg"),
+      "an empty column must keep its glyph",
+    ).toContain("display: none;");
+    expect(
+      cssRule(styles, ".layers-panel .layers-list > li:has(.layers-children) > .layers-row > .layers-row-icon::before"),
+    ).toContain("border-radius: 50%;");
+
+    /*
+     * And the count renders at zero, quietly. Hidden below one, an untouched
+     * project's columns carried no information at all: three identical rows,
+     * no numbers, and a mark that only means something once there is an axis
+     * under it.
+     */
+    const panelSource = readFileSync(new URL("./app/view/LayersPanel.tsx", import.meta.url), "utf8");
+    expect(panelSource, "the count must render at zero").toContain(
+      'data-empty={layer.children.length === 0 ? "true" : undefined}',
+    );
+    const emptyCount = cssRule(styles, '.layers-row-count[data-empty="true"]');
+    expect(emptyCount).toContain("background: transparent;");
+    expect(emptyCount).toContain("color: var(--text-muted);");
+    /*
+     * ─── Everything round centres on the line's centre, not its left edge ───
+     *
+     * `--axis-x` is where the 1px stroke *starts*: it occupies
+     * [44, 45), so its centre is 44.5. Centring the beads on `--axis-x` put
+     * every one of them half a pixel left of the line it sits on — which at 2×
+     * reads as the line running along one side of the dot instead of through
+     * it, and so as the line being painted over the dot. Measured: bead span
+     * [41.5, 47.5), centre 44.5; line [44, 45), centre 44.5; difference 0.
+     */
+    expect(cssRule(styles, ".layers-panel .layers-list")).toContain(
+      "--axis-mid: calc(var(--axis-x) + 0.5px);",
+    );
+    for (const round of [
+      ".layers-row--child::before",
+      ".layers-children > li:first-child::after",
+    ]) {
+      expect(cssRule(styles, round), `${round} must centre on the line`).toContain(
+        "left: calc(var(--axis-mid) - 3px);",
+      );
+      expect(cssRule(styles, round)).toContain("width: 6px;");
+    }
+
+    /*
+     * And the elbow's descent lands in the line's own column. A
+     * `border-right` is drawn inside its box, so the box has to end at
+     * `--axis-x` + 1 — ending it at `--axis-x` left the elbow one pixel to the
+     * line's left, which is a jog at the join.
+     */
+    const elbowRule = cssRule(styles, ".layers-children > li:first-child::before");
+    expect(elbowRule, "the elbow must descend in the line's column").toContain(
+      "width: calc(var(--axis-x) + 1px - var(--axis-stem) - 2.5px);",
+    );
+    /*
+     * And `border-box` is load-bearing, not tidiness.
+     *
+     * Without it `width` is the *content* width and the 1px `border-right` is
+     * added outside it, so the arm painted one pixel right of the line. Both
+     * reported `[44, 45)` in `getComputedStyle`; the offset only appeared in
+     * the rendered pixels, read off a 12× capture — arm [53, 54) against line
+     * [52, 53). Drop this declaration and the measurement comes back.
+     */
+    expect(elbowRule, "without border-box the elbow paints a pixel off").toContain(
+      "box-sizing: border-box;",
+    );
+
+    /*
+     * ─── The dotted stretch sets its own rhythm ───
+     *
+     * `border-left: 1px dashed` has a fixed ~2-on-2-off pattern, which reads
+     * as a solid hairline — so the only dial was the colour, and the line
+     * could be heavy (at `--border-subtle`) or invisible (at 6%) and nothing
+     * useful between. A gradient makes the rhythm the dial instead: sparse
+     * dashes, and a colour a reader can see.
+     */
+    expect(cssRule(styles, ".layers-panel .layers-list")).toContain("--axis-dash: 2px;");
+    expect(cssRule(styles, ".layers-panel .layers-list")).toContain("--axis-dash-gap: 4px;");
+    const dotted = cssRule(styles, ".layers-children::before");
+    expect(dotted).toContain("repeating-linear-gradient(");
+    expect(dotted).toContain("var(--axis-line-faint) 0 var(--axis-dash),");
+    // Newline plus the rule's own indent, so this matches the *declaration*
+    // and not the sentence in the comment above it explaining why it is gone.
+    expect(dotted, "a border-dashed line cannot set its own rhythm").not.toContain(
+      "\n  border-left: 1px dashed",
+    );
+
+    /*
+     * ─── The solid line is opaque ───
+     *
+     * Mixed against the card's background, not against `transparent`. The
+     * dotted stretch runs the full height with the solid one painted over it,
+     * so a translucent solid let the dashes show through: measured 147 against
+     * 124 on the "solid" segment — a 23-level ripple on the dash period.
+     */
+    expect(
+      cssRule(styles, ".layers-panel .layers-list"),
+      "a translucent axis line bands over the dotted one beneath it",
+    ).toContain("--axis-line: color-mix(in srgb, var(--text-primary) 45%, var(--fn-bg));");
+
+    /*
+     * And the beads on the solid stretch drop their ring.
+     *
+     * The 2px background ring is what makes a bead sit on top of the line, and
+     * over the solid stretch it read as a break: the dark line came out as a
+     * column of dashes, which is exactly what the dotted stretch below it was
+     * supposed to be. Measured in the browser before and after.
+     */
+    expect(
+      cssRule(styles, '.layers-children > li:has(~ li .layers-row[data-active="true"]) .layers-row--child::before'),
+      "beads above the pick must join the line, not break it",
+    ).toContain("box-shadow: none;");
+
+    /*
+     * ─── The labels take the same three steps as the axis ───
+     *
+     * The line said it — solid above the pick, dotted below — but every label
+     * sat at `--text-muted` regardless, so the type flattened the distinction
+     * the axis was drawing. There are exactly three text tokens and exactly
+     * three states, which is the whole mapping: primary for the picked row,
+     * secondary above it, muted below.
+     */
+    expect(
+      cssRule(styles, '.layers-children > li:has(~ li .layers-row[data-active="true"]) .layers-row--child'),
+      "rows above the pick must read darker than rows below it",
+    ).toContain("color: var(--text-secondary);");
+    // And hover stays one step ahead of wherever the row rests: a row already
+    // at `--text-secondary` would otherwise answer the pointer with the colour
+    // it is wearing — the exact bug the cancelled hover had.
+    expect(
+      cssRule(styles, '.layers-children > li:has(~ li .layers-row[data-active="true"]) .layers-row--child:hover'),
+    ).toContain("color: var(--text-primary);");
+
+    /*
+     * ─── The picked bead is one cursor that slides ───
+     *
+     * It was a per-row bead turned orange, so picking another row
+     * extinguished one element and lit another — there is nothing to animate
+     * between two elements. One cursor, translated by the same
+     * `--axis-index` the line reads, slides. `translateY` rather than `top`
+     * so it is composited and stays smooth beside the line's height
+     * animation.
+     */
+    const cursor = cssRule(styles, ".layers-children > li:first-child::after");
+    expect(cursor).toContain("background: var(--select-color);");
+    expect(cursor, "the cursor and the line must share one curve").toContain(
+      "transition: transform var(--axis-slide) var(--axis-spring),",
+    );
+    // Opacity stays flat: a bouncing fade on first pick reads as a flicker.
+    expect(cursor).toContain("opacity var(--motion-base) var(--ease-out);");
+    expect(cssRule(styles, '.layers-children[data-axis="on"] > li:first-child::after')).toContain(
+      "transform: translateY(calc(var(--axis-index) * var(--axis-pitch)));",
+    );
+    // The row's own bead steps aside, hidden rather than recoloured: two
+    // orange beads would be on screen together for the length of the slide.
+    expect(cssRule(styles, '.layers-row--child[data-active="true"]::before')).toContain(
+      "background: transparent;",
+    );
+    // And nothing may put `position` back on the rows: the cursor and the
+    // elbow both resolve against the list, where the arithmetic is.
+    expect(
+      styles,
+      "layer rows must stay unpositioned so the cursor resolves against the list",
+    ).not.toContain(".layers-children > li {\n  position: relative;");
+
+    /*
+     * ─── Hover answers the pointer ───
+     *
+     * The child rows' hover used to be written as `transparent` and
+     * `--text-muted` — their own resting values — to cancel the shared
+     * `.layers-row:hover`. Nothing responded until a click, so the rows read
+     * as labels rather than controls.
+     */
+    const childHover = cssRule(styles, ".layers-row--child:hover");
+    expect(childHover, "child rows must answer the pointer").toContain(
+      "background: var(--fn-row-wash);",
+    );
+    expect(childHover).not.toContain("background: transparent;");
+
+    /*
+     * And the cursor says so too.
+     *
+     * This row carried `cursor: default` while calling `onSelectSlot` — the
+     * third declaration in this one block written as if the row were a label:
+     * the hover that cancelled itself, the arrow cursor, and the bead that had
+     * no hover state. The rows are controls; all three now say it.
+     */
+    // Anchored on the padding rather than through `cssRule`: two rules match
+    // ".layers-row--child {" — this one and the shared height above it — and
+    // `cssRule` keys on the first.
+    const childRuleStart = styles.indexOf("  padding-left: calc(var(--axis-x) + 14px);");
+    expect(childRuleStart).toBeGreaterThan(-1);
+    expect(
+      styles.slice(childRuleStart, styles.indexOf("\n}", childRuleStart)),
+      "a row that selects something must not show an arrow",
+    ).toContain("cursor: pointer;");
+    expect(cssRule(styles, ".layers-row--child:hover::before")).toContain(
+      "transform: translateY(-50%) scale(1.2);",
+    );
+    // All three legs on the bead, or the growth snaps while the colour fades.
+    // The growth springs; the colours do not — a bouncing tint is a flicker.
+    expect(cssRule(styles, ".layers-row--child::before")).toContain(
+      "transform var(--motion-base) var(--axis-spring);",
+    );
+
+    // Reduced motion keeps the glide and drops the spring. Not `none`: the
+    // cursor would then jump between rows, and a jump is harder to follow
+    // than a glide — worse for the reader who asked for less motion.
+    const calm = styles.slice(styles.indexOf("@media (prefers-reduced-motion: reduce) {\n  .layers-list"));
+    expect(calm).toContain("--axis-slide: 120ms;");
+    expect(calm).toContain("--axis-spring: var(--ease-out);");
+
+    /*
+     * ─── A column is a heading ───
+     *
+     * Both levels sat at 12px / 400 in neighbouring greys, so 左栏 and
+     * 展示标题 carried the same weight on screen while one contains the other.
+     */
+    const head = cssRule(styles, ".layers-panel .layers-list > li > .layers-row");
+    expect(head).toContain("color: var(--text-primary);");
+    /*
+     * Small, tracked and heavy — a section header, which is what the reference
+     * makes of it. Size is the other half of the elbow's clearance (see
+     * `--axis-r`): the curve passes under these glyphs, and an 11px CJK
+     * character's ink reaches ~5.5px below the row's middle where a 12px one
+     * reaches 6. Tracking is what keeps it reading as a heading once the size
+     * comes down.
+     */
+    expect(head).toContain("font-size: 13px;");
+    expect(head).toContain("font-weight: 700;");
+    expect(head).toContain("letter-spacing: 0.02em;");
+  });
+
+  it("folds the canvas panel to an icon column opposite the rail", () => {
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+    const folded = ".workspace-layout .topbar:not([data-open])";
+
+    /*
+     * Folded, this card is the rail's opposite number and has to read as one:
+     * same width, same full height, same curves. It used to fold to a short
+     * row at the top right, which left the two sides of the canvas folding
+     * into different shapes.
+     *
+     * Not scoped to a surface. It was `[data-mode="builder"]`-only, because
+     * `saved-preview` put the run-mode and scenario pickers in the same row
+     * and a 56px column has no room for them — so that surface kept the short
+     * card and folded into a different shape from the builder's. The pickers
+     * are a section inside the panel now (`Topbar.tsx`), which is what lets
+     * one fold serve both: measured at 1600px, both surfaces fold to a 56px
+     * column 934px tall with Export at the bottom.
+     */
+    const rule = cssRule(styles, folded);
+    expect(rule).toContain("width: var(--iconbar-col);");
+    expect(rule).toContain("bottom: var(--fn-float-gap);");
+    expect(rule).toContain("width var(--motion-rail-in) var(--ease-out)");
+    // The control row takes the height, which is what lets Export sit at the
+    // bottom of the card instead of under the last icon.
+    expect(rule).toContain("grid-template-rows: minmax(0, 1fr) 0fr;");
+    expect(cssRule(styles, `${folded} .topbar-controls`)).toContain("flex-direction: column;");
+    expect(cssRule(styles, `${folded} .topbar-deploy-button`)).toContain("margin-top: auto;");
+
+    /*
+     * `min-width` as well as `width` on the folded Export button.
+     *
+     * `.primary-button.topbar-deploy-button` carries `min-width: 64px`, which
+     * won against `width: 36px` alone and left the button hanging 4px out of a
+     * 56px card. Measured in the browser, not reasoned about — which is why
+     * this is asserted rather than trusted.
+     */
+    expect(
+      cssRule(styles, `${folded} .topbar-deploy-button`),
+      "the folded Export button must beat .primary-button's min-width",
+    ).toContain("min-width: 0;");
+
+    // The style reads as a tile — thumbnail over label — because that is the
+    // shape the rail's destinations have across the canvas.
+    expect(cssRule(styles, `${folded} .style-chip`)).toContain("flex-direction: column;");
+    expect(cssRule(styles, `${folded} .style-chip-caret`)).toContain("display: none;");
+
+    // Glyph hidden by default, not hidden-when-open: every surface that is not
+    // this folded card keeps the button as it was, the word and nothing beside
+    // it.
+    expect(cssRule(styles, ".topbar-deploy-glyph")).toContain("display: none;");
+    expect(cssRule(styles, `${folded} .topbar-deploy-glyph`)).toContain("display: inline-flex;");
+
+    // And the canvas leaves the column room, the mirror of the rail's own
+    // folded gutter. Without this the canvas's card slid under the column.
+    expect(
+      cssRule(styles, ".workspace-layout:not([data-layers-open])"),
+    ).toContain("--canvas-pad-right: calc(var(--fn-float-gap) * 2 + var(--iconbar-col));");
+
+    // 编辑 UI/UX survives the fold as its gear, the same glyph/label split
+    // Export uses: it is the way back to the builder, so on `saved-preview` it
+    // is the control that must not disappear into the panel.
+    expect(cssRule(styles, `${folded} .topbar-edit-button`)).toContain("width: 36px;");
+    expect(cssRule(styles, `${folded} .topbar-edit-label`)).toContain("display: none;");
+  });
+
+  it("keeps the run-preview panel to controls that surface can actually change", () => {
+    const app = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+    const topbar = readFileSync(new URL("./app/view/Topbar.tsx", import.meta.url), "utf8");
+
+    /*
+     * 选择风格 was handed to both surfaces by one `panelSections` prop, and on
+     * the run preview it could not work: the canvas there renders
+     * `activeProject` — `state.savedProject`, the snapshot taken on entry —
+     * while `applyStyle` writes `project`. Measured in the browser: applying a
+     * different card left `data-style-preset="native"` on the preview frame
+     * and restyled the project *behind* it, which is worse than inert.
+     */
+    expect(app).toContain('state.surfaceMode !== "builder" ? null : (');
+
+    // What that panel carries instead: the two controls that do belong to a
+    // run. They are also why they are not in the control row — see the
+    // shear measurements on `.topbar-controls`' wrap guard.
+    expect(topbar).toContain("topbar-run-section");
+    expect(topbar).toContain("copy.shell.topbar.runModeLabel");
+    expect(topbar).toContain('runMode === "replay" ? (');
+  });
+
+  it("puts every style in the folded column, and sends the chip to the panel", () => {
+    const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+    const picker = readFileSync(new URL("./app/view/StylePicker.tsx", import.meta.url), "utf8");
+    const topbar = readFileSync(new URL("./app/view/Topbar.tsx", import.meta.url), "utf8");
+    const app = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+
+    /*
+     * Switching style was the one thing the folded card had no way to do and
+     * no shortcut for: the chip named the style being worn, and everything
+     * that could change it was in the panel the card had just folded. A 56px
+     * column has room for the whole list as plates, so it carries them.
+     */
+    expect(topbar).toContain("{panelOpen ? null : styleRail}");
+    expect(picker).toContain("export function StyleRailThumbs");
+    // Plates for every style the picker offers, not a hand-picked few.
+    expect(picker).toContain("styleCardOptions.map");
+    // Named, not just pictured. Six plates at 36px are six small pictures, and
+    // which is 水墨 and which is 复古 is not a question a thumbnail answers —
+    // a tooltip answers it one at a time, which is no use when the reason to
+    // look at the column is to compare.
+    expect(picker).toContain('<span className="style-rail-name">{label}</span>');
+
+    /*
+     * And a tile unfolds the panel rather than applying the style.
+     *
+     * It applied directly for one round. Switching style brings the style's
+     * own components with it, the cards carry an Apply button precisely so
+     * that is deliberate, and a 36px target in a column you are scrolling is
+     * the easiest thing in the product to hit by accident. So the column is an
+     * index, and `onApply` is not among its props at all — there is nothing
+     * here that could switch a style by mistake.
+     */
+    expect(picker).toContain("onClick={onExpand}");
+    // Bounded to the function: `StyleCards` below it does apply styles, and a
+    // slice that ran to the end of the file would always find its `onApply`.
+    const railStart = picker.indexOf("export function StyleRailThumbs");
+    const railEnd = picker.indexOf("export function", railStart + 1);
+    expect(railStart).toBeGreaterThan(-1);
+    expect(railEnd).toBeGreaterThan(railStart);
+    expect(
+      picker.slice(railStart, railEnd),
+      "the style column must not be able to apply a style",
+    ).not.toContain("onApply");
+    // `aria-pressed` would claim the button toggles the style. It opens a
+    // panel; the worn one is named with `aria-current` instead.
+    expect(picker).toContain('aria-current={active ? "true" : undefined}');
+
+    // It is the segment that takes the slack, so it is the one that scrolls:
+    // the tiles outgrow a short window where the fixed controls cannot.
+    const rail = cssRule(styles, ".style-rail");
+    expect(rail).toContain("overflow-y: auto;");
+    expect(rail).toContain("flex: 1 1 auto;");
+    // Worn is marked on the plate's frame and in the name, not over the
+    // picture — at 36px the picture is the only thing the tile is for.
+    expect(cssRule(styles, '.style-rail-tile[data-active="true"] .style-rail-thumb')).toContain(
+      "border-color: var(--select-line);",
+    );
+    expect(cssRule(styles, '.style-rail-tile[data-active="true"] .style-rail-name')).toContain(
+      "color: var(--select-strong);",
+    );
+
+    /*
+     * And the chip unfolds the panel instead of dropping its own menu. The
+     * panel's first section is this same list of cards, so the menu put the
+     * picker on screen twice — the second time over the thing it duplicates.
+     */
+    expect(app).toContain("onExpand={() => dispatch({ type: \"patch\", patch: { layersOpen: true } })}");
+    expect(picker).toContain("onClick={onExpand ? onExpand : () => setOpen((value) => !value)}");
+    // The menu cannot open while the chip is an unfold control, or an outside
+    // pointer would be dismissing something that never appeared.
+    expect(picker).toContain("{open && !onExpand ? (");
   });
 
   it("magnifies the canvas without reflowing it", () => {
     const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
     const zoomRule = cssRule(styles, ".canvas-zoom");
 
-    expect(zoomRule).toContain("zoom: var(--canvas-zoom, 1);");
+    // The applied factor is the reader's zoom times a constant base scale, so
+    // 105% of the fitted size is what a 100% readout now means. Kept as two
+    // variables rather than folded into the default `canvasZoom`: the ladder
+    // and the readout stay honest, and "back to 100%" returns to the baseline
+    // rather than to something smaller than it.
+    expect(zoomRule).toContain("zoom: var(--canvas-zoom-effective);");
+    expect(zoomRule).toContain("calc(var(--canvas-base-scale, 1) * var(--canvas-zoom, 1))");
+    // The region labels resist it too: they are the editor's annotations on the
+    // drawing, not part of it.
+    expect(cssRule(styles, ".region-label")).toContain("12px / var(--canvas-zoom-effective, 1)");
     // Sized in container units, which is what keeps the layout box the size of
     // the free space while `zoom` magnifies only what is rendered — the reflow
     // that zoom must not cause. A *percentage* under `zoom` resolves against the
@@ -443,11 +1309,14 @@ describe("App shell controls", () => {
     // Measured in Chrome at 150%: layout 1131x848, rendered 1696x1272.
     expect(zoomRule).toContain("width: var(--canvas-page-w);");
     expect(zoomRule).toContain("100cqw");
-    // The page is 4:3 — the frame, not the frame plus the label gutters, which
+    // The page is 16:10 — the frame, not the frame plus the label gutters, which
     // is why the height adds them back after taking the ratio.
-    expect(zoomRule).toContain("(100cqh - 2 * var(--canvas-label-gutter)) * 4 / 3");
+    // One gutter, not two: the labels are only drawn above the page, so the
+    // bottom one was dead space that kept the canvas from reaching its 8px.
+    expect(zoomRule).toContain("--canvas-page-ratio: 1.6;");
+    expect(zoomRule).toContain("(100cqh - var(--canvas-label-gutter)) * var(--canvas-page-ratio)");
     expect(zoomRule).toContain(
-      "height: calc(var(--canvas-page-w) * 3 / 4 + 2 * var(--canvas-label-gutter));",
+      "height: calc(var(--canvas-page-w) / var(--canvas-page-ratio) + var(--canvas-label-gutter));",
     );
     // And the surface has to be a size container, or `cqh` has nothing to
     // measure against and the width silently falls back to the whole row.
@@ -459,8 +1328,18 @@ describe("App shell controls", () => {
     expect(cssRule(styles, '.builder-surface[data-canvas-zoomed="true"]')).toContain("overflow: hidden;");
     // The pan is a transform on the zoom wrapper, divided back out of the zoom
     // so a wheel moves the canvas the same distance at every magnification.
-    expect(zoomRule).toContain("calc(var(--canvas-pan-x, 0px) / var(--canvas-zoom, 1))");
-    expect(zoomRule).toContain("calc(var(--canvas-pan-y, 0px) / var(--canvas-zoom, 1))");
+    // Divided by the *effective* factor, which includes the base scale — the
+    // raw `--canvas-zoom` would leave the pan 5% out at every level.
+    expect(zoomRule).toContain("calc(var(--canvas-pan-x, 0px) / var(--canvas-zoom-effective, 1))");
+    /*
+     * The Y term also carries the centring offset now — the canvas is centred
+     * on the *screen*, and the surface reserves 60px above it for the floating
+     * topbar against 8px below, so half that difference is taken back here.
+     * Still divided by the zoom, which is what this test is about: an offset
+     * measured in screen pixels must not grow with the magnification.
+     */
+    expect(zoomRule).toContain("var(--canvas-pan-y, 0px) - var(--canvas-centre-offset)");
+    expect(zoomRule).toContain("var(--canvas-zoom-effective, 1)");
   });
 
   it("centres the canvas frame and keeps the region labels outside its clip", () => {
@@ -473,10 +1352,16 @@ describe("App shell controls", () => {
     const frameRule = cssRule(styles, ".builder-surface .preview-frame");
     expect(frameRule).toContain("height: auto;");
     expect(frameRule).toContain("margin-top: var(--canvas-label-gutter);");
-    expect(frameRule).toContain("margin-bottom: var(--canvas-label-gutter);");
+    // Nothing reserved at the bottom, which is what lets the canvas sit exactly
+    // 8px off the surface edge and line up with the floating cards.
+    expect(frameRule).toContain("margin-bottom: 0;");
     // The same gutter the canvas page's height accounts for, so the frame left
-    // inside it is 4:3 rather than 4:3-minus-two-labels.
-    expect(cssRule(styles, ".app-shell")).toContain("--canvas-label-gutter: 26px;");
+    // inside it is 16:10 rather than 16:10-minus-two-labels.
+    expect(cssRule(styles, ".app-shell")).toContain(// 16px: the labels need about that for 12px text, and every pixel freed here
+    // goes to the frame — the one reserved band on the canvas not holding a
+    // floating card.
+    // 16px of label plus a 4px gap under it, composed so the gap is nameable.
+    "--canvas-label-gutter: calc(16px + var(--canvas-label-gap));");
 
     // The labels sit in that gap, as a sibling of the frame. They used to be a
     // child at `top: -26px`, which the frame's `overflow: hidden` clipped away
@@ -527,16 +1412,27 @@ describe("App shell controls", () => {
     expect(cssRule(styles, ".group-row-chevron")).toContain("rotate(-90deg)");
   });
 
-  it("opens on the native style's first theme and shows it on the canvas", () => {
+  it("opens on no style at all, on the plainest theme, and shows it on the canvas", () => {
     const markup = renderToStaticMarkup(<IconSetProvider><App /></IconSetProvider>);
     const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
 
-    // 原生风 / 柔光玻璃 — the first theme of the first style.
-    expect(emptyStructureProject.theme.stylePreset).toBe("native");
+    // 空白 / 柔光玻璃. It opened on 原生风, which claimed a style the empty canvas
+    // was not showing — and made 原生风 unreachable, since `requestStyleSwitch`
+    // returns early on the already-selected style.
+    expect(emptyStructureProject.theme.stylePreset).toBe("blank");
     expect(emptyStructureProject.theme.preset).toBe("soft-glass");
     expect(nativeThemePresetIds[0]).toBe("soft-glass");
-    expect(markup).toContain('data-style-preset="native"');
     expect(markup).toContain('data-theme-preset="soft-glass"');
+
+    // 空白 wears 原生风's looks, so the attribute the CSS branches on says
+    // `native` while the id beside it says what is really selected. This is
+    // also what puts 原生风's palettes in 空白's theme list — the cards pair
+    // `[data-style-preset]` with `[data-theme-style]`.
+    expect(visualStylePreset("blank")).toBe("native");
+    expect(markup).toContain('data-style-preset="native"');
+    expect(markup).toContain('data-style-id="blank"');
+    // And no branch of its own, or the alias would be fighting real rules.
+    expect(styles).not.toContain('[data-style-preset="blank"]');
 
     // Each empty column shows the surface its style gives it — in 柔光玻璃 that
     // is #F4F6FA for the sidebar and #FFFFFF for the centre and right. It must
@@ -763,9 +1659,22 @@ describe("App shell controls", () => {
   });
 
   it("keeps the second and third native light themes clean instead of muddy", () => {
-    expect(themeTokens["sand-workspace"].surface.hover).toBe("#FFECD6");
-    expect(themeTokens["sand-workspace"].accent.soft).toBe("#FFECD6");
-    expect(themeTokens["sand-workspace"].accent.action).toBe("#C87330");
+    /*
+     * 原生风's second colourway was rebuilt from Airbnb's design language —
+     * asked for. It was a warm clay palette (#FFF9F2 paper, #C87330 accent)
+     * whose hover and accent-soft were deliberately the *same* clean tint,
+     * which is what the name of this test is about.
+     *
+     * The new one separates them, and that is Airbnb's structure rather than a
+     * regression: a neutral #EBEBEB hover on the page grey, and a coral tint
+     * reserved for accent surfaces. Still clean — neither is a mix of the ink
+     * into the paper, which is what "muddy" meant here.
+     */
+    expect(themeTokens["sand-workspace"].name).toBe("Coral Desk");
+    expect(themeTokens["sand-workspace"].surface.hover).toBe("#EBEBEB");
+    expect(themeTokens["sand-workspace"].accent.soft).toBe("#FFF0F3");
+    // Rausch.
+    expect(themeTokens["sand-workspace"].accent.action).toBe("#FF385C");
 
     expect(themeTokens["apricot-agent"].surface.hover).toBe("#FFD1A3");
     expect(themeTokens["apricot-agent"].accent.soft).toBe("#FFEDD5");
@@ -784,69 +1693,92 @@ describe("App shell controls", () => {
     expect(themeTokens["polar-mono"].accent.action).not.toBe(themeTokens["mist-blue"].accent.action);
   });
 
-  it("keeps minimal user avatar choices limited to the first four", () => {
-    const styles = readFileSync(new URL("./styles/agentmatrix.css", import.meta.url), "utf8");
-
-    expect(styles).toContain('.preset-panel[data-style-preset="illustrated"] .am-state-options[data-slot="author.user"] .am-state-option:nth-of-type(n + 5)');
+  it("gives the reader the same four default avatars in every style", () => {
+    // The reader's side is four fixed people plus an upload tile, whatever the
+    // style; the characters styles used to give the reader are the agent's now.
+    for (const styleId of presetStyleIds) {
+      expect(STYLE_AVATAR_OPTIONS[styleId]["author.user"], styleId).toEqual(DEFAULT_USER_AVATAR_IDS);
+      expect(STYLE_AVATAR_DEFAULTS[styleId]["author.user"], styleId).toBe(DEFAULT_USER_AVATAR_IDS[0]);
+    }
+    expect(ICON_OPTIONS["author.user"].slice(0, 4).map((option) => option.id)).toEqual(DEFAULT_USER_AVATAR_IDS);
+    expect(STYLE_AVATAR_DEFAULTS.native["author.agent"]).toBe("orange-blob");
+    expect(ICON_OPTIONS["author.agent"][0]?.id).toBe("orange-blob");
   });
 
-  it("defaults avatars to the first visible choice for each style", () => {
-    const styles = readFileSync(new URL("./styles/agentmatrix.css", import.meta.url), "utf8");
+  it("moves each style's former reader avatars into its agent gallery", () => {
+    expect(STYLE_AVATAR_OPTIONS.native["author.agent"]).toEqual(
+      expect.arrayContaining(["blue-smile", "heart-eyes", "golden-joy", "purple-bored"]),
+    );
+    expect(STYLE_AVATAR_OPTIONS.tech["author.agent"]).toEqual(
+      expect.arrayContaining(["tech-user-cloud", "tech-user-gummy", "tech-user-block", "tech-user-hex"]),
+    );
+    expect(STYLE_AVATAR_OPTIONS.inkwash["author.agent"]).toEqual(
+      expect.arrayContaining(["ink-peaks", "ink-bridge", "ink-bamboo", "ink-sun"]),
+    );
+  });
 
-    expect(STYLE_AVATAR_DEFAULTS.native).toEqual({
-      "author.user": "blue-smile",
-      "author.agent": "orange-blob",
-    });
-    expect(STYLE_AVATAR_DEFAULTS.illustrated).toEqual({
-      "author.user": "user",
-      "author.agent": "orange-blob",
-    });
-    expect(ICON_OPTIONS["author.agent"][0]?.id).toBe("orange-blob");
-    expect(styles).toContain('.preset-panel[data-style-preset="illustrated"] .am-state-options[data-slot="author.agent"] .am-state-option[data-option-id="orange-blob"]');
-    expect(styles).toContain("order: -1;");
+  it("leaves which avatars a style shows to the table, not to CSS deny-lists", () => {
+    // Per-id `display: none` rules used to sit beside the table and had drifted
+    // from it: 原生风 listed four agent avatars and drew two.
+    const styles = readFileSync(new URL("./styles/agentmatrix.css", import.meta.url), "utf8");
+    expect(styles).not.toMatch(/\.am-state-option\[data-option-id="[^"]+"\][^{]*\{\s*display: none;/);
+  });
+
+  it("offers at most two rows of avatars a side, and always its own default", () => {
+    // The invariant: a style's default has to be in its own list, or the canvas
+    // opens wearing a face the gallery cannot select and the reader cannot get
+    // back to. This caught `zine`, whose agent default named `square-terminal` —
+    // an id belonging to `content.terminal`, so `resolveIcon` had been silently
+    // answering with `options[0]`.
+    for (const styleId of presetStyleIds) {
+      for (const slot of ["author.user", "author.agent"] as const) {
+        const ids = STYLE_AVATAR_OPTIONS[styleId][slot];
+        expect(ids.length, `${styleId}/${slot}`).toBeLessThanOrEqual(8);
+        expect(ids, `${styleId}/${slot} default`).toContain(STYLE_AVATAR_DEFAULTS[styleId][slot]);
+        // And every id is real, so a rename cannot leave a hole in the gallery.
+        for (const id of ids) {
+          expect(ICON_OPTIONS[slot].some((option) => option.id === id), `${styleId} ${id}`).toBe(true);
+        }
+      }
+    }
   });
 });
 
 describe("event flow axis", () => {
-  it("draws the flow as an axis with a marker per stage", () => {
+  it("draws the groups as a plain list, with no axis and no ticks", () => {
     const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
+    const rail = readFileSync(new URL("./app/view/PresetRail.tsx", import.meta.url), "utf8");
 
-    // The line hangs off the list, not off the rows: an expanded stage pushes
-    // the next marker down and the line has to follow.
-    const lineRule = cssRule(
-      styles,
-      '.preset-panel[data-nav-section="components"] > .group-list::before',
-    );
-    expect(lineRule).toContain("left: 15.5px;");
+    /*
+     * Both are gone on request, and this is the tripwire for either coming
+     * back by accident.
+     *
+     * They drew the seven groups as a sequence with a progress state. The
+     * sequence is not one — 审批 and 运行状态 end the run and continue in the
+     * next — and "covered" answered a question nobody asked: a group is a place
+     * to configure something, not a task to tick off.
+     */
+    expect(styles).not.toContain(".flow-axis-marker");
+    expect(styles).not.toContain('.preset-panel[data-nav-section="components"] > .group-list::before');
+    expect(rail).not.toContain("flow-axis-marker");
 
-    // The axis sits in the rail's left gutter and the nested options clear it,
-    // rather than the line running down through the option cards. Moving the
-    // line left instead of indenting the body is what keeps the cards their
-    // width — measured 96px, against 97px before the axis existed.
+    /*
+     * And the gutter went with them. 8px on the row and 24px on the nested body
+     * were the line's clearance; with no line they were an empty strip down the
+     * left of every group, and the 18px came off the column itself
+     * (`--rail-col`) rather than being left as slack.
+     */
     expect(
       cssRule(styles, '.preset-panel[data-nav-section="components"] .group-row'),
-    ).toContain("padding-left: 8px;");
-    expect(
-      cssRule(
-        styles,
-        '.preset-panel[data-nav-section="components"] > .group-list .preset-panel-body',
-      ),
-    ).toContain("padding-left: 24px;");
-
-    // One fixed box at every state, so a marker's centre stays on the line.
-    // Sizing the marker to its content moved the tick right of the line the
-    // moment a stage was covered — measured 9px off.
-    const markerRule = cssRule(styles, ".flow-axis-marker");
-    expect(markerRule).toContain("width: 15px;");
-    expect(markerRule).toContain("height: 15px;");
-    expect(cssRule(styles, '.flow-axis-marker[data-covered="true"]')).toContain(
-      "background: var(--select-fill);",
+    ).toContain("padding-left: 2px;");
+    // Set once, for both sections: 架构 kept the 22px axis gutter long after the
+    // line was gone from 组件, because the shared rule was never the one changed.
+    expect(cssRule(styles, ".group-row-body > .preset-panel-body")).toContain(
+      "padding: 6px 8px 10px 6px;",
     );
-
-    // An exit reads as a ring rather than a point on the line.
-    expect(cssRule(styles, '.flow-axis-marker[data-kind="exit"]::before')).toContain(
-      "background: var(--fn-bg);",
-    );
+    expect(styles).toContain("--rail-col: 272px;");
+    // One token for both columns, so they cannot drift apart.
+    expect(styles).toContain("--layers-col: var(--rail-col);");
   });
 
   it("lets the centre column be highlighted when it is empty", () => {
@@ -865,19 +1797,29 @@ describe("event flow axis", () => {
   });
 
   it("reads the flow in the order it happens, and marks any exit as one", () => {
-    // The run opens → thinks → reports progress → calls tools → hands back to
-    // the reader → delivers. The previous reading (思考 → 审批 → 工具 → 结果报错
-    // → 中断 → 生成中 → 交付) was one linear turn, which the protocol these
-    // stages describe does not have: several run at once, and two of them end
-    // the run and continue in the next one.
+    /*
+     * The reader's journey, in their words: 思考中 → 思考完成 → 工具调用 → 审批
+     * → 加载 → 运行状态 → 交付.
+     *
+     * It used to open on `blocks` (运行状态) — where a run *ends* — so the first
+     * group in the list was the last thing that happens. Two of these do end
+     * the run and continue in the next one (审批 and 运行状态), so the sequence
+     * is not strictly linear; but a list has to start somewhere, and starting
+     * where the reader starts beats starting at the outcome.
+     *
+     * `ux-effects` before `thinking-done` is load-bearing, not aesthetic: both
+     * write `reasoning.*` and `styleKitOptionIds` resolves that by last-writer
+     * in this order, so swapping them would give every style the settled
+     * block's choices for the running one.
+     */
     const flow = presetRailSections.find((section) => section.id === "event-flow")?.groupIds ?? [];
     expect(flow).toEqual([
-      "blocks",
       "ux-effects",
       "thinking-done",
-      "media-generation",
       "tool-calls",
       "approval",
+      "media-generation",
+      "blocks",
       "delivery",
     ]);
 
@@ -907,35 +1849,35 @@ describe("sidebar resize", () => {
     // the frame: the labels are a sibling of the frame — they had to leave it
     // to escape its clipping — so a property on the frame never reached them
     // and they stayed put while the columns moved.
-    expect(labelsSource).toContain("var(--session-width-set, 236px)");
+    expect(labelsSource).toContain("var(--session-width-set, var(--side-col-w, 236px))");
     const frameIndex = appSource.indexOf('className="preview-frame"');
     const varIndex = appSource.indexOf('"--session-width-set"');
     expect(varIndex).toBeGreaterThan(-1);
     expect(varIndex).toBeLessThan(frameIndex);
 
-    // The centre/right split belongs to the panel group, so the labels read its
-    // live layout. `mainSize` and `rightPanelSize` are only where it starts.
-    expect(appSource).toContain("onLayoutChange={(layout) =>");
-    expect(labelsSource).toContain("panelLayout?.main ?? mainSize");
-    expect(labelsSource).toContain("panelLayout?.right ?? rightPanelSize");
+    // The right column is a fixed width the same way, read from its own
+    // property, and the centre takes the rest — so no JavaScript there either.
+    expect(labelsSource).toContain("var(--right-width-set, var(--side-col-w, 236px))");
+    expect(labelsSource).toContain('"minmax(0, 1fr)"');
+    expect(appSource).toContain('"--right-width-set"');
   });
 
   it("gives the left column its own drag handle", () => {
     const appSource = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
     const styles = readFileSync(new URL("./styles/app.css", import.meta.url), "utf8");
 
-    // The centre/right split gets its handle from `PanelGroup`. The sidebar is
-    // a fixed-width flex item outside it, so it needs one of its own that sets
-    // `--session-width-set` directly.
+    // Both side columns are fixed-width flex items, each with a handle of its
+    // own that sets its property directly — `--session-width-set` here.
     expect(appSource).toContain('className="resize-handle sidebar-resize-handle"');
     expect(appSource).toContain('"--session-width-set"');
     // Same class as the panel group's handle, which also exempts it from the
     // canvas's click suppression.
     expect(cssRule(styles, ".sidebar-resize-handle")).toContain("cursor: col-resize;");
 
-    // Overridable with the shipped 236px as the fallback, so an export that
-    // was never dragged is unchanged.
-    expect(styles).toContain("--session-width: var(--session-width-set, 236px);");
+    // Overridable, defaulting to the width both side columns share (236px
+    // unless the style narrows it), so an export never dragged is unchanged.
+    expect(styles).toContain("--session-width: var(--session-width-set, var(--side-col-w, 236px));");
+    expect(createInitialWorkspaceState("zh").rightPanelWidth).toBeNull();
 
     // Session state, like the right split: `layout.mainSize` is the default the
     // panel group starts from, and dragging that does not write back either.
@@ -965,7 +1907,7 @@ describe("panel header and conversation title", () => {
     expect(
       cssRule(
         styles,
-        '.preset-panel:is([data-nav-section="structure"], [data-nav-section="components"], [data-nav-section="theme"])\n  > :is(.preset-style-cards, .preset-panel-header, .layers-panel-head)',
+        '.preset-panel:is([data-nav-section="structure"], [data-nav-section="components"], [data-nav-section="layers"])\n  > :is(.preset-style-cards, .preset-panel-header, .layers-panel-head)',
       ),
     ).toContain("flex: none;");
   });
@@ -995,5 +1937,81 @@ describe("panel header and conversation title", () => {
     const chatCopy = readFileSync(new URL("./i18n/copy/chat.ts", import.meta.url), "utf8");
     expect(chatCopy).toContain('reasoned: "思考过程"');
     expect(chatCopy).not.toContain('reasoned: "已完成思考"');
+  });
+});
+
+describe("icon galleries", () => {
+  it("offers four tiles a slot in every style, and only ids that exist", () => {
+    /*
+     * The registry is shared between styles: every set that has shipped is
+     * registered as options on the same slots, so `tool.search` holds fourteen
+     * — lucide's four plus hand-drawn, painted and comic marks. Three styles
+     * had a curated list and the rest fell through to "all of them", which put
+     * fourteen tiles in one gallery and asked the reader to pick a magnifier
+     * drawn for someone else's skin.
+     *
+     * Four is the count the gallery is built for, so this holds every style to
+     * it — including the hidden ones, which a saved project can still be in.
+     */
+    const gallerySlots = presetGroups.flatMap((group) =>
+      visibleStateCards(group.id).map((card) => card.slot),
+    );
+    expect(gallerySlots.length).toBeGreaterThan(0);
+
+    for (const styleId of presetStyleIds) {
+      for (const slot of new Set(gallerySlots)) {
+        const ids = styleAvatarOptionIds(styleId, slot);
+        expect(ids, `${styleId}/${slot}`).toBeDefined();
+        // Avatars run to two rows: the agent's own four and the characters
+        // the style used to give the reader.
+        const isAvatar = slot === "author.user" || slot === "author.agent";
+        expect(ids!.length, `${styleId}/${slot} count`).toBeLessThanOrEqual(isAvatar ? 8 : 4);
+        // No tile may name an id the registry does not have: `resolveIcon`
+        // answers an unknown id with `options[0]`, so the gallery would show
+        // two tiles drawing one picture and the miss would be invisible.
+        for (const id of ids!) {
+          expect(
+            ICON_OPTIONS[slot as keyof typeof ICON_OPTIONS]?.some((option) => option.id === id),
+            `${styleId}/${slot} ${id}`,
+          ).toBe(true);
+        }
+        // And no id twice in one gallery, which is the same bug with the
+        // registry innocent.
+        expect(new Set(ids).size, `${styleId}/${slot} unique`).toBe(ids!.length);
+      }
+    }
+  });
+});
+
+describe("style cards", () => {
+  it("shows one card per buildable style, each with four colourways and a plate", () => {
+    /*
+     * The picker is a card per style: a preview plate, and on hover the four
+     * colourways it offers plus one Apply button. Three things can rot here and
+     * all three are invisible until someone opens the panel — a style with no
+     * plate (an empty grey rectangle), a style with three or five colourways
+     * (the row was built for four), or 空白 creeping back into a list where it
+     * has nothing to offer.
+     */
+    expect(styleCardOptions.map((style) => style.id)).not.toContain("blank");
+    expect(styleCardOptions.every((style) => !style.hidden)).toBe(true);
+    // Every buildable style, 空白 excepted, has a card.
+    expect(styleCardOptions.length).toBe(
+      selectablePresetStyleOptions.filter((style) => style.id !== "blank").length,
+    );
+
+    for (const style of styleCardOptions) {
+      const themes = styleCardThemeIds(style.id);
+      expect(themes.length, `${style.id} colourways`).toBe(4);
+      // Real ids, and no id twice — a repeated swatch is two dots doing one job.
+      expect(new Set(themes).size, `${style.id} unique`).toBe(4);
+      for (const themeId of themes) {
+        expect(themeTokens[themeId], `${style.id} ${themeId}`).toBeDefined();
+      }
+      // The plate the card rests as. Named by the component, not by CSS, so it
+      // stays out of every exported project.
+      const plate = new URL(`../public/style-card/${style.id}.png`, import.meta.url);
+      expect(existsSync(plate), `${style.id} plate`).toBe(true);
+    }
   });
 });

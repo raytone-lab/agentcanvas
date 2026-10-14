@@ -10,10 +10,11 @@ import {
   isOptionShownInRail,
   layerContentsForProject,
   mountedComponentsForProject,
+  styleMotionOptionIds,
   layersForProject,
   regionsWithChosenContent,
 } from "./presetRailData";
-import { emptyStructureProject, type AgentFrontendProject } from "../../schema/agentuxConfig";
+import { emptyStructureProject, presetStyleIds, type AgentFrontendProject } from "../../schema/agentuxConfig";
 import { isPresetOptionActive, togglePresetOption } from "../../schema/presetActions";
 import { presetGroups } from "../../schema/presets";
 import { presetRailSections } from "./presetRailData";
@@ -92,7 +93,11 @@ describe("layer contents", () => {
       { id: "speaker-labels", groupId: "conversation", label: "名称标签" },
     ]);
     const centre = layers.find((layer) => layer.id === "center");
-    expect(centre?.children.map((child) => child.label)).toEqual(["输入框", "上传"]);
+    // "输入框" is gone from this list: `ComposerFrame` joined
+    // `FULLY_ENUMERATED_COMPONENTS`, so the tree lists the composer's *parts*
+    // and not the composer. What the test is actually for still holds — the
+    // conversation option is absent because its region is not mounted.
+    expect(centre?.children.map((child) => child.label)).toEqual(["上传"]);
   });
 
   it("opens with nothing picked in any column", () => {
@@ -106,12 +111,12 @@ describe("layer contents", () => {
     expect(regionsWithChosenContent(emptyStructureProject, items).size).toBe(0);
 
     const layers = layerContentsForProject(emptyStructureProject, "zh", []);
-    // The composer is the one exception, and it is there because it is
-    // required rather than because it was picked.
-    expect(layers.find((layer) => layer.id === "center")?.children.map((child) => child.id)).toEqual([
-      "composer",
-    ]);
-    for (const layer of layers.filter((entry) => entry.id !== "center")) {
+    // Empty now, where it used to list the composer. Both containers in this
+    // column — the conversation and the composer — are enumerated by their
+    // parts rather than by themselves, so neither is a row. Nothing has been
+    // picked, so there are no parts yet either.
+    expect(layers.find((layer) => layer.id === "center")?.children.map((child) => child.id)).toEqual([]);
+    for (const layer of layers) {
       expect(layer.children, `${layer.id} should open empty`).toEqual([]);
     }
   });
@@ -192,39 +197,38 @@ describe("rail selection honesty", () => {
     }
   });
 
-  it("will not put a conversation on the canvas until it is picked", () => {
-    // Its toggle is visible in the rail, so mounting it because a stage was
-    // picked would put a thing on the canvas the reader had not selected while
-    // the control for it sat unticked. Picking 思考中 used to conjure a whole
-    // conversation that way.
+  it("opens with no conversation, and will not let another destination conjure one", () => {
+    // The configurator opens on 空白, so a pre-filled middle column was the one
+    // thing on screen contradicting that. `thinking-wave` belongs to the
+    // event-flow destination, not to the conversation, so it still cannot bring
+    // the conversation with it.
+    expect(mountedComponentsForProject(emptyStructureProject, [], []).has("ChatFrame")).toBe(false);
     expect(mountedComponentsForProject(emptyStructureProject, [], ["thinking-wave"]).has("ChatFrame"))
       .toBe(false);
-
-    // Ticked, it appears — and the toggle reads the canvas, so it agrees.
-    const shown = togglePresetOption(emptyStructureProject, "chat-visible");
-    const mounted = mountedComponentsForProject(shown, [], []);
-    expect(mounted.has("ChatFrame")).toBe(true);
-    const chatVisible = presetGroups
-      .find((entry) => entry.id === "conversation")!
-      .options.find((option) => option.id === "chat-visible")!;
-    expect(isOptionSelectedInRail(shown, chatVisible, "conversation", [], mounted)).toBe(true);
-    expect(
-      isOptionSelectedInRail(
-        emptyStructureProject,
-        chatVisible,
-        "conversation",
-        [],
-        mountedComponentsForProject(emptyStructureProject, [], []),
-      ),
-    ).toBe(false);
   });
 
-  it("locks the event flow until there is a conversation to show it in", () => {
-    // Every stage renders inside the conversation, and a stage no longer
-    // conjures one, so a pick with no conversation would change nothing. The
-    // rail says what is missing rather than accepting a pick that does nothing.
+  it("does let the conversation's own group mount it", () => {
+    // The other half of the rule, and what keeps the empty start usable: a pick
+    // inside the conversation's own group is the reader configuring it, so it
+    // arrives.
+    // The project has to carry the patch as well as the pick id:
+    // `isAddedContentOption` asks whether the option is *in force*, not merely
+    // named, so a pick list on an untouched project answers false. Picking does
+    // both in the app, and this mirrors that.
+    const withLabels = togglePresetOption(emptyStructureProject, "speaker-labels");
+    expect(
+      mountedComponentsForProject(withLabels, [], ["speaker-labels"]).has("ChatFrame"),
+    ).toBe(true);
+  });
+
+  it("locks the event flow until there is a conversation to render into", () => {
+    // Live again: every stage renders inside the conversation, so from the empty
+    // start a stage pick would change nothing. It was briefly unreachable, when
+    // the conversation was permanently on, so `flowNeedsConversation` /
+    // `onEventFlowLocked` can fire once more.
     expect(isEventFlowReady(emptyStructureProject, [], [])).toBe(false);
-    expect(isEventFlowReady(togglePresetOption(emptyStructureProject, "chat-visible"), [], [])).toBe(true);
+    const withConversation = togglePresetOption(emptyStructureProject, "chat-visible");
+    expect(isEventFlowReady(withConversation, [], [])).toBe(true);
   });
 
   it("moves the tick when a second variant in a section is picked", () => {
@@ -242,8 +246,13 @@ describe("rail selection honesty", () => {
   it("keeps controls that can only ever be on out of the rail", () => {
     // A control that is always ticked is not a choice: the canvas opens with
     // three columns, and with a composer because an agent frontend without a
-    // way to type is not one. All three stay in the schema — the canvas
-    // toolbar's delete still turns the column ones off.
+    // way to type is not one. They stay in the schema; the canvas toolbar's
+    // delete still turns them off.
+    //
+    // `chat-visible` was briefly a fourth, when the conversation was
+    // permanently on. It is back in the rail because the conversation is now
+    // off at the start — and a control that is the only route to a state cannot
+    // be the one that is hidden.
     expect([...RAIL_HIDDEN_OPTION_IDS]).toEqual([
       "sidebar-visible",
       "output-visible",
@@ -278,7 +287,9 @@ describe("rail contents", () => {
     // of the run's own state and picking a turn back up is the next run's job.
     // So the group is withheld and its contents get rebuilt where they belong.
     const interrupt = presetGroups.find((group) => group.id === "interrupt")!;
-    expect(interrupt.options.filter(isOptionShownInRail)).toEqual([]);
+    // Wrapped, not passed by reference: the second parameter is the style now,
+    // and `Array.filter` would hand it the index.
+    expect(interrupt.options.filter((option) => isOptionShownInRail(option))).toEqual([]);
     expect(isGroupShownInRail("interrupt")).toBe(false);
     expect(presetRailSections.find((section) => section.id === "event-flow")?.groupIds).not.toContain(
       "interrupt",
@@ -312,20 +323,64 @@ describe("thinking group scope", () => {
     // how the text comes in.
     const live = presetGroups
       .find((group) => group.id === "ux-effects")!
-      .options.filter(isOptionShownInRail)
+      .options.filter((option) => isOptionShownInRail(option))
       .map((option) => option.id);
     expect(live).toEqual([
       "thinking-wave",
       "thinking-pulse",
       "thinking-shimmer",
-      "thinking-bars",
+      // `thinking-bars` was here, fourth in Motion. It is in Done style now,
+      // below — Motion is glyphs, and its own description says it has none:
+      // "the status text itself cycles". Moving it shifts what the Nth-option
+      // kit rule picks for every style past the third, which is why it is also
+      // excluded from the kit (`KIT_EXCLUDED_OPTION_IDS`).
       "thinking-orbit",
       "thinking-orb-s1",
       "thinking-orb-b5",
       "thinking-orb-m2",
-      "reasoning-auto-collapse",
-      "reasoning-expanded",
-      "reasoning-done-timed",
+      "thinking-hourglass",
+      /*
+       * The per-style motions. Present here because this list is the *schema*
+       * — `isOptionShownInRail` is called with no style, so nothing is
+       * narrowed. What the reader sees is four of them, which the test below
+       * pins.
+       */
+      "thinking-comic-halftone",
+      "thinking-comic-inkblot",
+      "thinking-comic-bubble",
+      "thinking-comic-flip",
+      "thinking-quest-torch",
+      "thinking-quest-rune",
+      "thinking-quest-coins",
+      "thinking-pixel-cursor",
+      "thinking-pixel-bars",
+      "thinking-pixel-spin",
+      "thinking-pixel-bricks",
+      "thinking-sketch-bubble",
+      "thinking-sketch-pencil",
+      "thinking-sketch-blot",
+      "thinking-sketch-page",
+      "thinking-tech-matrix",
+      "thinking-tech-signal",
+      "thinking-tech-scan",
+      "thinking-tech-segments",
+      "thinking-ink-drop",
+      "thinking-ink-stroke",
+      "thinking-ink-ripple",
+      "thinking-ink-seal",
+      "thinking-retro-watch",
+      "thinking-retro-record",
+      "thinking-retro-metronome",
+      "thinking-retro-telegraph",
+      // `reasoning-auto-collapse` and `reasoning-expanded` were here. They are
+      // withheld now: the fold is something the reader does on the thinking
+      // block itself, by hovering its header and clicking the chevron, so a
+      // pair of cards in the rail offered the same decision a second time —
+      // and in the one place where its effect is not visible.
+      // `reasoning-done-timed` moved to the 思考完成 group, where the rest of
+      // the settled-block axes now live — the title, what survives the fold,
+      // and the left rule, which it used to carry as a side effect.
+      "thinking-bars",
       "reasoning-writing-smooth",
       "reasoning-writing-typewriter",
       "reasoning-writing-chunked",
@@ -334,25 +389,84 @@ describe("thinking group scope", () => {
     expect(
       presetGroups
         .find((group) => group.id === "ux-effects")!
-        .options.filter(isOptionShownInRail)
+        .options.filter((option) => isOptionShownInRail(option))
         .map((option) => option.section),
     ).toEqual([
-      ...Array(8).fill("Motion"),
-      "Disclosure",
-      "Disclosure",
+      // Nineteen in the schema: the original eight (nine glyphs when the
+      // hourglass joined, less the text cycle, which moved to Done style) plus
+      // eleven drawn for a particular style. The reader is shown four — see the
+      // test below.
+      /* Twenty-three in the schema now: the original eight, eleven drawn for
+         漫画/游戏/像素, and four for 手绘风. The reader is still shown four — the
+         narrowing test below. */
+      ...Array(35).fill("Motion"),
+      // Disclosure is gone: folding the thinking block is done on the block
+      // itself, so the two cards were the same decision offered twice.
+      //
+      // Two in Done style now — what the closed row is called, and the option to
+      // replace the glyph with cycling text. Both are about what the block
+      // *does* rather than which mark it wears.
       "Done style",
+      // "Done style" went with it.
       "Text loading",
       "Text loading",
       "Text loading",
     ]);
 
-    // 思考完成 keeps its place in the flow — `REASONING_END` is its own event —
-    // with nothing shown in it yet. What is specific to the settled block (the
-    // summary row, the kept history, the per-段 timing) is still to design, and
-    // the panel says so rather than opening blank.
+    /*
+     * And what one style actually shows: four, every time.
+     *
+     * The narrowing matters more than a tidy panel. Three of the originals
+     * (`orb-s1`, `orb-b5`, `orb-m2`) have their geometry and keyframes written
+     * only under `[data-style-preset="native"]`, and the eleven new ones are
+     * scoped the same way — so a card outside its own style picks a motion the
+     * canvas cannot animate. The indicator does not degrade; it stops.
+     */
+    for (const styleId of presetStyleIds) {
+      const shown = presetGroups
+        .find((group) => group.id === "ux-effects")!
+        .options.filter(
+          (option) => option.section === "Motion" && isOptionShownInRail(option, styleId),
+        )
+        .map((option) => option.id);
+      // Four everywhere now — 复古风 was the one exception, on a single static
+      // indicator, until its own four were drawn.
+      expect(shown.length, `${styleId} motions`).toBe(4);
+      expect([...shown].sort(), styleId).toEqual([...styleMotionOptionIds(styleId)].sort());
+    }
+
+    /*
+     * 思考完成 is no longer empty. It held one dimmed card ("summary row") and
+     * the note here said the settled block was still to design; it now carries
+     * three axes, which is the shape the schema comment on `doneStyle` was
+     * anticipating ("more to come; this is the first of the set"):
+     *
+     *   Done title   — what the closed title says: label / timed / counted /
+     *                  conclusion. The summary-row idea is folded in as
+     *                  "conclusion", which puts the gist *in* the title rather
+     *                  than spending a second row on it.
+     *   Settled body — what is left on screen: foldable / title-only /
+     *                  peek-one-line. The group had no axis for this at all.
+     *   Left rule    — additive, and decoupled from `timed`, which used to
+     *                  carry it as a side effect.
+     */
     const settled = presetGroups
       .find((group) => group.id === "thinking-done")!
-      .options.filter(isOptionShownInRail);
-    expect(settled).toEqual([]);
+      .options.filter((option) => isOptionShownInRail(option));
+    expect(settled.map((option) => option.id)).toEqual([
+      "reasoning-done-label",
+      "reasoning-done-timed",
+      "reasoning-done-counted",
+      "reasoning-done-conclusion",
+      "reasoning-done-expandable",
+      "reasoning-done-title-only",
+      "reasoning-done-first-line",
+      "reasoning-done-rule",
+    ]);
+    // Two single-select sets and one additive flag, in that order.
+    expect([...new Set(settled.map((option) => option.section))]).toEqual([
+      "Done title",
+      "Settled body",
+    ]);
   });
 });

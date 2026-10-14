@@ -1,3 +1,18 @@
+/*
+ * Radii here follow the style the canvas is wearing.
+ *
+ * They were `clamp(28px, 7%, 64px)` on the outer surfaces and
+ * `clamp(8px, 7%, 32px)` on the loaders — written in a module, which cannot see
+ * which style it is rendering inside, so every style got the same 28px pillow
+ * while an image loaded. 像素风 rounds nothing and 复古风 rounds at 8px.
+ *
+ * `--preview-media-radius` is declared per style on `.preview-frame`
+ * (`app.css`), and custom properties inherit, so it arrives here without this
+ * module having to know anything about styles. The fallback is the old value,
+ * for the two places these loaders render outside the canvas: the landing page
+ * and the option-card previews, neither of which has a style to follow.
+ */
+
 .igWrap {
   --loader-grid-dot: #a1a1a1;
   --loader-grid-glow: #0b0d12;
@@ -18,7 +33,7 @@
 .igWrap[data-size="inline"] {
   width: 100%;
   aspect-ratio: 1;
-  border-radius: clamp(28px, 7%, 64px);
+  border-radius: var(--preview-media-radius, clamp(28px, 7%, 64px));
 }
 
 .igWrap[data-size="thumb"] {
@@ -81,7 +96,7 @@
   width: min(540px, 100%);
   aspect-ratio: 1;
   overflow: hidden;
-  border-radius: clamp(28px, 7%, 64px);
+  border-radius: var(--preview-media-radius, clamp(28px, 7%, 64px));
 }
 
 .igReveal > * {
@@ -223,7 +238,7 @@
   aspect-ratio: 1;
   place-items: center;
   overflow: hidden;
-  border-radius: clamp(8px, 7%, 32px);
+  border-radius: var(--preview-media-radius, clamp(8px, 7%, 32px));
   background: var(--dot-flicker-surface);
   color: var(--dot-flicker-ink);
   box-shadow: inset 0 0 0 1px var(--dot-flicker-line);
@@ -258,7 +273,7 @@
   width: var(--grid-sweep-size);
   aspect-ratio: 1;
   overflow: hidden;
-  border-radius: clamp(8px, 7%, 32px);
+  border-radius: var(--preview-media-radius, clamp(8px, 7%, 32px));
 }
 
 .gridSweepWrap .igWrap {
@@ -273,7 +288,7 @@
   width: var(--blur-flow-size);
   aspect-ratio: 1;
   overflow: hidden;
-  border-radius: clamp(8px, 7%, 32px);
+  border-radius: var(--preview-media-radius, clamp(8px, 7%, 32px));
   background:
     linear-gradient(112deg, #eceef1 0%, #f7f7f8 48%, #e5e7ea 100%);
   box-shadow: inset 0 0 0 1px rgb(116 122 127 / 0.07);
@@ -356,7 +371,7 @@
   width: var(--audio-loader-size);
   aspect-ratio: 4 / 1;
   overflow: hidden;
-  border-radius: clamp(8px, 6%, 18px);
+  border-radius: var(--preview-media-radius, clamp(8px, 6%, 18px));
   background: var(--audio-loader-surface);
   color: var(--audio-loader-ink);
   box-shadow: inset 0 0 0 1px var(--audio-loader-line);
@@ -479,7 +494,7 @@
   width: min(540px, 100%);
   aspect-ratio: 1;
   overflow: hidden;
-  border-radius: clamp(28px, 7%, 64px);
+  border-radius: var(--preview-media-radius, clamp(28px, 7%, 64px));
   background: #f6f6f6;
 }
 

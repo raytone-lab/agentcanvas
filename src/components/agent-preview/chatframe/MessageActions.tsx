@@ -57,7 +57,12 @@ export function MessageActions({ project, role }: { project: AgentFrontendProjec
         </span>
       ) : (
         <IconTooltip key={action.id} label={action.label}>
-          <button className="message-action-icon" aria-label={action.label} type="button">
+          <button
+            className="message-action-icon"
+            data-message-action={action.id}
+            aria-label={action.label}
+            type="button"
+          >
             {action.icon}
           </button>
         </IconTooltip>

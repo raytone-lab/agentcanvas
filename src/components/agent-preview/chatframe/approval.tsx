@@ -12,6 +12,8 @@ export type InlineApprovalPromptOption = {
   body?: string;
   answerPlaceholder?: boolean;
   disabled?: boolean;
+  /** The reply's mark — 允许 / 始终允许 / 拒绝 each have a gallery in 人机协作. */
+  iconSlot?: IconSlot;
   onSelect?: () => void;
 };
 
@@ -25,6 +27,8 @@ export function InlineApprovalPrompt({
   primaryLabel,
   pending = false,
   approvalSurface,
+  cancelLabel,
+  onCancel,
   onSecondary,
   onPrimary,
 }: {
@@ -37,6 +41,9 @@ export function InlineApprovalPrompt({
   primaryLabel: string;
   pending?: boolean;
   approvalSurface?: "inline";
+  /** A way out without answering — drawn with 取消's mark. Omitted, no key. */
+  cancelLabel?: string;
+  onCancel?: () => void;
   onSecondary?: () => void;
   onPrimary?: () => void;
 }) {
@@ -65,6 +72,11 @@ export function InlineApprovalPrompt({
             data-interactive={option.onSelect ? "true" : undefined}
           >
             <span className="inline-approval-option-index">{index + 1}.</span>
+            {option.iconSlot ? (
+              <span className="approval-option-icon" aria-hidden="true">
+                <StateIcon slot={option.iconSlot} size={15} />
+              </span>
+            ) : null}
             {option.answerPlaceholder ? (
               <input
                 className="inline-approval-answer"
@@ -101,6 +113,12 @@ export function InlineApprovalPrompt({
           {hint}
         </span>
         <div>
+          {onCancel && cancelLabel ? (
+            <button type="button" className="approval-cancel" disabled={pending} onClick={onCancel}>
+              <StateIcon slot="permission.cancel" size={14} aria-hidden="true" />
+              <span>{cancelLabel}</span>
+            </button>
+          ) : null}
           <button
             type="button"
             className="inline-approval-secondary"
@@ -156,6 +174,7 @@ export function InlineApprovalSurface({
         id: choice.id,
         title: choice.label,
         body: choice.hint,
+        iconSlot: choice.iconSlot,
         onSelect: () => void confirm(choice.id),
       }))}
       hint={copy.chat.approval.chooseHint}
@@ -163,6 +182,10 @@ export function InlineApprovalSurface({
       primaryLabel={copy.chat.approval.yes}
       pending={pending}
       approvalSurface="inline"
+      // The same way out the external card has, so 取消's gallery reaches this
+      // surface too.
+      cancelLabel={copy.chat.approval.cancel}
+      onCancel={() => void confirm("no")}
       onSecondary={() => void confirm("no")}
       onPrimary={() => void confirm("yes")}
     />
@@ -193,11 +216,11 @@ export function ExternalApprovalSurface({
       <div className="external-approval-head">
         <div>
           <span className="external-approval-title-row">
-            {approvalIconSlot ? (
-              <span className="external-approval-title-icon" aria-hidden="true">
-                <StateIcon slot={approvalIconSlot} size={15} />
-              </span>
-            ) : null}
+            {/* Always drawn: it is 等待确认's mark, and with nothing here that
+                gallery changed nothing anywhere on the canvas. */}
+            <span className="external-approval-title-icon" aria-hidden="true">
+              <StateIcon slot={approvalIconSlot ?? "tool.pending_approval"} size={15} />
+            </span>
             <strong>{copy.chat.approval.permissionRequired}</strong>
           </span>
         </div>
@@ -221,6 +244,9 @@ export function ExternalApprovalSurface({
             onClick={() => setSelected(choice.id)}
           >
             <span className="external-approval-index">{index + 1}.</span>
+            <span className="approval-option-icon" aria-hidden="true">
+              <StateIcon slot={choice.iconSlot} size={15} />
+            </span>
             <span className="external-approval-option-copy">
               <strong>{choice.label}</strong>
               <span>{choice.hint}</span>
@@ -233,6 +259,18 @@ export function ExternalApprovalSurface({
         <span>
           {copy.chat.approval.chooseHint}
         </span>
+        {/* Dismiss without choosing — 取消's mark. The rail had a gallery for
+            it and the card had no control that drew it. Beside 确认 rather than
+            in a corner, so the card reads in the rail's order: the question,
+            the three replies, then the way out. */}
+        <button
+          type="button"
+          className="approval-cancel"
+          onClick={() => void Promise.resolve(onConfirm?.("no")).catch(() => undefined)}
+        >
+          <StateIcon slot="permission.cancel" size={14} aria-hidden="true" />
+          <span>{copy.chat.approval.cancel}</span>
+        </button>
         <button
           type="button"
           className="external-approval-confirm"
@@ -251,22 +289,30 @@ export function isPendingApprovalTool(item: AgentUXToolTimelineItem): item is Ag
 
 type ApprovalChoice = ApprovalDecision;
 
-function approvalChoices(copy: UiCopy): Array<{ id: ApprovalChoice; label: string; hint: string }> {
+/**
+ * The three replies, each with the slot that draws it. Before the slots were
+ * here, 人机协作's 允许一次 / 始终允许 / 拒绝 galleries set icons nothing on the
+ * card rendered — reported as "这几个图标我选择之后在哪里显示".
+ */
+function approvalChoices(copy: UiCopy): Array<{ id: ApprovalChoice; label: string; hint: string; iconSlot: IconSlot }> {
   return [
     {
       id: "yes",
       label: copy.chat.approval.yes,
       hint: copy.chat.approval.hints.yes,
+      iconSlot: "permission.allow",
     },
     {
       id: "always",
       label: copy.chat.approval.always,
       hint: copy.chat.approval.hints.always,
+      iconSlot: "permission.allow_always",
     },
     {
       id: "no",
       label: copy.chat.approval.no,
       hint: copy.chat.approval.hints.no,
+      iconSlot: "permission.deny",
     },
   ];
 }

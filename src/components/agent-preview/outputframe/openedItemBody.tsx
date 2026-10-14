@@ -11,13 +11,17 @@ import { renderMarkdownPreview as renderMarkdown } from "./markdown/renderMarkdo
 export { renderMarkdownPreview } from "./markdown/renderMarkdown";
 
 export function renderOpenedOutputBody(item: OutputPanelItem, kind: OpenedOutputRenderKind, language: string, copy: OutputFrameCopy): ReactNode {
-  // An artifact with nothing in it says so. Synthesizing a body here produced a page that
-  // looked like a real preview — a heading, a line of filler and a "Preview action" button —
-  // sitting next to the genuine article in a second tab.
-  if (item.body === undefined || item.body.trim() === "") {
-    return <div className="empty-state">{copy.emptyNoArtifact}</div>;
-  }
-  const body = item.body;
+  /*
+   * Media first, because a picture is not a text body.
+   *
+   * The empty check used to run before these three, so an image artifact — which
+   * has no text in it by nature — fell straight through to "this run produced no
+   * artifact" and the image renderer was unreachable. Measured on the canvas:
+   * the tab said `data-render-kind="image"` and the panel said there was no
+   * artifact, with a `cover.png` sitting right there in the tab strip. It is
+   * also what `presetRendering.test.tsx > renders opened output by file type`
+   * has been failing on.
+   */
   if (kind === "image") {
     return <ImageOutputPreview item={item} />;
   }
@@ -27,6 +31,13 @@ export function renderOpenedOutputBody(item: OutputPanelItem, kind: OpenedOutput
   if (kind === "video") {
     return <VideoOutputPreview item={item} />;
   }
+  // An artifact with nothing in it says so. Synthesizing a body here produced a page that
+  // looked like a real preview — a heading, a line of filler and a "Preview action" button —
+  // sitting next to the genuine article in a second tab.
+  if (item.body === undefined || item.body.trim() === "") {
+    return <div className="empty-state">{copy.emptyNoArtifact}</div>;
+  }
+  const body = item.body;
   // The extension says "html"; the body decides whether there is a page to render. A `.html`
   // tab holding something else (a tool's JSON receipt, for instance) shows its source rather
   // than being dressed up as a page.

@@ -23,7 +23,7 @@ import {
   type PreviewScenarioId,
 } from "../../preview-runner/PreviewRunner";
 import { runLiveLlmPreview, LIVE_TOOL_SIMULATION_DELAY_MS } from "../../preview-runner/LiveLlmPreviewRunner";
-import { initialSavedPreviewRunMode } from "../../preview-runner/runModeState";
+import { canUseLivePreview, initialSavedPreviewRunMode } from "../../preview-runner/runModeState";
 import { defaultProviderConnection, type AgentFrontendProject, type ProviderConnection, type ProviderConnectionId } from "../../schema/agentuxConfig";
 import { themeTokens } from "../../theme/themeTokens";
 import type { AgentUXEvent } from "../../agentux";
@@ -44,7 +44,11 @@ export function createRunActions(
 ) {
   const { state, dispatch, refs, locale, copy, project, activeProject, setProject, sessionKeys, previewRunner, activePiConversation } = ctx;
   const { setDefaultProvider, updateModel } = base;
-  async function saveScaffoldPreview() {
+  /**
+   * Enter the saved preview on a fresh snapshot of the project being edited,
+   * then play `prompt` (the default demo prompt when none is given).
+   */
+  async function saveScaffoldPreview(prompt?: string, context?: ComposerSubmitContext) {
     refs.standardStreamRef.current?.cancel();
     const saved = JSON.parse(JSON.stringify(project)) as AgentFrontendProject;
     const snapshot = createScaffoldExportSnapshot(saved);
@@ -67,7 +71,8 @@ export function createRunActions(
 
     await runSavedReplayPreview({
       project: saved,
-      prompt: defaultPreviewPromptForLocale(locale),
+      prompt: prompt?.trim() || defaultPreviewPromptForLocale(locale),
+      attachments: context?.attachments,
       scenarioId: defaultScenarioId,
       successMessage: copy.shell.toast.uiUxSaved,
     });
@@ -85,8 +90,7 @@ export function createRunActions(
     dispatch({ type: "patch", patch: { showStandard: false } });
 
     if (state.runMode === "live") {
-      await runLivePreview(prompt);
-      return;
+      return runLivePreview(prompt);
     }
 
     if (state.runMode === "pi") {
@@ -94,6 +98,19 @@ export function createRunActions(
       return;
     }
 
+    /*
+     * From the builder, a replay starts from a fresh snapshot of what is being
+     * edited. `state.savedProject` is whatever was snapshotted the last time
+     * the preview was entered — possibly a different style altogether — and
+     * replaying it switched the surface into the preview on that old project,
+     * with the live icon set (avatars are not snapshotted) on top: two
+     * projects mixed on one screen. Inside the preview the snapshot *is* the
+     * thing being previewed, so there it is used as it stands.
+     */
+    if (state.surfaceMode !== "saved-preview") {
+      await saveScaffoldPreview(prompt, context);
+      return;
+    }
     const normalizedPrompt = prompt.trim() || defaultPreviewPromptForLocale(locale);
     await runSavedReplayPreview({
       project: state.savedProject,
@@ -174,7 +191,8 @@ export function createRunActions(
     };
   }
 
-  async function runLivePreview(prompt = state.previewPrompt) {
+  /** Resolves `false` when the prompt was refused before anything was sent. */
+  async function runLivePreview(prompt = state.previewPrompt): Promise<boolean | void> {
     if (!state.savedProject) {
       toast.info(copy.shell.toast.saveBeforeLiveLlm);
       return;
@@ -182,6 +200,21 @@ export function createRunActions(
     if (state.liveRunning) {
       stopLivePreview();
       return;
+    }
+
+    /*
+     * No key, no run — said before anything moves. The runner refused this
+     * itself, but only after the prompt had been recorded: the welcome screen
+     * was gone, nothing was sent, and the one sign of why was an English toast
+     * that disappeared over an empty canvas reading 未加载回放事件.
+     */
+    if (!canUseLivePreview({ project: state.savedProject, sessionKeys })) {
+      toast.error(
+        formatCopy(copy.shell.toast.liveNeedsSessionKey, {
+          provider: defaultProviderConnection(state.savedProject).label,
+        }),
+      );
+      return false;
     }
 
     const normalizedPrompt = prompt.trim() || livePreviewFallbackPrompt[locale];
@@ -501,8 +534,35 @@ export function createRunActions(
     });
   }
 
+  /**
+   * Picking a scenario plays it.
+   *
+   * This was the patch alone, and nothing downstream reads
+   * `selectedScenarioId` except the *next* call to `runSavedReplayPreview` —
+   * so the picker set a value and the canvas kept whatever had been streamed
+   * before. Picking 工具审批 left 未加载回放事件 on screen while the control
+   * read 工具审批: the one place in the product where the reader chooses what
+   * to watch, and it showed them something else.
+   *
+   * Not a new behaviour. Entering this surface in replay mode already runs the
+   * scenario without asking for a prompt (`saveScaffoldPreview` below calls
+   * exactly this), so a transcript appearing on its own is the rule here; the
+   * control that changes *which* transcript simply was not following it.
+   *
+   * `id`, not `state.selectedScenarioId` — the dispatch above has not been
+   * applied yet when this closure runs.
+   */
   function updateScenario(id: PreviewScenarioId) {
     dispatch({ type: "patch", patch: { selectedScenarioId: id, gitPreviewStateOverride: undefined } });
+    // Replay is the only mode with a transcript to pick. Live and Pi produce
+    // their own events and must not be interrupted by a canned one.
+    if (!state.savedProject || state.runMode !== "replay") return;
+    void runSavedReplayPreview({
+      project: state.savedProject,
+      prompt: state.previewPrompt,
+      scenarioId: id,
+      successMessage: copy.shell.toast.pureFrontendComplete,
+    });
   }
 
   function updateRunMode(mode: RunMode) {
@@ -513,6 +573,25 @@ export function createRunActions(
       return;
     }
     dispatch({ type: "runModeChanged", mode });
+    /*
+     * Switching *to* replay has to load a replay.
+     *
+     * `runModeChanged` only writes events for the Pi branch, so coming from
+     * live this left `runEvents: []` and `runEventSource: "live"` exactly as
+     * the live entry had set them — the canvas went on showing an empty
+     * transcript under a control that said 回放模拟, and no amount of picking
+     * a scenario helped, because that was the same omission one function up.
+     *
+     * Live is deliberately not symmetrical: it needs a prompt and a key, and
+     * `saveScaffoldPreview` returns early for it rather than running anything.
+     */
+    if (mode !== "replay" || !state.savedProject) return;
+    void runSavedReplayPreview({
+      project: state.savedProject,
+      prompt: state.previewPrompt,
+      scenarioId: state.selectedScenarioId,
+      successMessage: copy.shell.toast.pureFrontendComplete,
+    });
   }
 
   function selectPiConversation(conversationId: string) {

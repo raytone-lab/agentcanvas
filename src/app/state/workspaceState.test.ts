@@ -118,6 +118,33 @@ describe("workspaceReducer transitions", () => {
     expect(next.previewPrompt).toBe("");
   });
 
+  it("holds the welcome state until something needs a conversation to be visible", () => {
+    /*
+     * 新建对话 asks for the welcome screen, and nothing had ever been able to
+     * turn it back off — `welcomeActive` was set by one action and cleared by
+     * none. Left that way it is a trap: the canvas keeps an empty column and
+     * every pick after it lands somewhere the reader cannot see.
+     *
+     * Three ways out, and each one is a thing that needs a conversation to
+     * exist: choosing a component, sending a prompt, or opening one of the
+     * sidebar's conversations. Editing the greeting is deliberately not among
+     * them — that field re-enters this state on focus, because it is the one
+     * case where the welcome screen *is* what is being configured.
+     */
+    const welcome = workspaceReducer(createInitialWorkspaceState(locale), { type: "enterWelcome" });
+    expect(welcome.welcomeActive).toBe(true);
+
+    expect(workspaceReducer(welcome, { type: "optionPicked", optionId: "mic" }).welcomeActive).toBe(false);
+    expect(workspaceReducer(welcome, { type: "recordPrompt", prompt: "hello" }).welcomeActive).toBe(false);
+    expect(workspaceReducer(welcome, { type: "leaveWelcome" }).welcomeActive).toBe(false);
+
+    // An empty prompt is not a send, so it must not move the canvas either.
+    expect(workspaceReducer(welcome, { type: "recordPrompt", prompt: "   " }).welcomeActive).toBe(true);
+    // And leaving when it is already left changes nothing (same object back).
+    const left = workspaceReducer(welcome, { type: "leaveWelcome" });
+    expect(workspaceReducer(left, { type: "leaveWelcome" })).toBe(left);
+  });
+
   it("replayCurrent re-emits the current events and falls back only when no run is loaded", () => {
     const state = createInitialWorkspaceState(locale);
     // Initial runEvents is [] (truthy), so a replay clones it rather than using the fallback —
@@ -187,6 +214,48 @@ describe("workspaceReducer transitions", () => {
 
     const edited = { ...state, previewPrompt: "custom" };
     expect(workspaceReducer(edited, { type: "localeDefaultPromptSwapped", from: "en", to: "zh" })).toBe(edited);
+  });
+
+  it("uiPreviewToggled clears the editor's selection on the way in and leaves it cleared on the way out", () => {
+    const state = {
+      ...createInitialWorkspaceState(locale),
+      selectedLayerId: "main",
+      selectedSlotId: "composer.send",
+      layersOpen: true,
+    };
+
+    const entered = workspaceReducer(state, { type: "uiPreviewToggled", active: true });
+    expect(entered.uiPreview).toBe(true);
+    // Selection paints on the canvas, so it cannot survive into a view of the
+    // interface.
+    expect(entered.selectedLayerId).toBeNull();
+    expect(entered.selectedSlotId).toBeNull();
+    // The panel is only folded away by CSS while in there — whatever the reader
+    // had open is still open when they come back.
+    expect(entered.layersOpen).toBe(true);
+
+    const left = workspaceReducer(entered, { type: "uiPreviewToggled", active: false });
+    expect(left.uiPreview).toBe(false);
+    expect(left.selectedLayerId).toBeNull();
+    expect(left.selectedSlotId).toBeNull();
+  });
+
+  it("leaves the interface preview whenever the reader is sent back to the rail", () => {
+    const looking = { ...createInitialWorkspaceState(locale), uiPreview: true };
+
+    // Opening a group is a request to edit, in a rail that is folded away.
+    expect(workspaceReducer(looking, { type: "presetGroupSelected", groupId: "theme" }).uiPreview).toBe(false);
+
+    // The run preview is its own surface with its own chrome.
+    const ran = workspaceReducer(looking, {
+      type: "savedPreviewEntered",
+      saved: {} as never,
+      snapshot: {} as never,
+      scenarioId: "simple-chat",
+      runMode: "replay",
+      live: false,
+    });
+    expect(ran.uiPreview).toBe(false);
   });
 
   it("savedPreviewEntered keeps the replay transcript when entering non-live saved preview", () => {

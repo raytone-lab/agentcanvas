@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { ChevronDown, Minus, Plus } from "lucide-react";
 
 import type { UiCopy } from "../../i18n/uiCopy";
 
@@ -17,6 +17,16 @@ export function clampZoom(value: number): number {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(value)));
 }
 
+/**
+ * The wheel's clamp. Not rounded: a pinch moves the zoom a fraction of a
+ * percent per event, and rounding each one back to the integer it started
+ * from would leave a slow pinch doing nothing at all. The readout rounds.
+ */
+export function clampZoomFine(value: number): number {
+  if (!Number.isFinite(value)) return 100;
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(value * 100) / 100));
+}
+
 /** Next step above `value`; the ceiling when there is none. */
 export function zoomIn(value: number): number {
   return ZOOM_STEPS.find((step) => step > value) ?? MAX_ZOOM;
@@ -28,7 +38,9 @@ export function zoomOut(value: number): number {
 }
 
 /**
- * Canvas zoom: a percentage readout that opens a menu.
+ * Canvas zoom: a step out, the percentage, a step in — floating at the
+ * canvas's top right, where a design tool keeps it. The percentage opens a
+ * menu.
  *
  * The percentage is editable because the presets can only ever be a handful,
  * and "show me this at 65%" is a real thing to want. Everything the menu does
@@ -45,15 +57,26 @@ export function ZoomControl({
   onZoomChange: (zoom: number) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(String(zoom));
+  /*
+   * Mounted for the length of the close as well as while open: an element
+   * that unmounts in the frame it closes has nothing to run an exit on, which
+   * is why the menu used to blink out. Cleared by the exit animation's end.
+   */
+  const [present, setPresent] = useState(false);
+  const shown = Math.round(zoom);
+  const [draft, setDraft] = useState(String(shown));
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   // The readout is the source of truth: a shortcut fired while the menu is open
   // has to move the field too, or the two disagree about the current zoom.
   useEffect(() => {
-    setDraft(String(zoom));
-  }, [zoom]);
+    setDraft(String(shown));
+  }, [shown]);
+
+  useEffect(() => {
+    if (open) setPresent(true);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -80,7 +103,7 @@ export function ZoomControl({
     // Tolerant of what people actually type: "150", "150%", " 150 ".
     const parsed = Number.parseFloat(draft.replace("%", "").trim());
     if (Number.isNaN(parsed)) {
-      setDraft(String(zoom));
+      setDraft(String(shown));
       return;
     }
     onZoomChange(clampZoom(parsed));
@@ -98,17 +121,44 @@ export function ZoomControl({
     <div className="zoom-control" ref={rootRef}>
       <button
         type="button"
+        className="zoom-step"
+        aria-label={copy.shell.topbar.zoomOut}
+        title={`${copy.shell.topbar.zoomOut}  −`}
+        disabled={zoom <= MIN_ZOOM}
+        onClick={() => onZoomChange(zoomOut(zoom))}
+      >
+        <Minus size={14} aria-hidden="true" />
+      </button>
+      <button
+        type="button"
         className="zoom-trigger"
         aria-label={copy.shell.topbar.zoomAria}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="zoom-trigger-value">{zoom}%</span>
-        <ChevronDown size={14} aria-hidden="true" />
+        <span className="zoom-trigger-value">{shown}%</span>
+        <ChevronDown size={12} aria-hidden="true" />
       </button>
-      {open ? (
-        <div className="zoom-menu" role="menu">
+      <button
+        type="button"
+        className="zoom-step"
+        aria-label={copy.shell.topbar.zoomIn}
+        title={`${copy.shell.topbar.zoomIn}  +`}
+        disabled={zoom >= MAX_ZOOM}
+        onClick={() => onZoomChange(zoomIn(zoom))}
+      >
+        <Plus size={14} aria-hidden="true" />
+      </button>
+      {open || present ? (
+        <div
+          className="zoom-menu"
+          role="menu"
+          data-state={open ? "open" : "closed"}
+          onAnimationEnd={(event) => {
+            if (event.target === event.currentTarget && !open) setPresent(false);
+          }}
+        >
           <input
             ref={inputRef}
             className="zoom-menu-field"
@@ -124,7 +174,7 @@ export function ZoomControl({
                 return;
               }
               if (event.key === "Escape") {
-                setDraft(String(zoom));
+                setDraft(String(shown));
                 setOpen(false);
                 return;
               }
@@ -137,11 +187,12 @@ export function ZoomControl({
             }}
           />
           <div className="zoom-menu-items">
-            {items.map((item) => (
+            {items.map((item, index) => (
               <button
                 key={item.key}
                 type="button"
                 className="zoom-menu-item"
+                style={{ "--zoom-item-index": index } as CSSProperties}
                 role="menuitem"
                 // Stepping past the end is not an error, it is a no-op — but it
                 // should not look available.

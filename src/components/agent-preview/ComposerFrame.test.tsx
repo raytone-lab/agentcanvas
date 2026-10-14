@@ -102,6 +102,6 @@ describe("ComposerFrame controls", () => {
     );
 
     expect(markup).toContain('type="button"');
-    expect(markup).toContain(">停止</button>");
+    expect(markup).toContain('aria-label="停止"');
   });
 });

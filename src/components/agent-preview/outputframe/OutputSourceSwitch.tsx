@@ -1,4 +1,4 @@
-import { motion, useReducedMotion } from "motion/react";
+import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { FileCode2, PanelRight, TerminalSquare } from "../../../agentmatrix/uiIcons";
 
 import type { OutputSource } from "../../../schema/agentuxConfig";
@@ -13,18 +13,19 @@ export function OutputSourceSwitch({
   copy: OutputFrameCopy;
   onChange: (source: OutputSource) => void;
 }) {
-  const reducedMotion = useReducedMotion();
+  const pill = useSourcePill(source);
   return (
-    <div className="output-source-switch" role="group" aria-label={copy.titleArtifactPrefix}>
+    <div className="output-source-switch" role="group" aria-label={copy.titleArtifactPrefix} ref={pill.trackRef}>
+      <span className="output-source-pill" aria-hidden="true" style={pill.style} data-ready={pill.ready ? "true" : undefined} />
       <button
         type="button"
         aria-label={copy.titleArtifactPrefix}
         aria-pressed={source === "artifact"}
         data-active={source === "artifact"}
+        data-source="artifact"
         title={copy.subtitleArtifactPreview}
         onClick={() => onChange("artifact")}
       >
-        {source === "artifact" ? <SourcePill reduced={reducedMotion} /> : null}
         <FileCode2 size={15} />
         <span className="output-source-label">{copy.sourceArtifact}</span>
       </button>
@@ -33,10 +34,10 @@ export function OutputSourceSwitch({
         aria-label={copy.titleConsole}
         aria-pressed={source === "console"}
         data-active={source === "console"}
+        data-source="console"
         title={copy.consoleLogs}
         onClick={() => onChange("console")}
       >
-        {source === "console" ? <SourcePill reduced={reducedMotion} /> : null}
         <TerminalSquare size={15} />
         <span className="output-source-label">{copy.sourceConsole}</span>
       </button>
@@ -45,33 +46,56 @@ export function OutputSourceSwitch({
 }
 
 /**
- * The moving background behind the active source tab.
+ * Where the ring behind the active tab sits: the active button's box, in the
+ * switch's own coordinates.
  *
- * A shared `layoutId` is what makes this slide: motion sees the same element leave one button
- * and arrive in the other, and interpolates the box between them. The previous version gave
- * each button its own `background` and cross-faded — two fades read as a jump, because nothing
- * ever travels.
+ * It used to be a motion `layoutId` shared between the two buttons, and that
+ * measures in *screen* space. On the design canvas the screen position of
+ * everything changes on every frame of a pan or a zoom, so the ring trailed
+ * behind its tab while the canvas was dragged — and, once told to ignore those
+ * renders, slid in from wherever the tab had been before the pan. `offsetLeft`
+ * and `offsetWidth` are layout lengths inside the switch: no pan, zoom or
+ * scroll moves them, and only the source (or a label changing width with the
+ * locale) does.
  *
- * Spring rather than a duration: the distance changes with the label widths (and with locale —
- * "Artifact" / "产物" / "アーティファクト" are three different widths), and a fixed duration
- * makes the short trip feel slow and the long one feel rushed.
- *
- * `border-radius: inherit` in CSS, not a value here: the minimal style preset swaps the
- * switch's radius, and a hardcoded pill would keep the pill round inside a square control.
+ * The slide is a CSS transition on `transform` and `width` (see
+ * `.output-source-pill`), held back until the first measurement has landed so
+ * the ring does not sweep in from the switch's left edge on mount.
  */
-function SourcePill({ reduced }: { reduced: boolean | null }) {
-  return (
-    <motion.span
-      className="output-source-pill"
-      layoutId="output-source-pill"
-      aria-hidden="true"
-      transition={
-        reduced
-          ? { duration: 0 }
-          : { type: "spring", stiffness: 420, damping: 34, mass: 0.7 }
-      }
-    />
-  );
+function useSourcePill(source: OutputSource) {
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const [box, setBox] = useState<{ x: number; w: number } | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const measure = () => {
+      const active = track.querySelector<HTMLElement>(`button[data-source="${source}"]`);
+      if (!active) return;
+      setBox((current) =>
+        current && current.x === active.offsetLeft && current.w === active.offsetWidth
+          ? current
+          : { x: active.offsetLeft, w: active.offsetWidth },
+      );
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    for (const button of track.querySelectorAll("button")) observer.observe(button);
+    return () => observer.disconnect();
+  }, [source]);
+
+  useLayoutEffect(() => {
+    if (!box || ready) return;
+    const frame = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(frame);
+  }, [box, ready]);
+
+  const style = box
+    ? ({ "--source-pill-x": `${box.x}px`, "--source-pill-w": `${box.w}px` } as CSSProperties)
+    : ({ visibility: "hidden" } as CSSProperties);
+  return { trackRef, style, ready };
 }
 
 export function ExpandOutputIcon({ size }: { size: number }) {
@@ -98,7 +122,11 @@ export function RightSidebarIcon({ size }: { size: number }) {
     <svg
       width={size}
       height={size}
-      viewBox="0 0 30 30"
+      // Half a unit of room round the box: the frame's stroke runs to the
+      // very edge of 0–30, and the viewBox clipped its outer half-pixel —
+      // the icon looked cut on one side at any zoom that is not 100%.
+      viewBox="-0.5 -0.5 31 31"
+      overflow="visible"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"

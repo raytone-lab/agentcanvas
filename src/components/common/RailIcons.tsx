@@ -11,7 +11,11 @@ export function SidebarRailIcon({ size }: { size: number }) {
     <svg
       width={size}
       height={size}
-      viewBox="0 0 30 30"
+      // Half a unit of room round the box: the frame's stroke runs to the
+      // very edge of 0–30, and the viewBox clipped its outer half-pixel —
+      // the icon looked cut on one side at any zoom that is not 100%.
+      viewBox="-0.5 -0.5 31 31"
+      overflow="visible"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
@@ -28,7 +32,11 @@ export function RightSidebarRailIcon({ size }: { size: number }) {
     <svg
       width={size}
       height={size}
-      viewBox="0 0 30 30"
+      // Half a unit of room round the box: the frame's stroke runs to the
+      // very edge of 0–30, and the viewBox clipped its outer half-pixel —
+      // the icon looked cut on one side at any zoom that is not 100%.
+      viewBox="-0.5 -0.5 31 31"
+      overflow="visible"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"

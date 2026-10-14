@@ -1,4 +1,4 @@
-import { useId, type SVGProps } from "react";
+import { useId, type ReactNode, type SVGProps } from "react";
 
 export function AssistantSecondAvatar({ size = 48, ...rest }: { size?: number | string } & SVGProps<SVGSVGElement>) {
   const maskId = useId();
@@ -56,3 +56,485 @@ export function UserThirdAvatar({ size = 48, ...rest }: { size?: number | string
   );
 }
 
+/*
+ * The pixel style's two avatars.
+ *
+ * Drawn on a 16×16 grid — the same grid the style's bricks, coins and badges
+ * are on — and scaled by whole units, so a 48px avatar is each cell at 3×3 and
+ * every edge still lands on a device pixel. `shapeRendering="crispEdges"` is
+ * what keeps that true at sizes the grid does not divide: without it the
+ * browser antialiases the rect edges and the sprite goes soft, which is the one
+ * thing this style cannot survive.
+ *
+ * Original artwork rather than the characters in the reference, because a style
+ * ships into the reader's own exported project and someone else's characters
+ * would ship with it. The vocabulary is the generic part of the idiom — hard
+ * outline, two-tone shading, a lit top edge — which is what actually carries
+ * the look.
+ *
+ * Both are built the same way so they read as a pair: one black outline, a base
+ * fill, a lighter top band for the light, a darker bottom band for the shade.
+ * The user is a round-helmeted explorer; the agent is a blockier machine with
+ * an aerial. Neither has a mouth — at 16 cells a mouth is one or two pixels and
+ * reads as a smudge.
+ */
+
+/** One cell of the sprite grid, as a rect. */
+const cell = (x: number, y: number, w: number, h: number, fill: string) => (
+  <rect key={`${x}-${y}-${w}-${h}-${fill}`} x={x} y={y} width={w} height={h} fill={fill} />
+);
+
+function PixelSprite({
+  size,
+  rest,
+  children,
+}: {
+  size: number | string;
+  rest: SVGProps<SVGSVGElement>;
+  children: ReactNode;
+}) {
+  return (
+    <svg
+      {...rest}
+      className={["custom-avatar-face", "pixel-avatar", rest.className].filter(Boolean).join(" ")}
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      shapeRendering="crispEdges"
+      fill="none"
+    >
+      {children}
+    </svg>
+  );
+}
+
+export function PixelExplorerAvatar({ size = 48, ...rest }: { size?: number | string } & SVGProps<SVGSVGElement>) {
+  /*
+   * A capped plumber, head and shoulders, on the 16-cell grid.
+   *
+   * Original artwork in the idiom rather than the character from the reference:
+   * a style ships into the reader's own exported project, and someone else's
+   * character would ship with it. What makes the idiom read is the vocabulary,
+   * not the individual — a red cap with a brim, a big nose, a moustache wide
+   * enough to survive being two pixels tall, and dungarees with a button. At 16
+   * cells those five things are the whole portrait.
+   */
+  const K = "#000000";          // outline
+  const CAP = "#D62411";        // cap
+  const CAP_LIT = "#F5533C";
+  const SKIN = "#F8C89A";
+  const SKIN_SHADE = "#D79A6A";
+  const HAIR = "#5A2D0C";
+  const BIB = "#1E5BD6";
+  const BIB_LIT = "#4A85F0";
+  const BTN = "#FEC300";
+  return (
+    <PixelSprite size={size} rest={rest}>
+      {/* cap crown */}
+      {cell(4, 0, 8, 1, K)}
+      {cell(3, 1, 10, 1, CAP_LIT)}
+      {cell(3, 2, 10, 1, CAP)}
+      {cell(2, 1, 1, 2, K)}
+      {cell(13, 1, 1, 2, K)}
+      {/* brim, wider than the crown */}
+      {cell(1, 3, 14, 1, CAP)}
+      {cell(1, 4, 14, 1, K)}
+      {/* face — kept plain on purpose.
+             The first draft had sideburns as well as eyes, which left one cell
+             of skin between them. Two cells is the floor for a feature here:
+             at 32px each cell is exactly 2px, and a one-cell gap between two
+             dark shapes closes up into a single dark mass. So the hair goes and
+             the eyes get a clear field. */}
+      {cell(3, 5, 10, 4, SKIN)}
+      {cell(2, 5, 1, 4, K)}
+      {cell(13, 5, 1, 4, K)}
+      {/* eyes: one cell each, three cells apart */}
+      {cell(5, 6, 1, 2, K)}
+      {cell(10, 6, 1, 2, K)}
+      {/* nose */}
+      {cell(7, 7, 2, 2, SKIN_SHADE)}
+      {/* moustache */}
+      {cell(4, 9, 8, 1, HAIR)}
+      {cell(3, 10, 10, 1, K)}
+      {/* dungarees */}
+      {cell(4, 11, 8, 1, BIB_LIT)}
+      {cell(4, 12, 8, 3, BIB)}
+      {cell(3, 11, 1, 4, K)}
+      {cell(12, 11, 1, 4, K)}
+      {cell(7, 12, 2, 2, BTN)}
+      {cell(3, 15, 10, 1, K)}
+    </PixelSprite>
+  );
+}
+
+export function PixelMachineAvatar({ size = 48, ...rest }: { size?: number | string } & SVGProps<SVGSVGElement>) {
+  /* Kept as the third option in the picker: a blockier machine with an aerial,
+     for readers who want the agent to look like a machine rather than a
+     creature. Same construction as the other two. */
+  const K = "#000000";
+  const BODY = "#02B838";
+  const BODY_LIT = "#5BE07F";
+  const BODY_SHADE = "#017A25";
+  const GLASS = "#DBEAF2";
+  return (
+    <PixelSprite size={size} rest={rest}>
+      {cell(7, 0, 2, 1, K)}
+      {cell(7, 1, 2, 2, "#FEC300")}
+      {cell(7, 3, 2, 1, K)}
+      {cell(2, 4, 12, 1, K)}
+      {cell(2, 5, 12, 1, BODY_LIT)}
+      {cell(2, 6, 12, 4, BODY)}
+      {cell(2, 10, 12, 1, BODY_SHADE)}
+      {cell(1, 5, 1, 6, K)}
+      {cell(14, 5, 1, 6, K)}
+      {cell(2, 11, 12, 1, K)}
+      {cell(4, 6, 8, 3, K)}
+      {cell(5, 7, 2, 1, GLASS)}
+      {cell(9, 7, 2, 1, GLASS)}
+      {cell(4, 12, 8, 2, BODY_SHADE)}
+      {cell(3, 12, 1, 2, K)}
+      {cell(12, 12, 1, 2, K)}
+      {cell(3, 14, 10, 1, K)}
+    </PixelSprite>
+  );
+}
+
+export function PixelMushroomAvatar({ size = 48, ...rest }: { size?: number | string } & SVGProps<SVGSVGElement>) {
+  /*
+   * A capped mushroom: the generic game object the reference uses, drawn the
+   * same way as the plumber so the two read as a pair.
+   *
+   * The spots are what identify it, so they get three cells across rather than
+   * one — a single-cell spot at 16 reads as dirt. The cap overhangs the stem by
+   * two cells on each side, which is what makes it a mushroom rather than a
+   * dome.
+   */
+  const K = "#000000";
+  const CAP = "#D62411";
+  const CAP_LIT = "#F5533C";
+  const SPOT = "#FFFFFF";
+  const STEM = "#FDF2CF";
+  const STEM_SHADE = "#D8C89A";
+  return (
+    <PixelSprite size={size} rest={rest}>
+      {/* cap */}
+      {cell(5, 0, 6, 1, K)}
+      {cell(3, 1, 10, 1, K)}
+      {cell(2, 2, 12, 1, K)}
+      {cell(3, 2, 10, 1, CAP_LIT)}
+      {cell(2, 3, 12, 1, CAP_LIT)}
+      {cell(1, 4, 14, 3, CAP)}
+      {cell(1, 3, 1, 4, K)}
+      {cell(14, 3, 1, 4, K)}
+      {cell(0, 4, 1, 3, K)}
+      {cell(15, 4, 1, 3, K)}
+      {/* spots */}
+      {cell(2, 4, 3, 2, SPOT)}
+      {cell(11, 4, 3, 2, SPOT)}
+      {cell(7, 3, 2, 2, SPOT)}
+      {/* underside */}
+      {cell(1, 7, 14, 1, K)}
+      {/* stem */}
+      {cell(4, 8, 8, 4, STEM)}
+      {cell(4, 11, 8, 1, STEM_SHADE)}
+      {cell(3, 8, 1, 4, K)}
+      {cell(12, 8, 1, 4, K)}
+      {cell(4, 12, 8, 1, K)}
+      /* eyes */
+      {cell(5, 9, 2, 2, K)}
+      {cell(9, 9, 2, 2, K)}
+    </PixelSprite>
+  );
+}
+
+/* ── The rest of the set ──────────────────────────────────────────────────
+   The style shipped with one user sprite and two agent sprites, so the avatar
+   gallery — four tiles per style — had one tile filled and three borrowed from
+   the smooth sets. Borrowed is the wrong answer here specifically: avatars are
+   exempt from the pixel icon remapping (`IconSetContext.tsx`, the
+   `!AVATAR_SLOTS.has(slot)` guard), so a borrowed face stays smooth and becomes
+   the one un-gridded thing on screen.
+
+   Same construction as the three above, and the same rule: original artwork in
+   the idiom, never a recognisable character — the style ships inside the
+   reader's exported project, and so would anyone else's mascot. Each sprite
+   names its own colours; two cells is the floor for any feature, because at
+   32px a cell is 2px and a one-cell gap between two dark shapes closes up. */
+
+export function PixelKnightAvatar({ size = 48, ...rest }: { size?: number | string } & SVGProps<SVGSVGElement>) {
+  /*
+   * A visored helm with a crest, and a gorget under it.
+   *
+   * No face — the visor slit is the feature, and eyes behind it would want four
+   * cells of detail inside a two-cell opening.
+   *
+   * Two things were learned redrawing this. The crest reads as a *vertical*
+   * stripe down the middle, because the portrait is front-on; the first draft
+   * put it off to one side, where it detached from the helm and read as a stray
+   * red pixel. And the crown has to step inward row by row — a flat wide row
+   * with black caps on the ends is a box, not a dome. The jaw steps back in the
+   * same way, which is what separates the helm from the gorget below it.
+   */
+  const K = "#000000";
+  const STEEL = "#8C96A8";
+  const STEEL_LIT = "#C3CBD9";
+  const STEEL_SHADE = "#5C6475";
+  const PLUME = "#C42B3C";
+  const PLUME_LIT = "#E85D6B";
+  const SLIT = "#1B2430";
+  return (
+    <PixelSprite size={size} rest={rest}>
+      {/* crest, down the centre line */}
+      {cell(6, 0, 4, 1, K)}
+      {cell(6, 1, 4, 1, PLUME_LIT)}
+      {cell(5, 2, 1, 1, K)}
+      {cell(10, 2, 1, 1, K)}
+      {cell(6, 2, 4, 1, PLUME)}
+      {/* crown, stepping outward */}
+      {cell(4, 3, 8, 1, K)}
+      {cell(3, 4, 1, 1, K)}
+      {cell(12, 4, 1, 1, K)}
+      {cell(4, 4, 8, 1, STEEL_LIT)}
+      {cell(6, 4, 4, 1, PLUME)}
+      {cell(2, 5, 1, 3, K)}
+      {cell(13, 5, 1, 3, K)}
+      {cell(3, 5, 10, 1, STEEL)}
+      {/* visor slit, two cells tall with a nose bar through it */}
+      {cell(3, 6, 10, 2, SLIT)}
+      {cell(7, 6, 2, 2, STEEL_SHADE)}
+      {/* jaw, stepping back in */}
+      {cell(3, 8, 10, 1, STEEL)}
+      {cell(2, 8, 1, 1, K)}
+      {cell(13, 8, 1, 1, K)}
+      {cell(3, 9, 1, 1, K)}
+      {cell(12, 9, 1, 1, K)}
+      {cell(4, 9, 8, 1, STEEL_SHADE)}
+      {cell(4, 10, 8, 1, K)}
+      {/* gorget */}
+      {cell(4, 11, 8, 1, STEEL_LIT)}
+      {cell(4, 12, 8, 2, STEEL)}
+      {cell(4, 13, 8, 1, STEEL_SHADE)}
+      {cell(3, 11, 1, 3, K)}
+      {cell(12, 11, 1, 3, K)}
+      {cell(3, 14, 10, 1, K)}
+    </PixelSprite>
+  );
+}
+
+export function PixelRangerAvatar({ size = 48, ...rest }: { size?: number | string } & SVGProps<SVGSVGElement>) {
+  /*
+   * A pointed hood, drawn as the shape rather than as a hat on a head.
+   *
+   * The peak is doing all the work. The first draft gave the hood a rounded
+   * crown, which put its silhouette within a cell of the mushroom's — two
+   * tiles in the same gallery that had to be told apart by colour alone. A
+   * single-cell point stepping out two cells per row is unmistakably a hood and
+   * cannot be confused with a cap.
+   *
+   * The cheek panels run past the jaw, which is the other half of the read: a
+   * hood covers the sides of the head, a hat does not.
+   */
+  const K = "#000000";
+  const HOOD = "#2E7D46";
+  const HOOD_LIT = "#4FAE68";
+  const HOOD_SHADE = "#1C5230";
+  const SKIN = "#E8B487";
+  const SKIN_SHADE = "#C08A5E";
+  const CLOAK = "#6B4A2A";
+  return (
+    <PixelSprite size={size} rest={rest}>
+      {/* the peak, stepping out two cells a row */}
+      {cell(7, 0, 2, 1, K)}
+      {cell(6, 1, 1, 1, K)}
+      {cell(9, 1, 1, 1, K)}
+      {cell(7, 1, 2, 1, HOOD_LIT)}
+      {cell(5, 2, 1, 1, K)}
+      {cell(10, 2, 1, 1, K)}
+      {cell(6, 2, 4, 1, HOOD_LIT)}
+      {cell(4, 3, 1, 1, K)}
+      {cell(11, 3, 1, 1, K)}
+      {cell(5, 3, 6, 1, HOOD_LIT)}
+      {cell(3, 4, 1, 1, K)}
+      {cell(12, 4, 1, 1, K)}
+      {cell(4, 4, 8, 1, HOOD)}
+      {cell(2, 5, 1, 5, K)}
+      {cell(13, 5, 1, 5, K)}
+      {/* cheek panels, past the jaw */}
+      {cell(3, 5, 2, 5, HOOD)}
+      {cell(11, 5, 2, 5, HOOD)}
+      {cell(3, 9, 2, 1, HOOD_SHADE)}
+      {cell(11, 9, 2, 1, HOOD_SHADE)}
+      {/* face between them */}
+      {cell(5, 5, 6, 4, SKIN)}
+      {cell(5, 9, 6, 1, SKIN_SHADE)}
+      {cell(6, 6, 2, 2, K)}
+      {cell(9, 6, 1, 2, K)}
+      {/* shoulders */}
+      {cell(2, 10, 12, 1, K)}
+      {cell(4, 11, 8, 3, CLOAK)}
+      {cell(3, 11, 1, 3, K)}
+      {cell(12, 11, 1, 3, K)}
+      {cell(7, 12, 2, 2, HOOD_SHADE)}
+      {cell(3, 14, 10, 1, K)}
+    </PixelSprite>
+  );
+}
+
+export function PixelDiverAvatar({ size = 48, ...rest }: { size?: number | string } & SVGProps<SVGSVGElement>) {
+  /*
+   * A round glass helm on a brass ring.
+   *
+   * Redrawn once. The first version made the dome out of two wide flat rows,
+   * which gave it square shoulders and a flat top — it read as a cooking pot.
+   * A dome on this grid has to step: two cells narrower at the top, one cell
+   * wider at the waist, then back in. The curve is in the steps, not in the
+   * colour.
+   *
+   * The glass is one lit field with a single highlight block. Any second tone
+   * inside it reads as a smudge rather than as a reflection at this size.
+   */
+  const K = "#000000";
+  const BRASS = "#C08B2E";
+  const BRASS_LIT = "#E8B84B";
+  const BRASS_SHADE = "#8A6318";
+  const GLASS = "#5FC8D8";
+  const GLASS_LIT = "#B8ECF3";
+  const SUIT = "#D9762E";
+  return (
+    <PixelSprite size={size} rest={rest}>
+      {/* crown valve */}
+      {cell(7, 0, 2, 1, K)}
+      {cell(7, 1, 2, 1, BRASS_LIT)}
+      {/* dome, stepping out */}
+      {cell(5, 2, 6, 1, K)}
+      {cell(4, 3, 1, 1, K)}
+      {cell(11, 3, 1, 1, K)}
+      {cell(5, 3, 6, 1, GLASS_LIT)}
+      {cell(3, 4, 1, 1, K)}
+      {cell(12, 4, 1, 1, K)}
+      {cell(4, 4, 8, 1, GLASS_LIT)}
+      {cell(2, 5, 1, 2, K)}
+      {cell(13, 5, 1, 2, K)}
+      {cell(3, 5, 10, 2, GLASS)}
+      {cell(4, 4, 3, 1, GLASS_LIT)}
+      {/* stepping back in */}
+      {cell(3, 7, 1, 1, K)}
+      {cell(12, 7, 1, 1, K)}
+      {cell(4, 7, 8, 1, GLASS)}
+      {/* brass ring */}
+      {cell(4, 8, 8, 1, BRASS)}
+      {cell(3, 8, 1, 1, K)}
+      {cell(12, 8, 1, 1, K)}
+      {cell(4, 9, 2, 1, BRASS_LIT)}
+      {cell(10, 9, 2, 1, BRASS_LIT)}
+      {cell(6, 9, 4, 1, BRASS_SHADE)}
+      {cell(3, 9, 1, 1, K)}
+      {cell(12, 9, 1, 1, K)}
+      {cell(4, 10, 8, 1, K)}
+      {/* suit */}
+      {cell(4, 11, 8, 3, SUIT)}
+      {cell(3, 11, 1, 3, K)}
+      {cell(12, 11, 1, 3, K)}
+      {cell(6, 12, 4, 2, BRASS)}
+      {cell(3, 14, 10, 1, K)}
+    </PixelSprite>
+  );
+}
+
+export function PixelCrystalAvatar({ size = 48, ...rest }: { size?: number | string } & SVGProps<SVGSVGElement>) {
+  /*
+   * A floating gem, with its shadow on the ground below it.
+   *
+   * The gap between the gem and the shadow is what says "floating" — without it
+   * the two shapes read as one object with a dark base. The facet is a hard
+   * diagonal of stacked cells rather than a line, so it stays a facet instead
+   * of becoming an anti-aliased smear.
+   */
+  const K = "#000000";
+  const GEM = "#4D7FE0";
+  const GEM_LIT = "#9EC0FF";
+  const GEM_SHADE = "#2A4E9C";
+  const SHADOW = "#1D2433";
+  return (
+    <PixelSprite size={size} rest={rest}>
+      {/* top point */}
+      {cell(7, 0, 2, 1, K)}
+      {cell(6, 1, 4, 1, K)}
+      {cell(7, 1, 2, 1, GEM_LIT)}
+      {/* upper body */}
+      {cell(5, 2, 6, 1, K)}
+      {cell(6, 2, 4, 1, GEM_LIT)}
+      {cell(4, 3, 8, 1, K)}
+      {cell(5, 3, 6, 1, GEM)}
+      {cell(3, 4, 10, 3, K)}
+      {cell(4, 4, 8, 3, GEM)}
+      {/* facet: a stacked diagonal, lit side */}
+      {cell(5, 4, 2, 1, GEM_LIT)}
+      {cell(6, 5, 2, 1, GEM_LIT)}
+      {cell(7, 6, 2, 1, GEM_LIT)}
+      {/* taper to the bottom point */}
+      {cell(4, 7, 8, 1, K)}
+      {cell(5, 7, 6, 1, GEM_SHADE)}
+      {cell(5, 8, 6, 1, K)}
+      {cell(6, 8, 4, 1, GEM_SHADE)}
+      {cell(6, 9, 4, 1, K)}
+      {cell(7, 9, 2, 1, GEM_SHADE)}
+      {cell(7, 10, 2, 1, K)}
+      {/* the gap, then the shadow */}
+      {cell(5, 13, 6, 1, SHADOW)}
+      {cell(6, 14, 4, 1, SHADOW)}
+    </PixelSprite>
+  );
+}
+
+export function PixelSlimeAvatar({ size = 48, ...rest }: { size?: number | string } & SVGProps<SVGSVGElement>) {
+  /*
+   * A dome with a wide flat base — the other universal pixel-game creature.
+   *
+   * Its whole character is in the outline: narrow at the top, spreading out
+   * fast, then a flat bottom row two cells wider than the body. The eyes are
+   * set low and far apart, which is what keeps it from reading as a hill.
+   */
+  const K = "#000000";
+  const BODY = "#3BBE7A";
+  const BODY_LIT = "#87E8AE";
+  const BODY_SHADE = "#1F8351";
+  const EYE_WHITE = "#FFFFFF";
+  return (
+    <PixelSprite size={size} rest={rest}>
+      {/* dome */}
+      {cell(6, 1, 4, 1, K)}
+      {cell(6, 2, 4, 1, BODY_LIT)}
+      {cell(4, 2, 2, 1, K)}
+      {cell(10, 2, 2, 1, K)}
+      {cell(4, 3, 8, 1, BODY_LIT)}
+      {cell(3, 3, 1, 1, K)}
+      {cell(12, 3, 1, 1, K)}
+      {cell(3, 4, 10, 2, BODY)}
+      {cell(2, 4, 1, 2, K)}
+      {cell(13, 4, 1, 2, K)}
+      {/* one highlight block on the shoulder of the dome */}
+      {cell(5, 3, 2, 1, "#C6F7DC")}
+      {/* spreading body */}
+      {cell(2, 6, 12, 3, BODY)}
+      {cell(1, 6, 1, 3, K)}
+      {cell(14, 6, 1, 3, K)}
+      {cell(2, 9, 12, 1, BODY_SHADE)}
+      {cell(1, 9, 1, 1, K)}
+      {cell(14, 9, 1, 1, K)}
+      {/* Eyes, low and wide. The pupil is one row inside a three-row sclera, so
+          there is white above *and* below it — a pupil that reaches the bottom
+          edge leaves a single white row that reads as a highlight on the body
+          rather than as an eye, which is what the first draft did. */}
+      {cell(4, 6, 2, 3, EYE_WHITE)}
+      {cell(10, 6, 2, 3, EYE_WHITE)}
+      {cell(4, 7, 2, 1, K)}
+      {cell(10, 7, 2, 1, K)}
+      {/* flat base, wider than the body */}
+      {cell(0, 10, 16, 1, K)}
+      {cell(1, 11, 14, 1, BODY_SHADE)}
+      {cell(1, 12, 14, 1, K)}
+    </PixelSprite>
+  );
+}

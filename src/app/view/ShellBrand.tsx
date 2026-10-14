@@ -1,3 +1,4 @@
+import { useMenuPresence } from "./useMenuPresence";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 
@@ -37,6 +38,7 @@ export function ShellBrand({
   floating?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const menu = useMenuPresence(menuOpen);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -72,8 +74,15 @@ export function ShellBrand({
           <img className="brand-logo" src="/brand-mark.png" alt={copy.shell.brand.title} />
           <ChevronDown size={14} aria-hidden="true" />
         </button>
-        {menuOpen ? (
-          <div className="brand-menu" role="menu" aria-label={copy.shell.brandMenu.ariaLabel}>
+        {/* Held mounted for its exit (`useMenuPresence`), so it closes with the
+            same motion the model picker's menu does instead of vanishing. */}
+        {menu.mounted ? (
+          <div
+            className="brand-menu"
+            role="menu"
+            aria-label={copy.shell.brandMenu.ariaLabel}
+            data-state={menu.state}
+          >
             {/* A placeholder until there is a home page to return to. It is here
                 so the menu's shape is settled before that exists; the row will
                 carry the link and nothing else about it changes. */}

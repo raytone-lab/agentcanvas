@@ -123,8 +123,12 @@ describe("scaffold package manifest", () => {
       "data-has-right-panel",
       "data-left-collapsed",
       "data-right-collapsed",
+      "data-right-folding",
+      "data-right-toggle",
       "data-style-preset",
+      "data-style-id",
       "data-appearance",
+      "data-theme-preset",
       "data-welcome",
     ]) {
       expect(shell, `missing ${attribute}`).toContain(attribute);
@@ -132,8 +136,10 @@ describe("scaffold package manifest", () => {
     // The style preset must come from the project — hardcoding it silently sent every
     // export down app.css's "native" branch.
     expect(shell).toContain("project.theme.stylePreset");
-    // The configurator does not set data-theme; an extra attribute is a divergence too.
-    expect(shell).not.toContain("data-theme");
+    // 空白 wears 原生风's rules on the canvas (`visualStylePreset`), so it must here too.
+    expect(shell).toContain('project.theme.stylePreset === "blank" ? "native" : project.theme.stylePreset');
+    // The configurator does not set a bare data-theme; an extra attribute is a divergence too.
+    expect(shell).not.toMatch(/data-theme=/);
   });
 
   it("passes the welcome-greeting context the configurator passes", () => {
@@ -287,14 +293,21 @@ describe("scaffold package manifest", () => {
     expect(snapshot.fileContents["src/exported-project.ts"]).toContain('"transport": "sse"');
   });
 
-  it("downgrades the under-construction studio style to native", () => {
+  it("exports the studio style as itself, rather than downgrading it to native", () => {
+    // It used to be rewritten to "native", correctly: the style rendered a
+    // placeholder panel and contributed no CSS, so exporting it would have
+    // exported nothing. It now has a theme, a CSS branch and an icon
+    // treatment, all of which travel with the project — so the substitution
+    // became the bug it was guarding against, and picking 插画风 then exporting
+    // would have quietly handed back Native.
     const studio = {
       ...defaultCodingAgentProject,
-      theme: { ...defaultCodingAgentProject.theme, stylePreset: "studio" as const },
+      theme: { ...defaultCodingAgentProject.theme, stylePreset: "studio" as const, preset: "studio-grape" as const },
     };
     const snapshot = createScaffoldExportSnapshot(studio);
-    expect(snapshot.agentuxConfig.theme.stylePreset).toBe("native");
-    expect(snapshot.fileContents["src/exported-project.ts"]).toContain('"stylePreset": "native"');
+    expect(snapshot.agentuxConfig.theme.stylePreset).toBe("studio");
+    expect(snapshot.fileContents["src/exported-project.ts"]).toContain('"stylePreset": "studio"');
+    expect(snapshot.fileContents["src/exported-project.ts"]).toContain('"preset": "studio-grape"');
   });
 
   it("emits a portable vite config and a project snapshot", () => {

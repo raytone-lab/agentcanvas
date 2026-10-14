@@ -1,4 +1,4 @@
-import { Brain, Bug, ChevronRight, FileText, Gauge, Image as ImageIcon, MessageSquareText, Mic, Paperclip, Plus, Rocket, Search, Send, ShieldCheck, ShieldHalf, ShieldOff, Sparkles, Square, X } from "../../agentmatrix/uiIcons";
+import { ArrowUp, Brain, Bug, ChevronRight, FileText, Gauge, Image as ImageIcon, MessageSquareText, Mic, Paperclip, Plus, Rocket, Search, Send, ShieldCheck, ShieldHalf, ShieldOff, Sparkles, Square, X } from "../../agentmatrix/uiIcons";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import {
   defaultProviderConnection,
@@ -8,6 +8,7 @@ import {
 } from "../../schema/agentuxConfig";
 
 import { StateIcon } from "../../agentmatrix";
+import { RunStatusDock } from "./outputframe/RunPanelSections";
 import { useCopy } from "../../i18n/LocaleContext";
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger, IconButton, SelectMenu, Textarea } from "../ui";
 
@@ -102,10 +103,16 @@ export function ComposerFrame({
   providerSettingsControl,
   welcomeGreeting,
   isWelcome = false,
+  timeline = [],
 }: {
   project: AgentFrontendProject;
   modelOptions: readonly string[];
-  onSubmit: (prompt: string, context?: ComposerSubmitContext) => void;
+  /**
+   * Resolving to `false` means the prompt was refused (no key for a live run,
+   * say): the field gets its text and attachments back rather than losing
+   * what was typed to a request that never went out.
+   */
+  onSubmit: (prompt: string, context?: ComposerSubmitContext) => void | boolean | Promise<void | boolean>;
   onProviderChange: (providerId: ProviderConnectionId) => void;
   onModelChange: (model: string) => void;
   isRunning?: boolean;
@@ -113,6 +120,8 @@ export function ComposerFrame({
   providerSettingsControl?: ReactNode;
   welcomeGreeting?: string;
   isWelcome?: boolean;
+  /** The run so far, for the progress / task dock above the prompt. */
+  timeline?: readonly { kind?: string }[];
 }) {
   const copy = useCopy();
   const promptShortcuts = [
@@ -121,6 +130,7 @@ export function ComposerFrame({
     { label: copy.composer.frame.shortcuts.explainChange, Icon: MessageSquareText },
   ] as const;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [composerElement, setComposerElement] = useState<HTMLFormElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const [promptValue, setPromptValue] = useState("");
@@ -130,6 +140,21 @@ export function ComposerFrame({
   const [isListening, setIsListening] = useState(false);
   const canSubmit = promptValue.trim().length > 0 || attachedFiles.length > 0;
   const isMinimalStyle = project.theme.stylePreset === "illustrated";
+  const isComicStyle = project.theme.stylePreset === "studio";
+  /*
+   * 科技风's send key is a black disc with an up arrow in it and no label —
+   * from the reference the reader supplied.
+   *
+   * Branched here rather than mapped in `uiIcons`, because this style draws
+   * 原生风's icon set unchanged (`iconStyleForStylePreset` answers "bold" for
+   * both): a `Send → ArrowUp` entry in that table would move 原生风's send key
+   * too. The label follows the same escape hatch 漫画风 already uses.
+   */
+  const isTechStyle = project.theme.stylePreset === "tech";
+  // Keep the product's menus inside its theme and collision boundary.
+  const portalContainer = isComicStyle
+    ? composerElement?.closest<HTMLElement>(".preview-frame")
+    : undefined;
   const showCombinedModelBudget = isMinimalStyle && Boolean(project.composer.thinkingBudget || project.composer.modelSwitcher);
   const hasToolsAfterUpload = Boolean(project.composer.thinkingBudget || project.composer.modelSwitcher);
   const enabledProviders = enabledProviderConnections(project);
@@ -184,9 +209,16 @@ export function ComposerFrame({
     const attachments = attachedFiles.map(({ name, isImage, imageSrc }) => ({ name, isImage, imageSrc }));
     const prompt = promptValue.trim() || attachments.map((file) => file.name).join(", ");
     if (prompt) {
+      const typed = promptValue;
+      const files = attachedFiles;
       setAttachedFiles([]);
       setPromptValue("");
-      onSubmit(prompt, { attachments, permissionMode, budgetMode });
+      void Promise.resolve(onSubmit(prompt, { attachments, permissionMode, budgetMode })).then((accepted) => {
+        if (accepted !== false) return;
+        // Only into an untouched field: anything typed since wins.
+        setPromptValue((current) => current || typed);
+        setAttachedFiles((current) => (current.length > 0 ? current : files));
+      });
     }
   }
 
@@ -285,6 +317,7 @@ export function ComposerFrame({
 
   return (
     <form
+      ref={setComposerElement}
       className="composer-frame"
       data-preview-anchor="composer"
       data-welcome={isWelcome ? "true" : undefined}
@@ -299,10 +332,24 @@ export function ComposerFrame({
           <h2 className="composer-greeting-text">{welcomeGreeting}</h2>
         </div>
       ) : null}
+      {!isWelcome ? (
+        <RunStatusDock
+          timeline={timeline}
+          copy={copy.workspace.outputFrame}
+          showProgress={project.output.execProgress}
+          showTasks={project.output.taskList}
+        />
+      ) : null}
       {project.composer.promptShortcuts ? (
         <div className="prompt-shortcuts" aria-label={copy.composer.frame.promptShortcutsLabel}>
-          {promptShortcuts.map(({ label, Icon }) => (
-            <Button key={label} variant="ghost" type="button" onClick={() => fillShortcut(label)}>
+          {promptShortcuts.map(({ label, Icon }, index) => (
+            <Button
+              key={label}
+              data-shortcut-index={index}
+              variant="ghost"
+              type="button"
+              onClick={() => fillShortcut(label)}
+            >
               <Icon size={13} />
               {label}
             </Button>
@@ -401,6 +448,8 @@ export function ComposerFrame({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
+                portalContainer={portalContainer}
+                collisionBoundary={portalContainer ?? undefined}
                 className={["permission-mode-menu", isMinimalStyle ? "minimal-composer-menu" : undefined]
                   .filter(Boolean)
                   .join(" ")}
@@ -438,7 +487,13 @@ export function ComposerFrame({
                   <ChevronRight className="composer-menu-chevron" size={14} aria-hidden="true" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="budget-mode-menu" align="start" sideOffset={10}>
+              <DropdownMenuContent
+                className="budget-mode-menu"
+                align="start"
+                sideOffset={10}
+                portalContainer={portalContainer}
+                collisionBoundary={portalContainer ?? undefined}
+              >
                 {budgetOptions.map(({ value, label, hint, Icon }) => (
                   <DropdownMenuItem
                     key={value}
@@ -458,6 +513,7 @@ export function ComposerFrame({
           ) : null}
           {project.composer.modelSwitcher && !showCombinedModelBudget ? (
             <SelectMenu
+              portalContainer={portalContainer}
               size="sm"
               align="end"
               disabled={isRunning}
@@ -570,13 +626,18 @@ export function ComposerFrame({
             ) : null}
             <Button
               className="send-button"
+              aria-label={isRunning ? copy.composer.frame.stop : copy.composer.frame.send}
+              title={isRunning ? copy.composer.frame.stop : copy.composer.frame.send}
+              data-running={isRunning ? "true" : undefined}
               variant={isRunning ? "danger" : "primary"}
               disabled={!isRunning && !canSubmit}
               type={isRunning ? "button" : "submit"}
               onClick={isRunning ? onStop : undefined}
             >
-              {isRunning ? <Square size={15} /> : <Send size={16} />}
-              {isRunning ? copy.composer.frame.stop : copy.composer.frame.send}
+              {/* A key, not a labelled button, in every style: 「发送」 beside the
+                  glyph made it an 85×40 pill, the biggest thing in the composer.
+                  The name is still there for assistive tech and the tooltip. */}
+              {isRunning ? <Square size={15} /> : isTechStyle ? <ArrowUp size={17} /> : <Send size={16} />}
             </Button>
           </div>
         </div>

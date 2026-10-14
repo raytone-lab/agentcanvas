@@ -168,7 +168,19 @@ describe("preset actions", () => {
     const pulse = applyPresetOption(defaultCodingAgentProject, "thinking-pulse");
 
     expect(pulse.theme.motion.reasoning).toBe("pulse");
-    expect(pulse.reasoning.collapse).toBe("summary-first");
+    /*
+     * A motion writes the glyph and nothing else.
+     *
+     * It used to write `collapse` as well. The reason was real — the old
+     * default, `summary-first`, is the one mode `ReasoningBlock` gives no fold
+     * control, so picking a motion had been removing the chevron — but the
+     * cure pinned every style's thinking block permanently open, which is what
+     * the reader then asked to have taken out. The default is `auto` now:
+     * open while the span runs, closed once it settles, chevron throughout. So
+     * this value is simply left alone, and a motion no longer decides how the
+     * block folds.
+     */
+    expect(pulse.reasoning.collapse).toBe("auto");
     expect(isPresetOptionActive(pulse, "thinking-pulse")).toBe(true);
     expect(isPresetOptionActive(pulse, "thinking-wave")).toBe(false);
   });
@@ -180,26 +192,59 @@ describe("preset actions", () => {
     expect(statusOnly.reasoning.show).toBe("status");
     expect(isPresetOptionActive(statusOnly, "reasoning-status-only")).toBe(true);
     expect(publicSummary.reasoning.show).toBe("summary");
-    expect(publicSummary.reasoning.collapse).toBe("summary-first");
+    // Visibility only: which *words* the block shows is not how it folds, and
+    // this option used to set both. See the note on the motions above.
+    expect(publicSummary.reasoning.collapse).toBe("auto");
     expect(isPresetOptionActive(publicSummary, "reasoning-public-summary")).toBe(true);
+  });
+
+  it("keeps the text cycle off the motion field, so it composes with a glyph", () => {
+    /*
+     * `thinking-bars` used to set `theme.motion.reasoning = "bars"`, which is
+     * why it was asserted alongside the glyphs here. It is not a motion any
+     * more: as one it was mutually exclusive with every glyph, so a reader who
+     * picked the dots and then the text cycle lost the dots.
+     *
+     * The three choices in this block are now orthogonal — the glyph, whether
+     * the words cycle, and whether the elapsed time is shown — so all three can
+     * be on at once.
+     */
+    const dots = applyPresetOption(defaultCodingAgentProject, "thinking-wave");
+    const dotsAndCycle = applyPresetOption(dots, "thinking-bars");
+    expect(dotsAndCycle.theme.motion.reasoning).toBe("wave");
+    expect(dotsAndCycle.reasoning.textCycle).toBe(true);
+    expect(isPresetOptionActive(dotsAndCycle, "thinking-wave")).toBe(true);
+    expect(isPresetOptionActive(dotsAndCycle, "thinking-bars")).toBe(true);
+
+    // And the elapsed time on top of both.
+    const allThree = applyPresetOption(dotsAndCycle, "reasoning-done-timed");
+    expect(allThree.theme.motion.reasoning).toBe("wave");
+    expect(allThree.reasoning.textCycle).toBe(true);
+    expect(allThree.reasoning.doneStyle).toBe("timed");
+    for (const id of ["thinking-wave", "thinking-bars", "reasoning-done-timed"]) {
+      expect(isPresetOptionActive(allThree, id), id).toBe(true);
+    }
+
+    // A second glyph still replaces the first — glyphs remain alternatives.
+    const orbitInstead = applyPresetOption(allThree, "thinking-orbit");
+    expect(orbitInstead.theme.motion.reasoning).toBe("orbit");
+    expect(isPresetOptionActive(orbitInstead, "thinking-wave")).toBe(false);
+    expect(orbitInstead.reasoning.textCycle).toBe(true);
   });
 
   it("supports additional reasoning motion presets", () => {
     const shimmer = applyPresetOption(defaultCodingAgentProject, "thinking-shimmer");
-    const bars = applyPresetOption(defaultCodingAgentProject, "thinking-bars");
     const orbit = applyPresetOption(defaultCodingAgentProject, "thinking-orbit");
     const lattice = applyPresetOption(defaultCodingAgentProject, "thinking-orb-s1");
     const handoff = applyPresetOption(defaultCodingAgentProject, "thinking-orb-b5");
     const morph = applyPresetOption(defaultCodingAgentProject, "thinking-orb-m2");
 
     expect(shimmer.theme.motion.reasoning).toBe("shimmer");
-    expect(bars.theme.motion.reasoning).toBe("bars");
     expect(orbit.theme.motion.reasoning).toBe("orbit");
     expect(lattice.theme.motion.reasoning).toBe("orb-s1");
     expect(handoff.theme.motion.reasoning).toBe("orb-b5");
     expect(morph.theme.motion.reasoning).toBe("orb-m2");
     expect(isPresetOptionActive(shimmer, "thinking-shimmer")).toBe(true);
-    expect(isPresetOptionActive(bars, "thinking-bars")).toBe(true);
     expect(isPresetOptionActive(orbit, "thinking-orbit")).toBe(true);
     expect(isPresetOptionActive(lattice, "thinking-orb-s1")).toBe(true);
     expect(isPresetOptionActive(handoff, "thinking-orb-b5")).toBe(true);

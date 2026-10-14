@@ -1,7 +1,26 @@
 import type { ReactNode } from "react";
+/*
+ * From `uiIcons`, not from lucide, and that is the whole point of this file.
+ *
+ * These cards are miniatures of the canvas: the paperclip here is a picture of
+ * the paperclip the composer will draw. Imported straight from lucide they
+ * stayed lucide in every style, so 水墨风 had washes on the canvas and outlines
+ * in the panel that chooses them — reported as "左栏浮层展示的图标和画布展示的
+ * 都不一样". `withStyledIcon` reads the active style from context, and this
+ * whole tree is already inside `IconStyleProvider` (App.tsx), so repointing the
+ * specifier is the entire fix: call sites, props and sizes are untouched.
+ *
+ * The rail's *own* chrome — the zoom control, the topbar, the group rows — must
+ * keep importing lucide directly. Those are the editor, not a preview of the
+ * thing being edited, and inking them would leave no neutral frame to judge the
+ * style from.
+ */
 import {
+  Check,
   ChevronRight,
+  Circle,
   Copy,
+  FileText,
   GitBranch,
   GitCommitHorizontal,
   Image,
@@ -15,10 +34,12 @@ import {
   RotateCcw,
   Search,
   Wrench,
-} from "lucide-react";
+} from "../agentmatrix/uiIcons";
 
 import { appVersionLabel } from "../appVersion";
-import { useCopy } from "../i18n/LocaleContext";
+import { useCopy, useLocale } from "../i18n/LocaleContext";
+import type { AppLocale } from "../i18n/locales";
+import { canvasConclusionSample } from "../app/projection/canvasTimeline";
 import { NewChatIcon, SearchIcon, SidebarToggleIcon } from "./agent-preview/SessionSidebar";
 import {
   AudioSkeletonLoader,
@@ -54,6 +75,68 @@ const THINKING_MOTIONS: Record<string, AgentFrontendProject["theme"]["motion"]["
   "thinking-orb-s1": "orb-s1",
   "thinking-orb-b5": "orb-b5",
   "thinking-orb-m2": "orb-m2",
+  "thinking-hourglass": "hourglass",
+  "thinking-comic-halftone": "comic-halftone",
+  "thinking-comic-inkblot": "comic-inkblot",
+  "thinking-comic-bubble": "comic-bubble",
+  "thinking-comic-flip": "comic-flip",
+  "thinking-quest-torch": "quest-torch",
+  "thinking-quest-rune": "quest-rune",
+  "thinking-quest-coins": "quest-coins",
+  "thinking-pixel-cursor": "pixel-cursor",
+  "thinking-pixel-bars": "pixel-bars",
+  "thinking-pixel-spin": "pixel-spin",
+  "thinking-pixel-bricks": "pixel-bricks",
+  "thinking-sketch-bubble": "sketch-bubble",
+  "thinking-sketch-pencil": "sketch-pencil",
+  "thinking-sketch-blot": "sketch-blot",
+  "thinking-sketch-page": "sketch-page",
+  "thinking-ink-drop": "ink-drop",
+  "thinking-ink-stroke": "ink-stroke",
+  "thinking-ink-ripple": "ink-ripple",
+  "thinking-ink-seal": "ink-seal",
+  "thinking-retro-watch": "retro-watch",
+  "thinking-retro-record": "retro-record",
+  "thinking-retro-metronome": "retro-metronome",
+  "thinking-retro-telegraph": "retro-telegraph",
+  "thinking-tech-matrix": "tech-matrix",
+  "thinking-tech-signal": "tech-signal",
+  "thinking-tech-scan": "tech-scan",
+  "thinking-tech-segments": "tech-segments",
+};
+
+/*
+ * The *Done title* cards, each showing the title it picks.
+ *
+ * Built from the block's own copy keys, so the cards follow a wording change
+ * instead of having to be found and re-typed. `kind` reaches CSS, which needs
+ * to know only one thing: `conclusion` is a sentence and the other three are
+ * labels, so it is the one that has to be allowed to clip.
+ */
+type DoneTitleSample = {
+  kind: "label" | "conclusion";
+  text: (copy: ReturnType<typeof useCopy>, locale: AppLocale) => string;
+};
+
+const DONE_TITLE_SAMPLES: Record<string, DoneTitleSample> = {
+  "reasoning-done-label": {
+    kind: "label",
+    text: (copy) => copy.chat.reasoning.reasonedPlain,
+  },
+  "reasoning-done-timed": {
+    kind: "label",
+    // `x`, not a number: the canvas reports the wait it measured, and a card
+    // showing "11" would be naming a duration this option does not set.
+    text: (copy) => copy.chat.reasoning.reasonedFor.replace("{seconds}", "x"),
+  },
+  "reasoning-done-counted": {
+    kind: "label",
+    text: (copy) => copy.chat.reasoning.reasonedCount.replace("{count}", "3"),
+  },
+  "reasoning-done-conclusion": {
+    kind: "conclusion",
+    text: (_copy, locale) => canvasConclusionSample(locale),
+  },
 };
 
 /**
@@ -121,6 +204,82 @@ function mediaLoaderPreviewKind(style: string): string {
   return "media-image-grid";
 }
 
+type MiniSidebarFocus = "title" | "collapse" | "new-button" | "search" | "sessions" | "row-icon" | "grouping" | "footer";
+/** Each sidebar option and the part of the column its card puts in focus. */
+const MINI_SIDEBAR_FOCUS: Partial<Record<string, MiniSidebarFocus>> = {
+  "sidebar-title": "title",
+  "sidebar-collapse": "collapse",
+  "sidebar-new-button": "new-button",
+  "sidebar-search": "search",
+  "sidebar-sessions": "sessions",
+  "sidebar-row-icon": "row-icon",
+  "sidebar-grouping": "grouping",
+  "sidebar-footer": "footer",
+};
+
+/**
+ * A miniature sidebar column with one part in focus. Everything not in focus
+ * is a skeleton bar; the focused part is the real thing — the project's name,
+ * the real icons, the real session titles — so the card is a picture of the
+ * product rather than an abstraction of it.
+ */
+function MiniSidebar({
+  focus,
+  title,
+  newLabel,
+  sessions,
+  today,
+  earlier,
+}: {
+  focus: MiniSidebarFocus;
+  title: string;
+  newLabel: string;
+  sessions: readonly string[];
+  today: string;
+  earlier: string;
+}) {
+  const on = (part: MiniSidebarFocus) => (part === focus ? "true" : undefined);
+  const rowMarks = focus === "row-icon";
+  const row = (label: string, index: number) =>
+    focus === "sessions" || rowMarks ? (
+      <span className="msb-row" data-on="true" data-active={index === 0 && focus === "sessions" ? "true" : undefined} key={label}>
+        {rowMarks ? <MessageSquare size={7} /> : null}
+        {rowMarks ? <span className="msb-skel" style={{ width: index === 0 ? 26 : 20 }} /> : <span className="msb-text">{label}</span>}
+      </span>
+    ) : (
+      <span className="msb-row" key={label}>
+        <span className="msb-skel" style={{ width: index === 0 ? 30 : 22 }} />
+      </span>
+    );
+  return (
+    <span className="msb" data-focus={focus}>
+      {/* The grouping card has two headings and two rows to fit; it gives up
+          the header so the four stay legible in the same 42px frame. */}
+      <span className="msb-head" hidden={focus === "grouping" || undefined}>
+        {focus === "title" ? <span className="msb-title" data-on="true">{title}</span> : <span className="msb-skel msb-skel-title" />}
+        <span className="msb-tools">
+          {/* The title card keeps one placeholder, not two, so the name has room. */}
+          {focus === "search" ? <span data-on="true"><SearchIcon size={8} /></span> : focus === "title" ? null : <span className="msb-dot" />}
+          {focus === "collapse" ? <span data-on="true"><SidebarToggleIcon size={8} /></span> : <span className="msb-dot" />}
+        </span>
+      </span>
+      {focus === "new-button" ? (
+        <span className="msb-new" data-on="true">
+          <NewChatIcon size={7} />
+          <span>{newLabel}</span>
+        </span>
+      ) : null}
+      {focus === "grouping" ? <span className="msb-group" data-on="true">{today}</span> : null}
+      {row(sessions[0] ?? "", 0)}
+      {focus === "grouping" ? <span className="msb-group" data-on="true">{earlier}</span> : null}
+      {/* A card that adds a line of its own (the new-chat row, the version)
+          drops the second row, so every card fits the same 42px frame. */}
+      {focus === "new-button" || focus === "footer" ? null : row(sessions[1] ?? "", 1)}
+      {focus === "footer" ? <span className="msb-version" data-on="true">{appVersionLabel}</span> : null}
+    </span>
+  );
+}
+
 export function PresetOptionPreview({
   optionId,
   projectName,
@@ -130,6 +289,7 @@ export function PresetOptionPreview({
   projectName?: string;
 }) {
   const copy = useCopy();
+  const { locale } = useLocale();
 
   // ---- Conversation · writing rhythm ---------------------------------------
   if (optionId === "writing-smooth") {
@@ -217,80 +377,34 @@ export function PresetOptionPreview({
       </Tile>
     );
   }
-  if (optionId === "sidebar-title") {
-    // The brand line as the column prints it, from the project's own name, so
-    // renaming the project renames the card.
-    return (
-      <Tile kind="control">
-        <span className="pv-control" data-align="center">
-          <span className="pv-brand">{projectName?.trim() || copy.workspace.sessionSidebar.brandName}</span>
-        </span>
-      </Tile>
-    );
-  }
-  if (optionId === "sidebar-collapse") {
-    return (
-      <Tile kind="control">
-        <span className="pv-control" data-align="center">
-          <SidebarToggleIcon size={14} />
-        </span>
-      </Tile>
-    );
-  }
-  if (optionId === "sidebar-sessions") {
-    // Two rows of the real thing, ellipsized — which is how the list reads in a
-    // column this narrow anyway.
-    return (
-      <Tile kind="control">
-        <span className="pv-sessions">
-          {copy.workspace.sessionSidebar.sessions.slice(0, 2).map((session, index) => (
-            <span key={session} className="pv-session" data-active={index === 0 ? "true" : undefined}>
-              {session}
-            </span>
-          ))}
-        </span>
-      </Tile>
-    );
-  }
-  if (optionId === "sidebar-new-button") {
-    // The control itself, icon and words, rather than an abstraction of it.
-    // Four tiles of grey bars said the same thing as each other.
-    return (
-      <Tile kind="control">
-        <span className="pv-control">
-          <NewChatIcon size={11} />
-          <span className="pv-control-label">{copy.workspace.sessionSidebar.newSession}</span>
-        </span>
-      </Tile>
-    );
-  }
-  if (optionId === "sidebar-search") {
-    // Just the magnifier: in the sidebar that is all this option adds.
-    return (
-      <Tile kind="control">
-        <span className="pv-control" data-align="center">
-          <SearchIcon size={14} />
-        </span>
-      </Tile>
-    );
-  }
-  if (optionId === "sidebar-grouping") {
-    // The two headings, stacked: the grouping *is* those words.
-    return (
-      <Tile kind="control">
-        <span className="pv-eyebrow">{copy.workspace.sessionSidebar.groupToday}</span>
-        <span className="pv-eyebrow">{copy.workspace.sessionSidebar.groupEarlier}</span>
-      </Tile>
-    );
-  }
-  if (optionId === "sidebar-footer") {
-    // The version string the sidebar actually prints, from the same constant,
-    // so the card cannot show a version the product does not.
-    return (
-      <Tile kind="control">
-        <span className="pv-version">{appVersionLabel}</span>
-      </Tile>
-    );
+  /*
+   * The sidebar's eight parts, each drawn as a slice of the sidebar itself.
+   *
+   * They used to be eight isolated objects — a word, an icon, two greyed rows,
+   * a different-sized tile for the row marks — which said *what* each option
+   * was and nothing about *where* it goes, and two of them broke the grid (the
+   * session list ran 53px tall, the row-mark tile 81px square against 56).
+   * Now every card is the same miniature column: a faint skeleton of the
+   * sidebar — header, title, rows — with the one part this option adds drawn
+   * in full ink. Same frame, same size, one visual language, and the position
+   * reads at a glance. See `MiniSidebar` below.
+   */
+  {
+    const focus = MINI_SIDEBAR_FOCUS[optionId];
+    if (focus) {
+      return (
+        <Tile kind="control">
+          <MiniSidebar
+            focus={focus}
+            title={projectName?.trim() || copy.workspace.sessionSidebar.brandName}
+            newLabel={copy.workspace.sessionSidebar.newSession}
+            sessions={copy.workspace.sessionSidebar.sessions.slice(0, 2)}
+            today={copy.workspace.sessionSidebar.groupToday}
+            earlier={copy.workspace.sessionSidebar.groupEarlier}
+          />
+        </Tile>
+      );
+    }
   }
 
   // ---- Media generation -----------------------------------------------------
@@ -400,15 +514,70 @@ export function PresetOptionPreview({
    * draws. The 11 is a sample, the way the session rows and v0.1.0 are — the
    * canvas shows the wait it actually measured.
    */
-  if (optionId === "reasoning-done-timed") {
+  /*
+   * The two axes are drawn in two different registers, because they change two
+   * different things.
+   *
+   * *Done title* changes a string, so each of its four cards shows its own
+   * string — the one the canvas will actually draw, assembled from the same
+   * copy keys the block uses, so a wording change cannot leave the cards behind.
+   * `x` and `3` stand in for the measured duration and the segment count the
+   * way `v0.1.0` and the session rows do elsewhere.
+   *
+   * *Settled body* changes a shape, so its four cards drop the words and show
+   * the shape: title bar, chevron or no chevron, how much body survives. The
+   * title is a grey bar in these, not text — the words are what the *other*
+   * axis picks, and spelling them out again would make the reader compare
+   * sentences when the difference is below them.
+   *
+   * All eight shared the timed illustration before this, on the theory that the
+   * labels carried the distinction. Eight identical thumbnails distinguish
+   * nothing; the label is then doing the picture's whole job.
+   */
+  const doneTitleSample = DONE_TITLE_SAMPLES[optionId];
+  if (doneTitleSample) {
     return (
       <Tile kind="reasoning-done">
+        {/* The title alone. The glyph and the chevron were both borrowed from
+            the real block and neither belongs to this card: the indicator is
+            what the *Motion* cards are for, and the chevron is the disclosure
+            control, which the *body* axis owns. */}
         <span className="pv-reasoning-done">
-          <ReasoningIndicator motion="orbit" />
-          <span className="pv-reasoning-done-title">
-            {copy.chat.reasoning.reasonedFor.replace("{seconds}", "11")}
+          <span className="pv-reasoning-done-title" data-sample={doneTitleSample.kind}>
+            {doneTitleSample.text(copy, locale)}
           </span>
-          <ChevronRight size={11} className="pv-reasoning-done-chevron" />
+        </span>
+      </Tile>
+    );
+  }
+  if (
+    optionId === "reasoning-done-expandable" ||
+    optionId === "reasoning-done-title-only" ||
+    optionId === "reasoning-done-first-line" ||
+    optionId === "reasoning-done-rule"
+  ) {
+    const body = optionId.slice("reasoning-done-".length);
+    return (
+      <Tile kind="done-body">
+        <span className="pv-done-body" data-body={body}>
+          <span className="pv-done-body-head">
+            <Line w={30} />
+            {/* Suppressed for `title-only` for the same reason the canvas
+                suppresses it: with the body discarded the control would open
+                an empty block. Its absence is half of what that card is. */}
+            {body !== "title-only" ? <span className="pv-done-chevron" /> : null}
+          </span>
+          {body === "first-line" ? (
+            <span className="pv-done-body-peek">
+              <Line w="86%" />
+            </span>
+          ) : null}
+          {body === "rule" ? (
+            <span className="pv-done-body-quoted">
+              <Line w="72%" />
+              <Line w="54%" />
+            </span>
+          ) : null}
         </span>
       </Tile>
     );
@@ -704,6 +873,57 @@ export function PresetOptionPreview({
           <Line w={22} tone="muted" />
         </span>
         <Line w="100%" />
+      </Tile>
+    );
+  }
+
+  // ---- Output · panel contents ---------------------------------------------
+  // Three rows with a state mark, a bar under a count, three rows with a file
+  // mark — each card is the section's own shape, which is what tells the three
+  // apart at this size better than any wording could.
+  if (optionId === "task-list") {
+    return (
+      <Tile kind="lines">
+        <span className="pv-row">
+          <Check size={10} />
+          <Line w="70%" />
+        </span>
+        <span className="pv-row">
+          <Check size={10} />
+          <Line w="50%" />
+        </span>
+        <span className="pv-row">
+          <Circle size={10} />
+          <Line w="60%" tone="muted" />
+        </span>
+      </Tile>
+    );
+  }
+  if (optionId === "exec-progress") {
+    return (
+      <Tile kind="progress">
+        <Line w={24} tone="muted" />
+        <span className="pv-bar">
+          <span className="pv-bar-fill" data-level="mid" />
+        </span>
+      </Tile>
+    );
+  }
+  if (optionId === "workspace-files") {
+    return (
+      <Tile kind="lines">
+        <span className="pv-row">
+          <FileText size={10} />
+          <Line w="55%" />
+        </span>
+        <span className="pv-row">
+          <FileText size={10} />
+          <Line w="70%" />
+        </span>
+        <span className="pv-row">
+          <FileText size={10} />
+          <Line w="40%" tone="muted" />
+        </span>
       </Tile>
     );
   }

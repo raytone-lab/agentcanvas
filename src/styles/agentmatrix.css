@@ -210,8 +210,40 @@ svg.lucide { stroke-width: 1.5; }
   border: 1px solid transparent; background: #f5f7fa; color: var(--text-secondary); cursor: pointer;
   transition: border-color .12s ease, background .12s ease;
 }
+/* The gallery tiles take the active style's icon treatment.
+   A tile is a preview of what the canvas will draw, and in these two styles
+   that is not a grey outline: 漫画风 draws a heavy black line with the closed
+   shapes filled, 游戏风 draws everything in gold. Without this the reader was
+   choosing from a preview that looked nothing like the result.
+   Scoped to `.am-state-option` and nothing else on purpose. The rest of the
+   rail is editor chrome and stays native — the same rule the hover toolbar
+   follows. The declarations mirror the canvas rules in app.css
+   (`[data-style-preset="studio"] svg.lucide` and the game equivalent); they are
+   repeated rather than shared because the canvas selectors are scoped to
+   `.preview-frame`, and widening those would repaint the whole rail. */
 .preset-panel[data-style-preset="native"] .am-state-option svg:not(.custom-avatar-face) {
   stroke-width: 2.1;
+}
+
+.preset-panel[data-style-preset="studio"] .am-state-option svg.lucide {
+  stroke: var(--border-subtle);
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Only the closed primitives, which is the style's whole icon rule: an open
+   path — an arrow, a chevron — becomes a blob when filled. */
+.preset-panel[data-style-preset="studio"] .am-state-option svg.lucide :is(circle, rect, ellipse, polygon) {
+  fill: var(--accent);
+}
+
+.preset-panel[data-style-preset="game"] .am-state-option svg.lucide {
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
 }
 .am-state-option:hover:not([data-active="true"]) { background: #ffffff; }
 .am-state-option[data-active="true"] {
@@ -246,85 +278,14 @@ svg.lucide { stroke-width: 1.5; }
   --avatar-active-mid: color-mix(in srgb, var(--accent-hover) 82%, var(--surface-panel));
   --avatar-active-end: color-mix(in srgb, var(--accent) 74%, var(--warning));
 }
-.am-state-option:not([data-active="true"]):has(.orb-face),
-.am-state-option:not([data-active="true"]):has(.robot-face),
-.am-state-option:not([data-active="true"]):has(.active-robot-face) {
-  --avatar-bg: var(--surface-inset);
-  --avatar-detail: var(--surface-panel);
-  --avatar-active-cyan: color-mix(in srgb, var(--text-muted) 62%, var(--surface-panel));
-  --avatar-active-blue: color-mix(in srgb, var(--text-muted) 72%, var(--accent-soft));
-  --avatar-active-violet: color-mix(in srgb, var(--text-muted) 72%, var(--accent));
-  --avatar-active-face: #020909;
-  --avatar-active-face-top: color-mix(in srgb, var(--accent) 22%, var(--text-muted));
-  --avatar-orb-highlight: #ffffff;
-  --avatar-orb-mid: color-mix(in srgb, var(--text-muted) 58%, #ffffff);
-  --avatar-orb-base: var(--text-muted);
-  --avatar-active-ripple-start: color-mix(in srgb, var(--surface-inset) 72%, transparent);
-  --avatar-active-ripple-end: color-mix(in srgb, var(--text-muted) 12%, transparent);
-  --avatar-active-start: var(--text-muted);
-  --avatar-active-mid: color-mix(in srgb, var(--text-muted) 74%, var(--surface-panel));
-  --avatar-active-end: var(--text-muted);
-}
-.am-state-option:not([data-active="true"]):has(.robot-face) {
-  --avatar-fg: var(--text-muted);
-  --avatar-fg-muted: color-mix(in srgb, var(--text-muted) 72%, var(--surface-inset));
-}
-.am-state-option:not([data-active="true"]):has(.custom-avatar-face) {
-  --avatar-bg: var(--surface-inset);
-  --avatar-fg: var(--text-muted);
-  --avatar-fg-muted: color-mix(in srgb, var(--text-muted) 72%, var(--surface-inset));
-  --avatar-cutout: var(--surface-panel);
-  --avatar-detail: var(--surface-panel);
-  --avatar-stroke: var(--border-subtle);
-}
-
+/* Avatar tiles show each face in its own colours, the same as the canvas.
+   They used to be muted to grey — variables swapped for `--text-muted` mixes
+   plus `grayscale(1) opacity(0.68)` — so a gallery of characters read as
+   switched off, and 原生风's coloured faces could not be told apart. */
 .preset-panel .am-state-options:is([data-slot="author.user"], [data-slot="author.agent"]) .am-state-option {
   color: var(--text-muted);
 }
 
-.preset-panel .am-state-options:is([data-slot="author.user"], [data-slot="author.agent"]) .am-state-option :is(
-  .custom-avatar-face,
-  .orb-face,
-  .robot-face,
-  .active-robot-face
-) {
-  --avatar-bg: var(--surface-inset);
-  --avatar-fg: color-mix(in srgb, var(--text-muted) 84%, var(--surface-panel));
-  --avatar-fg-muted: color-mix(in srgb, var(--text-muted) 68%, var(--surface-inset));
-  --avatar-cutout: var(--surface-panel);
-  --avatar-detail: var(--surface-panel);
-  --avatar-stroke: var(--border-subtle);
-  --avatar-active-cyan: color-mix(in srgb, var(--text-muted) 68%, var(--surface-panel));
-  --avatar-active-blue: color-mix(in srgb, var(--text-muted) 76%, var(--surface-panel));
-  --avatar-active-violet: color-mix(in srgb, var(--text-muted) 72%, var(--surface-panel));
-  --avatar-active-face: color-mix(in srgb, var(--text-muted) 82%, #000);
-  --avatar-active-face-top: color-mix(in srgb, var(--text-muted) 64%, var(--surface-panel));
-  --avatar-orb-highlight: color-mix(in srgb, var(--surface-panel) 80%, var(--text-muted));
-  --avatar-orb-mid: color-mix(in srgb, var(--text-muted) 54%, var(--surface-panel));
-  --avatar-orb-base: color-mix(in srgb, var(--text-muted) 82%, var(--surface-inset));
-  --avatar-active-ripple-start: color-mix(in srgb, var(--surface-inset) 78%, transparent);
-  --avatar-active-ripple-end: color-mix(in srgb, var(--text-muted) 10%, transparent);
-  --avatar-active-start: color-mix(in srgb, var(--text-muted) 76%, var(--surface-panel));
-  --avatar-active-mid: color-mix(in srgb, var(--text-muted) 64%, var(--surface-panel));
-  --avatar-active-end: color-mix(in srgb, var(--text-muted) 56%, var(--surface-panel));
-  --agent-orange-blob-bg: var(--surface-inset);
-  --agent-orange-blob-body: color-mix(in srgb, var(--text-muted) 86%, var(--surface-panel));
-  --agent-orange-blob-eye: var(--surface-panel);
-  --agent-work-bot-bg: var(--surface-inset);
-  --agent-work-bot-body: color-mix(in srgb, var(--text-muted) 86%, var(--surface-panel));
-  --agent-work-bot-face: var(--surface-panel);
-  --agent-work-bot-eye: color-mix(in srgb, var(--text-muted) 86%, var(--surface-panel));
-  --agent-work-bot-screen-start: color-mix(in srgb, var(--text-muted) 82%, var(--surface-panel));
-  --agent-work-bot-screen-end: color-mix(in srgb, var(--text-muted) 58%, var(--surface-panel));
-  --agent-spark-main-start: color-mix(in srgb, var(--text-muted) 88%, var(--surface-panel));
-  --agent-spark-main-end: color-mix(in srgb, var(--text-muted) 60%, var(--surface-panel));
-  --agent-spark-small-start: color-mix(in srgb, var(--text-muted) 88%, var(--surface-panel));
-  --agent-spark-small-end: color-mix(in srgb, var(--text-muted) 60%, var(--surface-panel));
-  --agent-spark-glow-start: color-mix(in srgb, var(--text-muted) 36%, transparent);
-  --agent-spark-glow-end: color-mix(in srgb, var(--text-muted) 12%, transparent);
-  --agent-spark-glow-opacity: 0.16;
-  filter: grayscale(1) saturate(0) opacity(0.68);
-}
 .am-state-option:focus-visible {
   outline: 0;
   box-shadow: none;
@@ -334,51 +295,11 @@ svg.lucide { stroke-width: 1.5; }
   border-radius: 999px;
 }
 
-.preset-panel[data-style-preset="native"] .am-state-option[data-option-id="user-fourth-avatar"],
-.preset-panel[data-style-preset="native"] .am-state-option[data-option-id="mood-excited"],
-.preset-panel[data-style-preset="native"] .am-state-option[data-option-id="mood-joyful"],
-.preset-panel[data-style-preset="native"] .am-state-option[data-option-id="mood-grateful"],
-.preset-panel[data-style-preset="native"] .am-state-option[data-option-id="mood-energized"],
-.preset-panel[data-style-preset="native"] .am-state-option[data-option-id="mood-sensitive"],
-.preset-panel[data-style-preset="native"] .am-state-option[data-option-id="mood-confused"],
-.preset-panel[data-style-preset="native"] .am-state-option[data-option-id="mood-bored"],
-.preset-panel[data-style-preset="native"] .am-state-option[data-option-id="mood-stressed"],
-.preset-panel[data-style-preset="native"] .am-state-option[data-option-id="mood-angry"],
-.preset-panel[data-style-preset="native"] .am-state-option[data-option-id="mood-insecure"],
-.preset-panel[data-style-preset="native"] .am-state-option[data-option-id="mood-hurt"],
-.preset-panel[data-style-preset="native"] .am-state-option[data-option-id="mood-guilty"] {
-  display: none;
-}
-
-.preset-panel[data-style-preset="native"] .am-state-options[data-slot="author.user"] .am-state-option[data-option-id="user"],
-.preset-panel[data-style-preset="native"] .am-state-options[data-slot="author.user"] .am-state-option[data-option-id="assistant-second-avatar"],
-.preset-panel[data-style-preset="native"] .am-state-options[data-slot="author.user"] .am-state-option[data-option-id="user-third-avatar"],
-.preset-panel[data-style-preset="native"] .am-state-options[data-slot="author.user"] .am-state-option[data-option-id="green-calm"],
-.preset-panel[data-style-preset="native"] .am-state-options[data-slot="author.agent"] .am-state-option[data-option-id="orb"],
-.preset-panel[data-style-preset="native"] .am-state-options[data-slot="author.agent"] .am-state-option[data-option-id="spark-avatar"] {
-  display: none;
-}
-
-/* Minimal style: keep only the first four user avatar options for now. */
-.preset-panel[data-style-preset="illustrated"] .am-state-options[data-slot="author.user"] .am-state-option:nth-of-type(n + 5) {
-  display: none;
-}
-
-.preset-panel[data-style-preset="illustrated"] .am-state-options[data-slot="author.agent"] .am-state-option[data-option-id="orange-blob"] {
-  order: -1;
-}
-
-/* Native-only avatars are hidden from the austere minimal style. */
-.preset-panel:not([data-style-preset="native"]) .am-state-option[data-option-id="orb"],
-.preset-panel:not([data-style-preset="native"]) .am-state-option[data-option-id="robot"],
-.preset-panel:not([data-style-preset="native"]) .am-state-option[data-option-id="active-robot"],
-.preset-panel:not([data-style-preset="native"]) .am-state-option[data-option-id="blue-smile"],
-.preset-panel:not([data-style-preset="native"]) .am-state-option[data-option-id="heart-eyes"],
-.preset-panel:not([data-style-preset="native"]) .am-state-option[data-option-id="golden-joy"],
-.preset-panel:not([data-style-preset="native"]) .am-state-option[data-option-id="green-calm"],
-.preset-panel:not([data-style-preset="native"]) .am-state-option[data-option-id="purple-bored"] {
-  display: none;
-}
+/* Which avatars a style offers is `STYLE_AVATAR_OPTIONS`, and only that.
+   Per-id `display: none` deny-lists used to sit here as well, written before
+   the table, and they had drifted from it: 原生风's gallery listed `orb` and
+   `spark-avatar` and showed neither, and every other style hid the expression
+   faces the table offers. */
 
 .active-robot-face {
   display: block;
@@ -495,10 +416,12 @@ svg.lucide { stroke-width: 1.5; }
   justify-content: center;
 }
 .status-pill { display: inline-flex; align-items: center; gap: 5px; }
+/* `.error-icon` is deliberately not in this list: the error row's mark takes no
+   motion in any style. It was here, spinning a full turn every second whenever
+   the incident was retryable. The row says 正在重试 in words. */
 .status-pill-icon[data-anim="spin"] svg,
 .tool-source-icon[data-anim="spin"] svg,
-.step-icon[data-anim="spin"] svg,
-.error-icon[data-anim="spin"] svg {
+.step-icon[data-anim="spin"] svg {
   animation: am-spin 1s linear infinite;
 }
 .step-item { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -789,4 +712,27 @@ svg.lucide { stroke-width: 1.5; }
   .am-side { border-left: 0; border-top: 1px solid var(--border-subtle); }
   .am-app-body { flex-direction: column; }
   .am-icons-panel { width: 100%; }
+}
+
+/* ---- Gallery labels keep the editor's ink -------------------------------
+   `StateGallery` applies the project's palette to its own root, so the tiles
+   preview the canvas — and with it every token inside, including the one the
+   labels read. On a dark palette that is a light text colour, and 游戏风's
+   等待确认 / 重试中 / 查看/读取 came out pale gold on the rail's light panel.
+
+   The rail's own values are captured one level up, on the panel, where the
+   palette has not been applied: a custom property holding `var(…)` resolves
+   where it is declared and is inherited as that value. The labels read the
+   captured ink; the tiles keep the palette. */
+.preset-panel {
+  --rail-ink: var(--text-primary);
+  --rail-ink-muted: var(--text-muted);
+}
+
+.preset-panel .am-state-name {
+  color: var(--rail-ink);
+}
+
+.preset-panel .am-state-toggle {
+  color: var(--rail-ink-muted);
 }

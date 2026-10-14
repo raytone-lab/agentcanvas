@@ -47,6 +47,31 @@ export function OutputContent({
 
   if (openItems.length > 0) {
     const active = openItems.find((item) => item.id === activeOpenItemId) ?? openItems[openItems.length - 1];
+    /*
+     * An explicit renderer applies to the delivery's own tab too. The tabs
+     * render by file type, so once the delivery was open as a tab — which on
+     * the canvas it always is — 代码 / 对比 / 预览 / 数据 changed nothing
+     * visible: notes.md stayed markdown whichever was picked. 自动 keeps the
+     * by-type rendering, which is what it means.
+     */
+    const activeIsDelivery =
+      artifact !== undefined &&
+      (active.id === `artifact:${artifact.id}` || active.title === (artifact.title ?? artifact.id).split("/").pop());
+    if (project.output.artifactRenderer !== "auto" && activeIsDelivery && artifact) {
+      return (
+        <div className="artifact-content opened-output">
+          {openItems.length > 1 ? (
+            <OutputTabs
+              items={openItems}
+              activeId={active.id}
+              onSelectOpenItem={onSelectOpenItem}
+              onCloseOpenItem={onCloseOpenItem}
+            />
+          ) : null}
+          {renderArtifactWith(renderer, artifact, project, copy)}
+        </div>
+      );
+    }
     return (
       <div className="artifact-content opened-output">
         {openItems.length > 1 ? (
@@ -66,6 +91,16 @@ export function OutputContent({
     return <div className="empty-state">{copy.emptyNoArtifact}</div>;
   }
 
+  return renderArtifactWith(renderer, artifact, project, copy);
+}
+
+/** The delivery drawn by one explicit renderer. Shared by the bare panel and the delivery's tab. */
+function renderArtifactWith(
+  renderer: ConcreteArtifactRenderer,
+  artifact: AgentUXArtifactTimelineItem,
+  project: AgentFrontendProject,
+  copy: OutputFrameCopy,
+) {
   if (renderer === "code") {
     const code = artifactCodePreview(artifact, copy);
     return (

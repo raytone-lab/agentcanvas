@@ -1,94 +1,32 @@
 import { describe, expect, it } from "vitest";
 
-import { canvasTimelineEvents, canvasTimelineParts } from "./canvasTimeline";
-import { emptyStructureProject, type AgentFrontendProject } from "../../schema/agentuxConfig";
-import { togglePresetOption } from "../../schema/presetActions";
+import { canvasTimelineEvents } from "./canvasTimeline";
+import { CANVAS_THINKING_MS, canvasReplayDelay } from "./canvasReplayPacing";
+import { initialPreviewRevealCount } from "./previewReplayPacing";
+import { chatCopy } from "../../i18n/copy/chat";
 
-const withAvatar = (side: "userAvatar" | "agentAvatar"): AgentFrontendProject => ({
-  ...emptyStructureProject,
-  conversation: { ...emptyStructureProject.conversation, [side]: true },
-});
+const types = (locale: "zh" | "en" | "ja" = "zh") =>
+  canvasTimelineEvents({ locale }).map((event) => event.type);
 
-const items = (...entries: [string, string][]) =>
-  entries.map(([id, groupId]) => ({ id, groupId: groupId as never }));
-
-describe("canvas timeline", () => {
-  it("shows nothing until something is picked", () => {
-    expect(canvasTimelineEvents({ project: emptyStructureProject, items: [], locale: "zh" })).toEqual([]);
-  });
-
-  it("gives each avatar its own turn", () => {
-    // Both avatars live in the same preset group, so keying off the group meant
-    // picking the reader's avatar also produced the agent's reply.
-    const user = canvasTimelineParts({
-      project: withAvatar("userAvatar"),
-      items: items(["state:author.user", "conversation"]),
-    });
-    expect(user.userTurn).toBe(true);
-    expect(user.agentTurn).toBe(false);
-
-    const agent = canvasTimelineParts({
-      project: withAvatar("agentAvatar"),
-      items: items(["state:author.agent", "conversation"]),
-    });
-    expect(agent.userTurn).toBe(false);
-    expect(agent.agentTurn).toBe(true);
-  });
-
-  it("keeps reasoning, tools and artifacts out until their group is picked", () => {
-    // These are what the reader saw and did not ask for: a thinking block, two
-    // tool cards and an artifact card, loaded wholesale with the fixture.
-    const parts = canvasTimelineParts({
-      project: withAvatar("agentAvatar"),
-      items: items(["state:author.agent", "conversation"]),
-    });
-    expect(parts).toMatchObject({ reasoning: false, tools: false, artifact: false });
-
-    // Driven by the click, not by project state: `reasoning.show` is
-    // "status" | "summary" | "thinking" with no off value, so one is always set
-    // and the project cannot say whether a thinking block was asked for.
-    const withThinking = togglePresetOption(emptyStructureProject, "thinking-wave");
-    // Any card in 思考中, on its own, makes the canvas one turn: the question
-    // and the block. Not a finished exchange with the picked thing under it.
-    expect(
-      canvasTimelineParts({
-        project: withThinking,
-        items: items(["thinking-wave", "ux-effects"]),
-        picked: ["thinking-wave"],
-      }),
-    ).toMatchObject({ reasoning: false, thinkingTurnOnly: true, reasoningDone: false, agentTurn: false });
-    expect(
-      canvasTimelineParts({ project: withThinking, items: items(["thinking-wave", "ux-effects"]) }),
-    ).toMatchObject({ reasoning: false, thinkingTurnOnly: false, liveReasoning: false });
-  });
-
-  it("closes that block for the cards that describe it closed", () => {
-    // 自动折叠 and 已思考（用时 11 秒）have nothing to show while the thinking is
-    // still going, so the one block on the canvas is a closed one. 文字加载方式
-    // is the other way round — text arrives while the agent thinks — so those
-    // cards leave it open.
-    const project = togglePresetOption(emptyStructureProject, "reasoning-done-timed");
-    expect(
-      canvasTimelineParts({ project, items: [], picked: ["reasoning-done-timed"] }),
-    ).toMatchObject({ thinkingTurnOnly: true, reasoningDone: true, agentTurn: false });
-    expect(
-      canvasTimelineParts({ project, items: [], picked: ["reasoning-writing-typewriter"] }),
-    ).toMatchObject({ thinkingTurnOnly: true, reasoningDone: false });
-
-    // The last card clicked is the moment shown: picking a fold and then a
-    // motion goes back to a block that is thinking. Latching on the first fold
-    // would mean never seeing a motion again.
-    expect(
-      canvasTimelineParts({ project, items: [], picked: ["reasoning-done-timed", "thinking-wave"] }).reasoningDone,
-    ).toBe(false);
-    expect(
-      canvasTimelineParts({ project, items: [], picked: ["thinking-wave", "reasoning-auto-collapse"] }).reasoningDone,
-    ).toBe(true);
-
-    // And the closed block is emitted as a real `reasoning.finished`, on the
-    // same turn as the question, with nothing after it.
-    const events = canvasTimelineEvents({ project, items: [], picked: ["reasoning-done-timed"], locale: "zh" });
-    expect(events.map((entry) => entry.type)).toEqual([
+/**
+ * The canvas's reply.
+ *
+ * It used to be composed from what had been picked, and rendered as the state
+ * an event stream ends in. Both changed at once, and the two halves live in
+ * different files: this one decides *what* the reply contains, and
+ * `useCanvasReplay` decides when each part of it appears. The tests below are
+ * about the first half, plus the seam between them — the pacing this
+ * composition assumes.
+ */
+describe("canvas reply composition", () => {
+  it("holds one complete reply, in the order a reply arrives", () => {
+    /*
+     * The whole point of the change. Every block used to be conditional on a
+     * group having been clicked, so the canvas showed half a reply: a reader
+     * judging how a wait resolves into tool work into a delivery could not see
+     * it until they had clicked in four separate places.
+     */
+    expect(types()).toEqual([
       "run.started",
       "text.started",
       "text.delta",
@@ -96,125 +34,195 @@ describe("canvas timeline", () => {
       "reasoning.status",
       "reasoning.delta",
       "reasoning.finished",
+      "tool.call.started",
+      "tool.call.running",
+      "tool.call.result",
+      "tool.call.finished",
+      // Five calls, one per tool action the product can show — view, edit,
+      // validate, search, run command — so the canvas holds a row of each, and
+      // each row draws the icon picked for *that* action in 工具调用.
+      "tool.call.started",
+      "tool.call.running",
+      "tool.call.result",
+      "tool.call.finished",
+      "tool.call.started",
+      "tool.call.running",
+      "tool.call.result",
+      "tool.call.finished",
+      "tool.call.started",
+      "tool.call.running",
+      "tool.call.result",
+      "tool.call.finished",
+      "tool.call.started",
+      "tool.call.running",
+      "tool.call.result",
+      "tool.call.finished",
+      "artifact.created",
+      "artifact.delta",
+      "artifact.finished",
+      "text.started",
+      "text.delta",
+      "text.finished",
+      "artifact.created",
+      // The media artifact's marker delta. See the note on the unfinished-media
+      // test below for why it is a delta and never a `finished`.
+      "artifact.delta",
+      // The audio and video loaders, same shape as the image: created plus a
+      // marker delta, never finished.
+      "artifact.created",
+      "artifact.delta",
+      "artifact.created",
+      "artifact.delta",
+      /*
+       * And a second exchange, which is where the run-state block lives now.
+       * It used to be one `run.error` stapled to the end of the first reply —
+       * a failure on a turn that had just delivered a document. The reader
+       * asks again instead, and this turn carries the group's specimens: a
+       * cancelled call, the three incident categories, the error itself, and
+       * the interrupt.
+       */
+      /*
+       * The second exchange: one failing run, read as a line.
+       *
+       * 写入 failed → why → two retries → a queued call cancelled with the run
+       * → the sandbox closing → the reader stopping it. The three call results
+       * (完成 / 失败 / 已取消) are shown *on the calls they happened to* rather
+       * than as invented extra rows, which is what `sync_index` and
+       * `fetch_docs` were.
+       */
+      "text.started",
+      "text.delta",
+      "text.finished",
+      /*
+       * No tool rows in the failing turn: the reason, two retries, the sandbox
+       * closing, the reader stopping it. 完成 / 失败 / 已取消 had a call each
+       * here to give their rail cards something to point at, and each was
+       * already said by something else — the incidents are the failure, the
+       * interrupt is the cancellation, and the first turn's delivery is the
+       * completion.
+       */
+      "run.error",
+      "run.error",
+      "run.error",
+      "run.error",
+      "step.started",
+      "step.finished",
+      "run.finished",
     ]);
   });
 
-  it("brings the finished turn back as soon as something needs one", () => {
-    // A tool card, an artifact, an error or the agent's avatar only exist on a
-    // turn that ended, so the transcript goes back to two turns and the
-    // thinking keeps its own running one.
-    const project = togglePresetOption(emptyStructureProject, "thinking-wave");
-    expect(
-      canvasTimelineParts({ project, items: [], picked: ["thinking-wave", "renderer-markdown"] }),
-    ).toMatchObject({ thinkingTurnOnly: false, reasoning: true, liveReasoning: true, artifact: true });
+  it("composes the same reply whatever the locale, and localises its words", () => {
+    // The list is the content; only the strings in it are translated. A locale
+    // that composed a different set of blocks would be a bug in the sample
+    // data, not a translation.
+    expect(types("en")).toEqual(types("zh"));
+    expect(types("ja")).toEqual(types("zh"));
+
+    const zh = canvasTimelineEvents({ locale: "zh" });
+    const en = canvasTimelineEvents({ locale: "en" });
+    const question = (events: ReturnType<typeof canvasTimelineEvents>) =>
+      (events.find((event) => event.type === "text.delta")?.payload as { delta: string }).delta;
+    expect(question(zh)).toBe("你都能帮我做什么呢？");
+    expect(question(en)).toBe("What can you help me with?");
   });
 
-  it("leaves the running turn without a follow-up question of its own", () => {
-    // The follow-up exists to carry a live turn *after* a finished one. With
-    // nothing above it, it read as a transcript with a hole in it: two
-    // questions, one answer missing.
-    const project = togglePresetOption(emptyStructureProject, "thinking-wave");
-    const events = canvasTimelineEvents({ project, items: [], picked: ["thinking-wave"], locale: "zh" });
-    const deltas = events.filter((entry) => entry.type === "text.delta");
-    expect(deltas).toHaveLength(1);
-    expect(events.some((entry) => entry.type === "run.finished")).toBe(false);
-    expect(events.filter((entry) => entry.type === "reasoning.status")).toHaveLength(1);
-    expect(events.some((entry) => entry.type === "reasoning.finished")).toBe(false);
+  it("leaves the finished block unlabelled so it reports the wait it measured", () => {
+    /*
+     * This is what makes 已思考5秒 true rather than written down.
+     *
+     * `ReasoningBlock` prefers a producer's `label` over the duration it timed,
+     * so the old sample label meant the canvas reported a fixed 11 秒 however
+     * long the block had been open. With no label, the closed title is the
+     * measured wait — and the wait is real, because the replay holds this event
+     * back for `CANVAS_THINKING_MS`.
+     */
+    const finished = canvasTimelineEvents({ locale: "zh" }).find(
+      (event) => event.type === "reasoning.finished",
+    );
+    expect(finished).toBeDefined();
+    expect(finished?.payload).not.toHaveProperty("label");
+
+    // And the copy the block falls back to has a seconds slot to fill, in every
+    // locale — without it the fallback would render the placeholder.
+    for (const [locale, copy] of Object.entries(chatCopy)) {
+      expect(copy.reasoning.reasonedFor, `${locale} fallback`).toContain("{seconds}");
+    }
   });
 
-  it("captions both speakers when name labels are on", () => {
-    // A label on one turn is half the thing being configured.
-    const project = togglePresetOption(emptyStructureProject, "speaker-labels");
-    const parts = canvasTimelineParts({ project, items: items(["speaker-labels", "conversation"]) });
-    expect(parts.userTurn).toBe(true);
-    expect(parts.agentTurn).toBe(true);
+  it("opens the block as thinking, not as already planning", () => {
+    // `running` is `status !== "done"`, so either value would animate — but the
+    // canvas is staging a wait that the reader watches begin, and "planning" is
+    // a later stage of one.
+    const status = canvasTimelineEvents({ locale: "zh" }).find(
+      (event) => event.type === "reasoning.status",
+    );
+    expect((status?.payload as { status: string }).status).toBe("thinking");
   });
 
-  it("emits a well-formed stream in event order", () => {
-    const events = canvasTimelineEvents({
-      project: withAvatar("userAvatar"),
-      items: items(["state:author.user", "conversation"]),
-      locale: "zh",
-    });
-    expect(events[0]?.type).toBe("run.started");
-    expect(events.at(-1)?.type).toBe("run.finished");
+  it("leaves the media artifact unfinished, which is what the loaders key on", () => {
+    // There are no media events in the protocol: the image loaders watch for an
+    // artifact with an image mime type that has not finished arriving. Finishing
+    // it would turn the thing being configured into a plain picture.
+    //
+    // The delta is not a finish. It carries `media-generation:image`, which is
+    // what makes the output panel show the picture the conversation is showing
+    // instead of one chosen by hashing the file name.
+    const artifacts = canvasTimelineEvents({ locale: "zh" }).filter((event) =>
+      event.type.startsWith("artifact."),
+    );
+    const media = artifacts.filter(
+      (event) => (event.payload as { artifactId: string }).artifactId === "art_canvas_media",
+    );
+    expect(media.map((event) => event.type)).toEqual(["artifact.created", "artifact.delta"]);
+    expect((media[0].payload as { mimeType: string }).mimeType).toBe("image/png");
+    expect((media[1].payload as { delta: string }).delta).toContain("media-generation:image");
+  });
+
+  it("emits a well-formed stream with stable ids and no moving clock", () => {
+    const events = canvasTimelineEvents({ locale: "zh" });
+    expect(new Set(events.map((event) => event.id)).size).toBe(events.length);
     expect(events.map((event) => event.seq)).toEqual(events.map((_, index) => index + 1));
-    // Stable timestamps: a clock reading would rebuild the timeline on every
-    // render, remounting it under the reader's pointer.
-    const again = canvasTimelineEvents({
-      project: withAvatar("userAvatar"),
-      items: items(["state:author.user", "conversation"]),
-      locale: "zh",
-    });
-    expect(again).toEqual(events);
-  });
-});
-
-describe("multi-turn transcript", () => {
-  it("keeps a thinking animation visible after a delivery pick", () => {
-    // The reason the canvas shows more than one turn. Thinking and delivery are
-    // two instants of the same turn, so a single frozen moment can only show
-    // one of them — pick the animation, then pick a renderer, and the animation
-    // was gone.
-    const project = togglePresetOption(emptyStructureProject, "thinking-wave");
-    const parts = canvasTimelineParts({
-      project,
-      items: [],
-      picked: ["thinking-wave", "renderer-markdown"],
-    });
-    expect(parts.artifact).toBe(true);
-    expect(parts.liveTurn).toBe(true);
-    expect(parts.liveReasoning).toBe(true);
-
-    const types = canvasTimelineEvents({
-      project,
-      items: [],
-      picked: ["thinking-wave", "renderer-markdown"],
-      locale: "zh",
-    }).map((event) => event.type);
-    // A finished first turn carrying the artifact, then a second turn that has
-    // not ended — no `run.finished`, or the animation would render as history.
-    expect(types).toContain("artifact.created");
-    // Two messages, not three: both picks are agent-side, so the finished turn
-    // carries only the reply. Nothing is shown that was not picked, which is
-    // the rule the canvas is built on.
-    expect(types.filter((type) => type === "text.started")).toHaveLength(2);
-    expect(types).not.toContain("run.finished");
-    expect(types.at(-1)).toBe("reasoning.delta");
+    // Composed twice, identical: a `Date.now()` in here would remount the
+    // timeline under the reader's pointer on every render.
+    expect(canvasTimelineEvents({ locale: "zh" })).toEqual(events);
   });
 
-  it("composes an error block and a media placeholder", () => {
-    // 结果报错 and 生成中 showed nothing at all: the timeline had no part for
-    // either. Errors ride on `run.error`; media has no events in the protocol,
-    // so the loaders key off an artifact whose mime type is an image.
-    const errorTypes = canvasTimelineEvents({
-      project: emptyStructureProject,
-      items: [],
-      picked: ["error-collapse"],
-      locale: "zh",
-    }).map((event) => event.type);
-    expect(errorTypes).toContain("run.error");
+  it("is played back over time rather than drawn at once", () => {
+    /*
+     * The seam. This composition is only correct in company: it emits a
+     * *finished* reply, and every mid-flight state in it — the wait counting up,
+     * the tool card running — exists solely because the replay reveals the list
+     * one event at a time.
+     *
+     * So the pacing is asserted here too. The five seconds belong to
+     * `reasoning.finished` specifically, because the block's clock runs between
+     * `reasoning.status` being revealed and this event being revealed; spread
+     * across the three reasoning events it would not be the wait the reader
+     * sees.
+     */
+    const events = canvasTimelineEvents({ locale: "zh" });
+    const finished = events.find((event) => event.type === "reasoning.finished");
+    expect(canvasReplayDelay(finished!)).toBe(CANVAS_THINKING_MS);
+    expect(CANVAS_THINKING_MS).toBe(5_000);
 
-    const mediaEvents = canvasTimelineEvents({
-      project: emptyStructureProject,
-      items: [],
-      picked: ["media-image-grid"],
-      locale: "zh",
-    });
-    const created = mediaEvents.find((event) => event.type === "artifact.created");
-    expect((created?.payload as { mimeType?: string })?.mimeType).toBe("image/png");
-    // No `artifact.finished`: a finished image is a picture, and what 生成中
-    // configures is the loader shown while it is still arriving.
-    expect(mediaEvents.some((event) => event.type === "artifact.finished")).toBe(false);
-  });
+    // Everything else is brisk. At the saved-run pacing this reply takes about
+    // twelve seconds, which is too long to sit through on every edit.
+    const others = events.filter((event) => event.type !== "reasoning.finished");
+    for (const event of others) {
+      expect(canvasReplayDelay(event), event.type).toBeLessThanOrEqual(240);
+    }
 
-  it("ends the run when nothing transient is picked", () => {
-    const types = canvasTimelineEvents({
-      project: emptyStructureProject,
-      items: [],
-      picked: ["renderer-markdown"],
-      locale: "zh",
-    }).map((event) => event.type);
-    expect(types.at(-1)).toBe("run.finished");
+    /*
+     * The opening prefix is two events, and both should be free.
+     *
+     * `run.started` carries the title and draws nothing, so pausing before it
+     * would be a blank frame at the top of every replay. The one after it opens
+     * the reader's own message — and the reader's question was already there
+     * before the agent replied, so animating it in would be staging the wrong
+     * thing. Its text still types on, from the delta 140ms later.
+     */
+    expect(initialPreviewRevealCount(events)).toBe(2);
+    expect(events[0].type).toBe("run.started");
+    expect((events[1].payload as { role: string }).role).toBe("user");
   });
 });

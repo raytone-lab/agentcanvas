@@ -2,7 +2,9 @@ import { PanelLeft, Search } from "../../agentmatrix/uiIcons";
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { useIconStyle } from "../../agentmatrix";
+import { OptionIcon, rowMarkOptionForStyle, useIconStyle } from "../../agentmatrix";
+import { InkChatNewIcon } from "../../agentmatrix/inkIcons";
+import { TechNewChatIcon } from "../../agentmatrix/techIcons";
 import { appVersionLabel } from "../../appVersion";
 import { useCopy, useLocale } from "../../i18n/LocaleContext";
 import type { AgentFrontendProject } from "../../schema/agentuxConfig";
@@ -48,6 +50,14 @@ export function SessionSidebar({
     ? sessionItems ?? sessionPrompts.map((prompt) => ({ id: prompt, title: prompt }))
     : [];
   const hasSessions = sessionList && sessions.length > 0;
+  /**
+   * The row mark, resolved once for the list.
+   *
+   * The toggle says whether rows are marked; the style says with what. Keeping
+   * those apart is what lets one switch serve eleven skins without the reader
+   * matching a glyph to a skin by hand.
+   */
+  const rowMark = project.sidebar.rowIcon ? rowMarkOptionForStyle(project.theme.stylePreset) : null;
   const collapsible = collapse && Boolean(onCollapse);
   // The header is the title and the two controls beside it; with none of them
   // chosen there is no row, rather than an empty band of padding at the top of
@@ -218,14 +228,14 @@ export function SessionSidebar({
           {grouping ? (
             <>
               {today.length > 0 ? (
-                <SessionGroup label={c.groupToday} items={today} activeId={effectiveActive} onSelect={onSelectSession} />
+                <SessionGroup label={c.groupToday} items={today} activeId={effectiveActive} onSelect={onSelectSession} rowIcon={rowMark} />
               ) : null}
               {earlier.length > 0 ? (
-                <SessionGroup label={c.groupEarlier} items={earlier} activeId={effectiveActive} onSelect={onSelectSession} />
+                <SessionGroup label={c.groupEarlier} items={earlier} activeId={effectiveActive} onSelect={onSelectSession} rowIcon={rowMark} />
               ) : null}
             </>
           ) : (
-            <SessionGroup items={sessions} activeId={effectiveActive} onSelect={onSelectSession} />
+            <SessionGroup items={sessions} activeId={effectiveActive} onSelect={onSelectSession} rowIcon={rowMark} />
           )}
         </nav>
       ) : null}
@@ -261,7 +271,11 @@ export function SidebarToggleIcon({ size }: { size: number }) {
     <svg
       width={size}
       height={size}
-      viewBox="0 0 30 30"
+      // Half a unit of room round the box: the frame's stroke runs to the
+      // very edge of 0–30, and the viewBox clipped its outer half-pixel —
+      // the icon looked cut on one side at any zoom that is not 100%.
+      viewBox="-0.5 -0.5 31 31"
+      overflow="visible"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
@@ -273,12 +287,124 @@ export function SidebarToggleIcon({ size }: { size: number }) {
   );
 }
 
+/**
+ * The comic style's new-task icon: a filled page with a folded corner and a
+ * plus cut out of it.
+ *
+ * Drawn to the artwork given rather than derived from the scale — the bevel is
+ * two inner shadows at fixed offsets, and the outline is 3px where the style's
+ * chrome line is 2px. That is not a violation of the line rule: §6 governs the
+ * lines that *build* the interface, and an icon is artwork sitting inside it.
+ * The audit reads `border-width`, not `stroke-width`, for the same reason.
+ *
+ * Kept out of the `iconStyle` switch below because `studio` resolves to "line",
+ * which it shares with three other styles — keying on it would hand this page
+ * to the kraft and game styles too. So it goes through the sibling-span switch
+ * the rail icons in this file already use, and CSS picks by style preset.
+ */
+function ComicNewChatIcon({ size }: { size: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 36 36"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {/* Both instances of this icon on a page share the filter id. They resolve
+          to the same definition, so the duplicate is inert — but it is why the
+          id is named rather than the exporter's `filter0_ii_818_2830`. */}
+      <g filter="url(#comic-new-chat-bevel)">
+        <path
+          d="M24 3L31.5 10.5V31.512C31.4996 31.9068 31.3425 32.2853 31.0632 32.5643C30.7839 32.8433 30.4053 33 30.0105 33H5.9895C5.59557 32.9973 5.21853 32.8396 4.93983 32.5612C4.66113 32.2828 4.50314 31.9059 4.5 31.512V4.488C4.5 3.666 5.1675 3 5.9895 3H24Z"
+          fill="#FECD0F"
+        />
+      </g>
+      <path d="M23.3789 4.5L30 11.1211V31.5H6V4.5H23.3789Z" stroke="black" strokeWidth="3" />
+      <rect x="13" y="17" width="11" height="3" rx="1.5" fill="black" />
+      <rect x="20" y="13" width="11" height="3" rx="1.5" transform="rotate(90 20 13)" fill="black" />
+      <defs>
+        <filter
+          id="comic-new-chat-bevel"
+          x="3.5"
+          y="2"
+          width="29"
+          height="32"
+          filterUnits="userSpaceOnUse"
+          colorInterpolationFilters="sRGB"
+        >
+          <feFlood floodOpacity="0" result="BackgroundImageFix" />
+          <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" />
+          <feColorMatrix
+            in="SourceAlpha"
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+            result="hardAlpha"
+          />
+          <feOffset dx="-4" dy="-4" />
+          <feGaussianBlur stdDeviation="0.5" />
+          <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" />
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.996078 0 0 0 0 0.714902 0 0 0 0 0.0588235 0 0 0 1 0"
+          />
+          <feBlend mode="normal" in2="shape" result="effect1_innerShadow" />
+          <feColorMatrix
+            in="SourceAlpha"
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+            result="hardAlpha"
+          />
+          <feOffset dx="2" dy="2" />
+          <feGaussianBlur stdDeviation="0.5" />
+          <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" />
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 1 0 0 0 0 0.943816 0 0 0 0 0.438157 0 0 0 1 0"
+          />
+          <feBlend mode="normal" in2="effect1_innerShadow" result="effect2_innerShadow" />
+        </filter>
+      </defs>
+    </svg>
+  );
+}
+
 /** Shared with the rail's option card for 新建对话, so both show one icon. */
 export function NewChatIcon({ size }: { size: number }) {
   // A hand-drawn icon rather than a lucide one, so repointing this file's
   // lucide import did not reach it — it stayed an outline while everything
   // around it became a glyph. codicon's `new-session` is the same idea.
   const iconStyle = useIconStyle();
+  /* The Game style draws this with the sheet's own chat-and-plus plate — the
+     one icon in that set that was painted for this exact control. It is not
+     reached through `uiIcons`: this is a hand-drawn SVG, not a lucide import,
+     so repointing the file's imports never touched it and it stayed an outline
+     while everything around it became a painted plate. */
+  if (iconStyle === "game") {
+    return (
+      <img
+        className="game-art-icon"
+        src="/game/icons/chat-new.png"
+        alt=""
+        width={size}
+        height={size}
+        draggable={false}
+        aria-hidden="true"
+      />
+    );
+  }
+  /* 水墨风, and the reason it needs a branch of its own rather than the span
+     pair below: this control was the *one* visibly non-ink glyph left on the
+     canvas after the set was wired. Everything else in the left column is a
+     lucide import, so `withStyledIcon` reaches it; this is hand-drawn SVG in a
+     CSS-gated span, and outside 漫画风 the gate shows the shared outline. Found
+     by counting — thirteen `.ink-icon` svgs against four that were not, three
+     of them hidden by that same gate and this one visible. */
+  if (iconStyle === "ink") {
+    return <InkChatNewIcon size={size} />;
+  }
   if (iconStyle === "codicon") {
     return (
       <span
@@ -288,21 +414,37 @@ export function NewChatIcon({ size }: { size: number }) {
       />
     );
   }
+  // Both drawn, one shown — the switch the rail's search and collapse icons in
+  // this file already use. The alternative was threading the style preset down
+  // as a prop through two call sites, one of which is a rail option card that
+  // has no preset to give.
   return (
-    <svg
-      width={size}
-      height={Math.round((size * 33) / 31)}
-      viewBox="0 0 31 33"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        d="M14.5283 1.16602C14.9311 1.167 15.3181 1.32338 15.6084 1.60254C15.8856 1.88048 16.042 2.25685 16.042 2.64941C16.042 3.04213 15.8858 3.41928 15.6084 3.69727C15.32 3.97958 14.9319 4.137 14.5283 4.13574H8.5752C8.20402 4.13574 7.8438 4.16084 7.49512 4.2373C7.13512 4.30255 6.78837 4.4061 6.45312 4.54785C6.11477 4.67831 5.79177 4.84543 5.49023 5.04688C5.19163 5.24474 4.91158 5.46955 4.65332 5.71777C4.39838 5.97034 4.16605 6.24527 3.95996 6.53906C3.76077 6.83574 3.58778 7.14927 3.44434 7.47656C3.17373 8.13321 3.03448 8.83666 3.0332 9.54688V18.626C3.03322 18.9858 3.06024 19.3325 3.13672 19.6924C3.21321 20.0388 3.3163 20.3878 3.45801 20.7207C3.73594 21.3949 4.15225 22.0033 4.67969 22.5068C5.20254 23.0196 5.82351 23.4221 6.50488 23.6904C6.83994 23.8321 7.19978 23.9352 7.55957 24.0117C7.91949 24.077 8.27991 24.1152 8.65332 24.1152C9.10834 24.1101 9.54723 24.2859 9.87305 24.6035C10.036 24.7617 10.1671 24.9499 10.2598 25.1572C10.3498 25.362 10.3879 25.5806 10.4014 25.7988L10.4131 27.8955L14.2451 25.1572C15.2238 24.4621 16.3153 24.1152 17.5234 24.1152H22.2686C22.642 24.1152 23.0022 24.077 23.3486 24.0117C23.7083 23.9465 24.0547 23.8457 24.3896 23.7041C24.7226 23.5624 25.0453 23.3956 25.3535 23.2021C25.6504 23.0087 25.934 22.7771 26.1904 22.5342C26.4469 22.2777 26.6781 22.007 26.8828 21.71C27.2907 21.1238 27.572 20.459 27.707 19.7578C27.7835 19.4091 27.8096 19.0621 27.8096 18.7021V14.0088C27.81 13.8137 27.8504 13.6205 27.9277 13.4414C28.0051 13.2624 28.1181 13.1008 28.2598 12.9668C28.4764 12.76 28.748 12.6195 29.042 12.5625C29.3359 12.5055 29.6398 12.5348 29.918 12.6455C30.0979 12.713 30.2645 12.8251 30.4062 12.9668C30.548 13.1008 30.6609 13.2624 30.7383 13.4414C30.8156 13.6205 30.856 13.8137 30.8564 14.0088V18.7021C30.8538 20.3651 30.3473 21.9884 29.4033 23.3574C29.0942 23.818 28.7367 24.2444 28.3369 24.6289C27.9365 25.0146 27.5013 25.3625 27.0381 25.6699C26.5733 25.9774 26.0776 26.2368 25.5596 26.4424C24.5136 26.8646 23.3965 27.0832 22.2686 27.0859H18.5127C17.3181 27.086 16.2244 27.4318 15.248 28.127L10.1699 31.752C9.87101 31.9692 9.51109 32.0862 9.1416 32.0869C8.91658 32.0835 8.69361 32.0399 8.48438 31.957C8.27292 31.8731 8.08075 31.7468 7.91992 31.5859C7.75876 31.4344 7.63182 31.2501 7.54688 31.0459C7.45576 30.8435 7.40765 30.6242 7.40527 30.4023L7.36621 26.9961C6.35406 26.8407 5.37537 26.5137 4.47266 26.0303C4.02423 25.7866 3.59924 25.5022 3.20215 25.1816C2.79973 24.8718 2.42843 24.5235 2.09473 24.1406C1.7621 23.7585 1.4607 23.3499 1.19434 22.9189C0.674521 22.0555 0.313421 21.1058 0.12793 20.1152C0.0407366 19.6237 -0.00186416 19.1252 0 18.626V9.54492C0 8.99367 0.0520703 8.45309 0.15332 7.91309C0.270289 7.37332 0.436663 6.84482 0.643555 6.33203C1.08688 5.31759 1.7194 4.39635 2.50684 3.61816C3.71357 2.43762 5.24381 1.64178 6.90332 1.33203C7.45321 1.21877 8.01377 1.16342 8.5752 1.16602H14.5283ZM24.9854 0C25.378 1.91864e-05 25.7551 0.152551 26.0381 0.424805C26.3209 0.696988 26.4877 1.06774 26.5029 1.45996H26.5049V3.9873H29.1602C29.5534 3.98732 29.9309 4.14382 30.209 4.42188C30.4868 4.69983 30.6425 5.07677 30.6426 5.46973C30.6426 5.86288 30.4869 6.2405 30.209 6.51855C29.9309 6.79661 29.5534 6.95311 29.1602 6.95312H26.5049V9.47949C26.5048 9.88205 26.3451 10.268 26.0605 10.5527C25.7757 10.8376 25.3891 10.998 24.9863 10.998C24.5836 10.998 24.1969 10.8375 23.9121 10.5527C23.6276 10.268 23.4678 9.88202 23.4678 9.47949V6.95312H20.8125C20.4193 6.9531 20.0417 6.7966 19.7637 6.51855C19.4857 6.2405 19.3301 5.86288 19.3301 5.46973C19.3302 5.07677 19.4859 4.69983 19.7637 4.42188C20.0417 4.14382 20.4193 3.98733 20.8125 3.9873H23.4678V1.45996C23.483 1.06771 23.6498 0.696993 23.9326 0.424805C24.2156 0.152534 24.5927 0 24.9854 0Z"
-        fill="currentColor"
-      />
-    </svg>
+    <>
+      <span className="comic-new-icon">
+        <ComicNewChatIcon size={size} />
+      </span>
+      {/* 科技风's: the ring and node from its plate, a plus where the sphere
+          sits in a row — shown by CSS, the same switch as the comic one. */}
+      <span className="tech-new-icon">
+        <TechNewChatIcon size={size} />
+      </span>
+      <span className="default-new-icon">
+        <svg
+          width={size}
+          height={Math.round((size * 33) / 31)}
+          viewBox="0 0 31 33"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            d="M14.5283 1.16602C14.9311 1.167 15.3181 1.32338 15.6084 1.60254C15.8856 1.88048 16.042 2.25685 16.042 2.64941C16.042 3.04213 15.8858 3.41928 15.6084 3.69727C15.32 3.97958 14.9319 4.137 14.5283 4.13574H8.5752C8.20402 4.13574 7.8438 4.16084 7.49512 4.2373C7.13512 4.30255 6.78837 4.4061 6.45312 4.54785C6.11477 4.67831 5.79177 4.84543 5.49023 5.04688C5.19163 5.24474 4.91158 5.46955 4.65332 5.71777C4.39838 5.97034 4.16605 6.24527 3.95996 6.53906C3.76077 6.83574 3.58778 7.14927 3.44434 7.47656C3.17373 8.13321 3.03448 8.83666 3.0332 9.54688V18.626C3.03322 18.9858 3.06024 19.3325 3.13672 19.6924C3.21321 20.0388 3.3163 20.3878 3.45801 20.7207C3.73594 21.3949 4.15225 22.0033 4.67969 22.5068C5.20254 23.0196 5.82351 23.4221 6.50488 23.6904C6.83994 23.8321 7.19978 23.9352 7.55957 24.0117C7.91949 24.077 8.27991 24.1152 8.65332 24.1152C9.10834 24.1101 9.54723 24.2859 9.87305 24.6035C10.036 24.7617 10.1671 24.9499 10.2598 25.1572C10.3498 25.362 10.3879 25.5806 10.4014 25.7988L10.4131 27.8955L14.2451 25.1572C15.2238 24.4621 16.3153 24.1152 17.5234 24.1152H22.2686C22.642 24.1152 23.0022 24.077 23.3486 24.0117C23.7083 23.9465 24.0547 23.8457 24.3896 23.7041C24.7226 23.5624 25.0453 23.3956 25.3535 23.2021C25.6504 23.0087 25.934 22.7771 26.1904 22.5342C26.4469 22.2777 26.6781 22.007 26.8828 21.71C27.2907 21.1238 27.572 20.459 27.707 19.7578C27.7835 19.4091 27.8096 19.0621 27.8096 18.7021V14.0088C27.81 13.8137 27.8504 13.6205 27.9277 13.4414C28.0051 13.2624 28.1181 13.1008 28.2598 12.9668C28.4764 12.76 28.748 12.6195 29.042 12.5625C29.3359 12.5055 29.6398 12.5348 29.918 12.6455C30.0979 12.713 30.2645 12.8251 30.4062 12.9668C30.548 13.1008 30.6609 13.2624 30.7383 13.4414C30.8156 13.6205 30.856 13.8137 30.8564 14.0088V18.7021C30.8538 20.3651 30.3473 21.9884 29.4033 23.3574C29.0942 23.818 28.7367 24.2444 28.3369 24.6289C27.9365 25.0146 27.5013 25.3625 27.0381 25.6699C26.5733 25.9774 26.0776 26.2368 25.5596 26.4424C24.5136 26.8646 23.3965 27.0832 22.2686 27.0859H18.5127C17.3181 27.086 16.2244 27.4318 15.248 28.127L10.1699 31.752C9.87101 31.9692 9.51109 32.0862 9.1416 32.0869C8.91658 32.0835 8.69361 32.0399 8.48438 31.957C8.27292 31.8731 8.08075 31.7468 7.91992 31.5859C7.75876 31.4344 7.63182 31.2501 7.54688 31.0459C7.45576 30.8435 7.40765 30.6242 7.40527 30.4023L7.36621 26.9961C6.35406 26.8407 5.37537 26.5137 4.47266 26.0303C4.02423 25.7866 3.59924 25.5022 3.20215 25.1816C2.79973 24.8718 2.42843 24.5235 2.09473 24.1406C1.7621 23.7585 1.4607 23.3499 1.19434 22.9189C0.674521 22.0555 0.313421 21.1058 0.12793 20.1152C0.0407366 19.6237 -0.00186416 19.1252 0 18.626V9.54492C0 8.99367 0.0520703 8.45309 0.15332 7.91309C0.270289 7.37332 0.436663 6.84482 0.643555 6.33203C1.08688 5.31759 1.7194 4.39635 2.50684 3.61816C3.71357 2.43762 5.24381 1.64178 6.90332 1.33203C7.45321 1.21877 8.01377 1.16342 8.5752 1.16602H14.5283ZM24.9854 0C25.378 1.91864e-05 25.7551 0.152551 26.0381 0.424805C26.3209 0.696988 26.4877 1.06774 26.5029 1.45996H26.5049V3.9873H29.1602C29.5534 3.98732 29.9309 4.14382 30.209 4.42188C30.4868 4.69983 30.6425 5.07677 30.6426 5.46973C30.6426 5.86288 30.4869 6.2405 30.209 6.51855C29.9309 6.79661 29.5534 6.95311 29.1602 6.95312H26.5049V9.47949C26.5048 9.88205 26.3451 10.268 26.0605 10.5527C25.7757 10.8376 25.3891 10.998 24.9863 10.998C24.5836 10.998 24.1969 10.8375 23.9121 10.5527C23.6276 10.268 23.4678 9.88202 23.4678 9.47949V6.95312H20.8125C20.4193 6.9531 20.0417 6.7966 19.7637 6.51855C19.4857 6.2405 19.3301 5.86288 19.3301 5.46973C19.3302 5.07677 19.4859 4.69983 19.7637 4.42188C20.0417 4.14382 20.4193 3.98733 20.8125 3.9873H23.4678V1.45996C23.483 1.06771 23.6498 0.696993 23.9326 0.424805C24.2156 0.152534 24.5927 0 24.9854 0Z"
+            fill="currentColor"
+          />
+        </svg>
+      </span>
+    </>
   );
 }
 
@@ -311,11 +453,22 @@ function SessionGroup({
   items,
   activeId,
   onSelect,
+  rowIcon = null,
 }: {
   label?: string;
   items: readonly SessionSidebarItem[];
   activeId?: string;
   onSelect?: (id: string) => void;
+  /**
+   * The mark every row wears, or null for none.
+   *
+   * An option id rather than a boolean: which glyph it is belongs to the style
+   * (`rowMarkOptionForStyle`), and this component is handed the answer instead
+   * of the question. One icon for the whole list rather than one per
+   * conversation — the slot says "a saved conversation", and a per-row choice
+   * would need a field on the session that the protocol does not carry.
+   */
+  rowIcon?: string | null;
 }) {
   return (
     <section className="session-group">
@@ -332,6 +485,11 @@ function SessionGroup({
               aria-current={active ? "true" : undefined}
               onClick={() => onSelect?.(id)}
             >
+              {rowIcon ? (
+                <span className="session-item-icon" aria-hidden="true">
+                  <OptionIcon slot="session.item" option={rowIcon} size={15} />
+                </span>
+              ) : null}
               <span className="session-item-label">{title}</span>
             </button>
           </div>

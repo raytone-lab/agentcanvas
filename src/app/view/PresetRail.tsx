@@ -1,12 +1,18 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { Check, ChevronDown, Clock3, Copy, GitMerge, Pencil, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+/* Split on purpose. `ChevronDown` is this panel's own disclosure arrow and
+   `GitMerge` labels a section of it — editor chrome, which stays neutral
+   whatever the canvas is wearing. The four below are the message-action
+   picker, and every glyph in it is a picture of a button the canvas draws, so
+   they come from `uiIcons` and follow the style. Same reasoning, and the same
+   reported bug, as the import at the top of `PresetOptionPreview`. */
+import { ChevronDown, GitMerge } from "lucide-react";
+import { Clock3, Copy, Pencil, RotateCcw } from "../../agentmatrix/uiIcons";
 
 import { StateGallery, type StateCard } from "../../components/agentmatrix/StateGallery";
 import { PresetOptionPreview } from "../../components/PresetOptionPreview";
 import { ProviderSettingsPanel } from "../../components/ProviderSettingsPanel";
 import { WelcomeSettingsPanel } from "../../components/WelcomeSettingsPanel";
 import { WritingParamControls, hasWritingParams } from "../../components/agent-preview/WritingParamControls";
-import { Dialog, DialogClose, DialogContent } from "../../components/ui/dialog";
 import {
   translatePresetGroupName,
   translatePresetOptionDescription,
@@ -26,17 +32,16 @@ import type {
 import { themeTokens } from "../../theme/themeTokens";
 import type { MessageActionKey } from "../appTypes";
 import {
-  FLOW_EXIT_GROUP_IDS,
-  OPTION_GROUP_IDS,
   isOptionSelectedInRail,
   mountedComponentsForProject,
+  visualStylePreset,
   groupsForNavSection,
   navSections,
-  presetStyleOptions,
   stateSectionTitle,
   type NavSectionId,
 } from "../projection/presetRailData";
-import type { SelectedComponentItem } from "../projection/selectedComponents";
+import { groupChoiceProgress, type SelectedComponentItem } from "../projection/selectedComponents";
+import type { ProviderCheckResult } from "../viewmodel/useProviderSettings";
 
 type PresetGroup = {
   id: PresetGroupId;
@@ -55,6 +60,7 @@ export function PresetRail({
   copy,
   locale,
   brand,
+  layersPanel,
   project,
   navSection,
   onNavSectionChange,
@@ -71,11 +77,6 @@ export function PresetRail({
   selectedPresetGroup,
   selectedPresetStyle,
   styleSwitching,
-  pendingStyle,
-  pendingStyleLabel,
-  onPendingStyleChange,
-  onStyleSwitchRequest,
-  onStyleSwitchConfirm,
   onPresetGroupClick,
   stateCards,
   selectedStateCode,
@@ -100,6 +101,14 @@ export function PresetRail({
   locale: AppLocale;
   /** The product wordmark and language switch, which sit at the top of the card. */
   brand?: ReactNode;
+  /**
+   * The canvas's layer list, composed by the shell.
+   *
+   * It needs the project and half the workspace's selection state, so threading
+   * all of it through this view — which otherwise only knows about preset
+   * groups — would make the rail the shell.
+   */
+  layersPanel: ReactNode;
   project: AgentFrontendProject;
   navSection: NavSectionId;
   onNavSectionChange: (section: NavSectionId) => void;
@@ -121,11 +130,6 @@ export function PresetRail({
   selectedPresetGroup: PresetGroup;
   selectedPresetStyle: PresetStyleId;
   styleSwitching: boolean;
-  pendingStyle: PresetStyleId | null;
-  pendingStyleLabel: string;
-  onPendingStyleChange: (style: PresetStyleId | null) => void;
-  onStyleSwitchRequest: (styleId: PresetStyleId, tabButton: HTMLButtonElement) => void;
-  onStyleSwitchConfirm: () => void;
   onPresetGroupClick: (groupId: PresetGroupId) => void;
   stateCards: StateCard[];
   selectedStateCode: string | null;
@@ -143,11 +147,11 @@ export function PresetRail({
   onMessageActionChange: (key: MessageActionKey, enabled: boolean) => void;
   sessionKeys: Record<string, string>;
   providerControls: {
-    onFetchModels: (provider: ProviderConnection, sessionKey?: string) => void;
+    onFetchModels: (provider: ProviderConnection, sessionKey?: string) => void | Promise<ProviderCheckResult>;
     onSave: () => void;
     onSetDefaultProvider: (id: ProviderConnectionId) => void;
     onSessionKeyChange: (id: ProviderConnectionId, value: string) => void;
-    onTestProvider: (provider: ProviderConnection, sessionKey?: string) => void;
+    onTestProvider: (provider: ProviderConnection, sessionKey?: string) => void | Promise<ProviderCheckResult>;
     onToggleProvider: (id: ProviderCatalogId) => void;
     onToggleSettingsLauncher: () => void;
     onUpdateProvider: (
@@ -174,10 +178,21 @@ export function PresetRail({
   // What the canvas is drawing, so a presence toggle can tick when its
   // component is on it.
   const mountedComponents = mountedComponentsForProject(project, selectedComponentItems, pickedOptionIds);
-  const flowCovered = new Set(
-    pickedOptionIds
-      .map((optionId) => OPTION_GROUP_IDS.get(optionId))
-      .filter((groupId): groupId is PresetGroupId => groupId !== undefined),
+  // Every group's count, for the rows. Memoised: the exclusivity test applies
+  // options pairwise, which is cheap once and wasteful on every hover.
+  const groupProgress = useMemo(
+    () =>
+      new Map(
+        visiblePresetGroups.map((group) => [
+          group.id,
+          groupChoiceProgress(project, group, {
+            stylePreset: selectedPresetStyle,
+            picked: pickedOptionIds,
+            mounted: mountedComponentsForProject(project, selectedComponentItems, pickedOptionIds),
+          }),
+        ]),
+      ),
+    [project, visiblePresetGroups, selectedPresetStyle, pickedOptionIds, selectedComponentItems],
   );
   // Exactly one group is open at a time, because the option set is projected for
   // the selected group — expanding a second would have to re-project the first,
@@ -197,6 +212,28 @@ export function PresetRail({
   }, [pinnedOptionId, onPinnedOptionShown, navSection, selectedGroupId]);
 
   /**
+   * Whether this panel has anything in it — which decides the "先占个位"
+   * placeholder below.
+   *
+   * Option sections are not the only thing a panel holds, and keying the
+   * placeholder on them alone is what put the dashed box directly above 运行
+   * 状态's cards: that group's content *is* its state cards, and its only two
+   * options are `error-collapse` (surfaced as its own block, so filtered out of
+   * the sections) and one more that is withheld. Sections empty, panel full.
+   *
+   * The four terms are the four kinds of content this panel can render. Git and
+   * Provider are not among them because they replace this whole branch in the
+   * conditional below, so the placeholder can never compete with either.
+   */
+  const hasPanelContent =
+    renderedPresetSections.length > 0 ||
+    stateCards.length > 0 ||
+    // 输入框 ends with the welcome-message editor, 对话区 with the two
+    // message-action pickers — both outside the sections.
+    selectedPresetGroup.id === "composer" ||
+    selectedPresetGroup.id === "conversation";
+
+  /**
    * The avatar gallery. Hoisted so it can sit on either side of the option
    * sections: 对话区 puts 布局 first, because whether the conversation shows at
    * all comes before which face it wears.
@@ -213,6 +250,8 @@ export function PresetRail({
                 onPickIcon={onStateCardPickIcon}
                 onDeselect={onStateCardDisable}
                 pickedSlots={pickedIconSlots}
+                stylePreset={project.theme.stylePreset}
+                themePreset={project.theme.preset}
               />
               {selectedPresetGroup.id === "conversation" ? (
                 <div className="preset-option-cell" data-option-id="speaker-labels">
@@ -246,8 +285,6 @@ export function PresetRail({
               <span className="preset-skel-card" />
               <span className="preset-skel-card" />
             </div>
-          ) : selectedPresetStyle === "studio" ? (
-            <div className="preset-panel-building">{copy.shell.editor.underConstruction}</div>
           ) : (
             <>
           {stateCards.length && selectedPresetGroup.id === "tool-calls" ? (
@@ -261,6 +298,8 @@ export function PresetRail({
                 onPickIcon={onToolActionsOverview}
                 onDeselect={onToolActionsOverview}
                 pickedSlots={pickedIconSlots}
+                stylePreset={project.theme.stylePreset}
+                themePreset={project.theme.preset}
               />
             </section>
           ) : null}
@@ -288,12 +327,12 @@ export function PresetRail({
             />
           ) : (
             <>
-            {renderedPresetSections.length === 0 ? (
+            {hasPanelContent ? null : (
               // A stage that is in the flow but has nothing to configure yet.
               // Silence here reads as a bug — the reader clicked a group and
               // got a blank panel — so the group says so itself.
               <p className="preset-panel-placeholder">{copy.shell.presetRail.emptyGroup}</p>
-            ) : null}
+            )}
             {renderedPresetSections.map((section) => (
               <section className="preset-option-section" key={section.label}>
                 {/* 动效 over 思考中's eight motions repeats the group's own name;
@@ -436,44 +475,17 @@ export function PresetRail({
   );
 
   return (
+    /*
+     * No style-switch dialog here any more.
+     *
+     * It asked "确定切换为「手绘风」？" and warned that the style brings its own
+     * components — a fair warning when the trigger was a bare swatch. The
+     * picker is a card with an Apply button on it now, so the button is the
+     * confirmation and the sheet asked the same question twice. See
+     * `useStyleSwitch.applyStyle`; the `confirmTitle` / `confirmDescription` /
+     * `cancel` strings stay in the copy for whatever next needs a confirm.
+     */
     <div className="preset-nav" data-open={presetDrawerOpen} data-nav-section={navSection}>
-      <Dialog
-        open={pendingStyle !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            onPendingStyleChange(null);
-          }
-        }}
-      >
-        {pendingStyle === "studio" ? (
-          <DialogContent
-            title={copy.shell.editor.styleSwitch.unbuiltTitle.replace("{style}", pendingStyleLabel)}
-            description={copy.shell.editor.styleSwitch.unbuiltDescription}
-            width={380}
-          >
-            <div className="style-switch-actions">
-              <DialogClose className="primary-button">
-                {copy.shell.editor.styleSwitch.gotIt}
-              </DialogClose>
-            </div>
-          </DialogContent>
-        ) : pendingStyle ? (
-          <DialogContent
-            title={copy.shell.editor.styleSwitch.confirmTitle.replace("{style}", pendingStyleLabel)}
-            description={copy.shell.editor.styleSwitch.confirmDescription.replaceAll("{style}", pendingStyleLabel)}
-            width={380}
-          >
-            <div className="style-switch-actions">
-              <DialogClose className="secondary-button">
-                {copy.shell.editor.styleSwitch.cancel}
-              </DialogClose>
-              <button type="button" className="primary-button" onClick={onStyleSwitchConfirm}>
-                {copy.shell.editor.styleSwitch.confirm}
-              </button>
-            </div>
-          </DialogContent>
-        ) : null}
-      </Dialog>
       {brand}
       <div className="preset-columns">
       {/* Four destinations, not thirteen groups. The groups still exist — they
@@ -504,13 +516,16 @@ export function PresetRail({
 
       {/* Every destination keeps the group panel, with App.tsx pointing
           `selectedGroup` at the group each one owns. Reusing the panel rather
-          than rebuilding it per destination is why theme cards and provider
-          settings still work.
+          than rebuilding it per destination is why provider settings still
+          work.
 
-          The layer list used to be a destination here — File, the first icon in
-          the column. It is on the right now, in the canvas's own panel, where
-          what it lists is: the layer list answers "what is on the canvas", and
-          the rail answers "what could be".
+          The layer list is a destination here again — 图层, the first icon in
+          the column. It spent a round in the canvas's own panel on the right,
+          which is where what it lists is; that side now holds the style and its
+          palettes, which is a choice of starting point rather than an
+          inventory, so the inventory came back to the column it is read beside.
+
+          Theme is no longer a destination: its palettes went with the style.
 
           The project's name used to sit above this panel. It is beside the mark
           at the top of the card now — it names the thing being configured, and
@@ -519,7 +534,8 @@ export function PresetRail({
         className="preset-panel"
         data-preset-group={selectedPresetGroup.id}
         data-nav-section={navSection}
-        data-style-preset={selectedPresetStyle}
+        data-style-preset={visualStylePreset(selectedPresetStyle)}
+        data-style-id={selectedPresetStyle}
         data-appearance={themeTokens[project.theme.preset].appearance}
         data-theme-preset={project.theme.preset}
         aria-label={translatePresetGroupName(selectedPresetGroup.id, copy.shell.presetRail.groups[selectedPresetGroup.id].label, locale)}
@@ -529,33 +545,20 @@ export function PresetRail({
             selected was reachable and the other twelve were not. Grouped by the
             same `presetRailSections` as before, as a list because there is one
             column now rather than two. */}
-      {/* Moved inside the Theme destination. Above the columns it had 304px to
-            show 550px of cards, so the fourth style was off-screen entirely and
-            the third was cut in half — measured, and already true at three
-            cards. In one column it wraps instead of clipping. */}
-          {navSection === "theme" ? (
-        <div className="preset-style-cards" role="tablist" aria-label={copy.shell.editor.chooseStyle}>
-          {presetStyleOptions.map((style) => (
-            <button
-              key={style.id}
-              className="preset-style-card"
-              type="button"
-              role="tab"
-              data-style={style.id}
-              data-active={style.id === selectedPresetStyle}
-              aria-selected={style.id === selectedPresetStyle}
-              onClick={(event) => onStyleSwitchRequest(style.id, event.currentTarget)}
-            >
-              <span className="preset-style-card-swatch" aria-hidden="true" />
-              <span className="preset-style-card-name">{style.label[locale]}</span>
-            </button>
-          ))}
-        </div>
-        ) : null}
+      {/* The style cards were here, inside the Theme destination. They moved out
+            to `StyleBar`, floating over the top of the canvas: picking a whole
+            style is one of the product's two entry paths, and it was sitting
+            three clicks inside the other one. Theme keeps the palettes, which
+            is the narrower question it was always better at answering.
+
+            `onStyleSwitchRequest` and `selectedPresetStyle` still arrive here —
+            the confirm dialog below is still the rail's, because it is the
+            column whose selections the switch replaces. */}
         {/* The group list, scoped to the destination. Structure and Components
             used to be two sections of one list; each is a destination now, so
             the list shows one section and the section label would only repeat
             the destination name. */}
+        {navSection === "layers" ? layersPanel : null}
         {navSection === "structure" || navSection === "components" ? (
           <div
             className="group-list"
@@ -606,20 +609,16 @@ export function PresetRail({
                               onPresetGroupClick(group.id);
                             }}
                           >
-                            {navSection === "components" ? (
-                              <span
-                                className="flow-axis-marker"
-                                data-covered={flowCovered.has(group.id) ? "true" : undefined}
-                                data-kind={FLOW_EXIT_GROUP_IDS.has(group.id) ? "exit" : "stage"}
-                                aria-hidden="true"
-                              >
-                                {flowCovered.has(group.id) ? <Check size={9} strokeWidth={3} /> : null}
-                              </span>
-                            ) : null}
+                            {/* The axis and its ticks are gone, on request. They drew the
+                                seven groups as a sequence with a progress state — and the
+                                sequence is not one (审批 and 运行状态 end the run and
+                                continue in the next), while "covered" answered a question
+                                nobody asked: a group is not a task to complete. */}
                             <span className="group-row-chevron" aria-hidden="true">
                               <ChevronDown size={14} />
                             </span>
                             <span className="layers-row-name">{groupName}</span>
+                            <GroupProgress locale={locale} {...(groupProgress.get(group.id) ?? { done: 0, total: 0 })} />
                           </button>
                           {expanded ? <div className="group-row-body">{panelBody}</div> : null}
                         </li>
@@ -635,7 +634,7 @@ export function PresetRail({
             belong to, so the panel is not a list up here and its detail down
             there. The other destinations have no group list, so the group name
             is the panel title. */}
-        {nestsOptionsUnderGroups ? null : (
+        {nestsOptionsUnderGroups || navSection === "layers" ? null : (
           <>
             <div className="preset-panel-header">
               <span className="preset-panel-title">{translatePresetGroupName(selectedPresetGroup.id, copy.shell.presetRail.groups[selectedPresetGroup.id].label, locale)}</span>
@@ -647,5 +646,38 @@ export function PresetRail({
       </aside>
       </div>
     </div>
+  );
+}
+
+const PROGRESS_COPY: Record<AppLocale, (done: number, total: number) => string> = {
+  zh: (done, total) => (done >= total ? `已选全部 ${total} 项` : `已选 ${done} 项，还有 ${total - done} 项未选`),
+  en: (done, total) => (done >= total ? `All ${total} chosen` : `${done} chosen, ${total - done} not yet`),
+  ja: (done, total) => (done >= total ? `${total} 項目すべて選択済み` : `${done} 項目選択、残り ${total - done} 項目`),
+};
+
+/**
+ * The count on a group row: how many of its choices are made.
+ *
+ * So a reader scanning 架构 or 组件 can see which groups still have something
+ * left without opening each — "要不其实用户很容易遗漏". `done/total` rather than
+ * a bare remainder, because a lone number cannot say which of the two it is.
+ * A finished group trades the fraction for a tick; an untouched one stays
+ * quiet so that the groups in progress are the ones that stand out.
+ */
+function GroupProgress({ done, total, locale }: { done: number; total: number; locale: AppLocale }) {
+  if (total === 0) return null;
+  const state = done === 0 ? "none" : done >= total ? "all" : "some";
+  const label = (PROGRESS_COPY[locale] ?? PROGRESS_COPY.zh)(done, total);
+  return (
+    <span className="group-row-count" data-state={state} title={label} aria-label={label}>
+      {state === "all" ? (
+        <svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">
+          <path d="M2.6 6.3 4.9 8.6 9.4 3.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : null}
+      <span aria-hidden="true">
+        <b>{done}</b>/{total}
+      </span>
+    </span>
   );
 }

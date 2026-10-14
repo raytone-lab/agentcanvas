@@ -17,6 +17,11 @@ export type DialogContentProps = {
   description?: string;
   /** Fixed panel width in px; defaults to a fluid responsive width. */
   width?: number;
+  /** Extra class on the panel, for a dialog that styles its own contents. */
+  className?: string;
+  /** Extra class on the overlay — a dialog previewing the page behind it
+      can ask for a lighter one. */
+  overlayClassName?: string;
   children?: React.ReactNode;
   ref?: React.Ref<HTMLDivElement>;
 };
@@ -26,15 +31,17 @@ export function DialogContent({
   title,
   description,
   width,
+  className,
+  overlayClassName,
   children,
   ref,
 }: DialogContentProps) {
   return (
     <RadixDialog.Portal>
-      <RadixDialog.Overlay className="ui-dialog-overlay" />
+      <RadixDialog.Overlay className={["ui-dialog-overlay", overlayClassName].filter(Boolean).join(" ")} />
       <RadixDialog.Content
         ref={ref}
-        className="ui-dialog"
+        className={["ui-dialog", className].filter(Boolean).join(" ")}
         style={width != null ? { width } : undefined}
       >
         <div className="ui-dialog-header">

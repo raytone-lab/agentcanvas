@@ -3,7 +3,7 @@
 > 本产品 UI/UX 的**视觉 + 交互事实来源**。遵循 [Google Stitch DESIGN.md 格式](https://stitch.withgoogle.com/docs/design-md/overview/)。
 > 所有颜色、字号、间距、圆角、阴影、动效值均**从现有实现抽取**（`src/theme/themeTokens.ts` + `src/styles/app.css`），不臆造。
 >
-> **分工**：本文件规范「设计语言与交互」；`docs/COMPONENT_SYSTEM.md` 规范「组件三层架构与花名册」；`AGENTS.md` 规范「产品边界」。三者互不重复。
+> **分工**：本文件规范「设计语言与交互」；`docs/COMPONENT_SYSTEM.md` 规范「组件三层架构与花名册」；`docs/TYPE_SCALE_SPEC.md` 规范「画布内文字的字号刻度」（六个风格的实测矩阵、允许的档位、已知偏差）；`AGENTS.md` 规范「产品边界」。四者互不重复。
 > **约束**：生成任何 UI 前必须读本文件。只用语义 token，禁止裸 hex、裸 px 动效时长、`outline: none`。
 
 ---
@@ -282,3 +282,11 @@ Output/artifact 面板右上角 Maximize 按钮切换**浮层展开**（`--z-mod
 - **已实现并固化**：6 主题预设 · 结构 token 全集 · Layer 1 ui/ 组件 · 对话泳道/气泡/头像 · 工具卡状态边条 · Composer 统一外壳 + Send 药丸。
 - **待收敛**：`app.css` 存量裸 px（非 8dp 阶梯值如 10/14px、头像 30px）逐步替换为 token；motion 值未来可下放主题预设。
 - **关联文档**：`docs/COMPONENT_SYSTEM.md`（组件架构/花名册/分期）· `AGENTS.md`（产品边界）。
+
+## 11. Game Skin Reference
+
+`game` 风格按用户提供的营火议事厅截图采用独立的视觉语言：炭灰底、古金细边、
+羊皮纸用户消息、衬线字体、写实角色头像及固定高度的营地横幅。
+该风格允许标题区插画和局部纸面/金属纹理；对话正文仍保持平静底色。
+颜色经语义 token 派生，状态遵循原有 AgentUX 语义，头像可替换，素材随脚手架导出。
+具体提取与映射见 `docs/GAME_SKIN_REFERENCE.md`。

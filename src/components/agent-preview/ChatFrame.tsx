@@ -1,5 +1,6 @@
 import type { AgentUXTimelineItem, AgentUXToolTimelineItem, AgentUXViewModel } from "@agent-ux/render-core";
-import type { ReactElement } from "react";
+import { TentTree } from "../../agentmatrix/uiIcons";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 
 import { StateIcon, errorDomainSlot, incidentSlot, runtimeOpSlot, useIconSet, type IconSlot } from "../../agentmatrix";
 import { useCopy } from "../../i18n/LocaleContext";
@@ -12,6 +13,55 @@ import type { OutputPanelOpenRequest } from "./OutputFrame";
 import { ReasoningBlock } from "./ReasoningBlock";
 import { ToolCallCard, type ApprovalDecision } from "./ToolCallCard";
 import { WritingText } from "./WritingText";
+
+/**
+ * Whether a scroller has content below the fold.
+ *
+ * The timeline's bottom fade exists so scrolled content dissolves before the
+ * composer instead of cutting off hard. It was unconditional, which is a
+ * different thing: with nothing to scroll, the mask still ate the last 28px of
+ * the *last* row, so the final tool pill sat under a white wash that read as a
+ * rendering fault rather than as "there is more". Asked about directly — "这张
+ * 图上为什么有一个白色的渐变".
+ *
+ * A mask rather than a gradient overlay is still right: several styles paint
+ * the conversation on a texture (halftone dots, paper tooth, a grid), and a
+ * flat gradient in the surface colour would sit on top of that as a visible
+ * band. So the fade stays a mask and this decides when it applies.
+ *
+ * Measured, not declared: `scrollHeight - scrollTop - clientHeight`. It
+ * follows scrolling *and* resizing — the canvas is zoomable and the columns are
+ * draggable, so "does this overflow" changes without anyone scrolling.
+ */
+function useMoreBelow(ref: { current: HTMLElement | null }): boolean {
+  const [moreBelow, setMoreBelow] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const read = () => {
+      // 1px of slack: fractional layout leaves a sub-pixel remainder at the
+      // true bottom, which would keep the fade on forever.
+      setMoreBelow(el.scrollHeight - el.scrollTop - el.clientHeight > 1);
+    };
+    read();
+    el.addEventListener("scroll", read, { passive: true });
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(read);
+    observer?.observe(el);
+    // Rows arrive as the replay runs, so the content grows under a still
+    // scroller — that changes the answer without a scroll or a resize of the
+    // scroller itself.
+    const children = typeof MutationObserver === "undefined" ? null : new MutationObserver(read);
+    children?.observe(el, { childList: true, subtree: true });
+    return () => {
+      el.removeEventListener("scroll", read);
+      observer?.disconnect();
+      children?.disconnect();
+    };
+  }, [ref]);
+
+  return moreBelow;
+}
 
 // The approval surfaces stay re-exported from this module: both the editor and the generated
 // agent-shell import them from "./components/agent-preview/ChatFrame", and the scaffold export
@@ -51,6 +101,8 @@ export function ChatFrame({
 }) {
   const copy = useCopy();
   const promptHistory = previewPrompts?.filter((prompt) => prompt.trim().length > 0);
+  const timelineRef = useRef<HTMLDivElement | null>(null);
+  const moreBelow = useMoreBelow(timelineRef);
 
   return (
     <section
@@ -60,17 +112,21 @@ export function ChatFrame({
       data-tool-style={project.theme.motion.toolCall}
       data-writing-motion={project.theme.motion.writing}
     >
-      {/* The conversation's own title, which is what a chat header says. It
-          used to be a fixed product label — "编码 Agent" — above the real title
-          in small print, so the header named the wrong thing twice: the product
-          is already named in the sidebar's brand. */}
+      {/* The conversation's own title, and only that, which is what a chat
+          header says.
+
+          It carried a "预设预览" subtitle under the title. That is a fact about
+          the configurator, not about the conversation — the header of an
+          exported app would have announced itself as a preview. Two labels ago
+          it was "编码 Agent", a fixed product name the sidebar's brand already
+          gives; the subtitle line was the same mistake in a smaller size. */}
       <header className="frame-header">
+        {project.theme.stylePreset === "game" ? <TentTree className="game-camp-mark" aria-hidden="true" /> : null}
         <div>
           <h2>{viewModel.title ?? copy.chat.frame.fallbackConversationTitle}</h2>
-          <p>{copy.chat.frame.subtitleSuffix}</p>
         </div>
       </header>
-      <div className="timeline-list">
+      <div className="timeline-list" ref={timelineRef} data-more-below={moreBelow ? "true" : undefined}>
         {viewModel.timeline.length === 0 ? (
           <ConversationEmptyState project={project} />
         ) : (
@@ -244,6 +300,20 @@ function AssistantTurn({
             onApprovalDecision={onApprovalDecision}
           />
         ))}
+        {/*
+         * Copy and regenerate belong to the *answer*, and the answer is the
+         * whole turn: the words, the document it delivered, the image it
+         * generated. They used to sit inside the message bubble, so on this
+         * canvas they landed between the reply and the notes.md card — offering
+         * "copy the response" halfway through it.
+         *
+         * Rendered once per turn rather than once per message, and only when
+         * the turn actually said something: a turn that is nothing but tool
+         * rows has no response to copy.
+         */}
+        {orderedItems.some((item) => item.kind === "message" && item.role === "assistant") ? (
+          <MessageActions project={project} role="assistant" />
+        ) : null}
       </div>
     </div>
   );
@@ -313,7 +383,10 @@ function TimelineItem({
           <div className="msg-surface">
             {isAssistant ? <WritingText project={project} text={text} replayKey={writingReplayKey} /> : <p>{text}</p>}
           </div>
-          <MessageActions project={project} role={isAssistant ? "assistant" : "user"} />
+          {/* The agent's row moved to the end of the turn — see `AssistantTurn`.
+              A user message reaching the lane still carries its own, because a
+              prompt is the whole of its turn. */}
+          {isAssistant ? null : <MessageActions project={project} role="user" />}
         </article>
       );
     }
@@ -363,6 +436,27 @@ function TimelineItem({
     case "step": {
       const kind = item.stepKind ?? item.scope?.kind ?? "runtime";
       const spin = item.status === "running" || item.status === "started";
+      /*
+       * A run the reader stopped is a *break in the stream*, not a message in
+       * it — which is how every agent client draws it: a rule across the column
+       * with the word on it. It used to be a row like the others, reading
+       * `session 已被你中断 运行停在了这里…` with the internal kind name at the
+       * front of a sentence.
+       */
+      if (kind === "session") {
+        return (
+          <div className="run-separator" data-status={item.status} role="separator" aria-label={item.label}>
+            <span className="run-separator-label">
+              {/* The glyph comes with it. Turning this row into a rule dropped
+                  the icon, and 已中断 is a card in 运行状态 with four glyphs to
+                  choose between — so the reader was picking a mark that had
+                  nothing on the canvas to draw it. */}
+              <StateIcon slot={stepIconSlot(kind, item.status)} size={13} />
+              {item.label}
+            </span>
+          </div>
+        );
+      }
       return (
         <article className="step-item" data-status={item.status}>
           <span className="step-icon" data-anim={spin ? "spin" : "none"}>
@@ -386,13 +480,65 @@ function TimelineItem({
               ? copy.chat.error.incident.terminal
               : item.code;
       return (
-        <article className="error-item" data-collapse={project.blocks.errorCollapse} data-preview-anchor="error-block">
-          <span className="error-icon" data-anim={errorIconAnimation(item.category, item.retryable, iconSet["incident.retrying"])}>
+        /*
+         * Three levels, three lines — the shape every agent client gives a
+         * failure, and the one thing this row was not.
+         *
+         * It used to lay the state word, the sentence and a caption out on one
+         * line, so a failure read as `重试中 写入超时，正在重试。 调试详情已隐藏
+         * 于侧栏` — a status, a sentence and an explanation of the interface,
+         * spliced together.
+         *
+         * The code moves with it. `E_WRITE_FILE` was the *title* whenever the
+         * failure had no incident state, which puts a machine string where the
+         * reader looks first and demotes the human sentence to a footnote; it
+         * belongs under the sentence, set as code.
+         *
+         * And the caption is gone rather than relocated: "debug detail is in
+         * the sidebar" describes the interface, and the panel it names is on
+         * screen. A line of prose about where something *is not* is the kind of
+         * text a real client does not carry.
+         */
+        /*
+         * One card, one sentence.
+         *
+         * The card carried three fields — the state word, the sentence, and the
+         * error code — and they say the same thing three ways: 重试中 /
+         * 写入超时，正在重试（第 2 次）/ E_WRITE_FILE. The sentence already
+         * contains the state, so the other two are restatements. Asked for
+         * directly: 你就一句话展示就行.
+         *
+         * The state is still legible without the word: the glyph is chosen from
+         * it (`errorIconSlot`), and it stays on the element as the accessible
+         * name for anything that cannot see the glyph.
+         */
+        <article
+          className="error-item"
+          data-collapse={project.blocks.errorCollapse}
+          data-preview-anchor="error-block"
+          aria-label={incidentTitle}
+        >
+          {/*
+            * No `data-anim` here, in any style.
+            *
+            * This mark used to spin a full turn every second whenever the
+            * incident was retryable, and three more motions were layered on top
+            * of it by which retrying icon the reader had picked — a
+            * counter-rotation, a sweeping timer hand, and two sand dots falling
+            * through an hourglass. Asked for directly: these icons take no
+            * motion.
+            *
+            * The icons themselves are untouched and still selectable; only the
+            * movement is gone. Worth knowing why it read badly: a 15px glyph
+            * rotating continuously is never legible at any frame — the
+            * screenshot that prompted this caught a cross and an hourglass
+            * mid-turn and both looked like a different, broken shape. The row
+            * already says 正在重试（第 2 次）in words.
+            */}
+          <span className="error-icon">
             <StateIcon slot={errorIconSlot(item.category, item.code)} size={15} />
           </span>
-          <strong>{incidentTitle}</strong>
           <p>{project.blocks.errorCollapse ? item.userMessage ?? item.message : item.developerMessage ?? item.message}</p>
-          {project.blocks.errorCollapse ? <small>{copy.chat.error.debugHidden}</small> : null}
         </article>
       );
     }
@@ -404,15 +550,6 @@ function errorIconSlot(category: string | undefined, code: string): IconSlot {
     return incidentSlot(category);
   }
   return errorDomainSlot(code);
-}
-
-function errorIconAnimation(category: string | undefined, retryable: boolean | undefined, retryingIconId: string | undefined) {
-  if (category === "retrying") {
-    if (retryingIconId === "timer") return "timer-hand";
-    if (retryingIconId === "rotate") return "retry-rotate";
-    if (retryingIconId === "hourglass") return "hourglass";
-  }
-  return retryable ? "spin" : "none";
 }
 
 function stepIconSlot(kind: string, status: string): IconSlot {

@@ -49,16 +49,19 @@ describe("preview run mode UI state", () => {
     });
   });
 
-  it("starts saved preview in Live LLM whenever the default provider supports direct preview", () => {
+  it("starts saved preview in Live LLM only when live can answer, and on the replay otherwise", () => {
     expect(initialSavedPreviewRunMode({
       project: defaultCodingAgentProject,
       sessionKeys: { openai: "sk-test" },
     })).toBe("live");
 
+    // A blank key cannot answer: the replay plays the configured flow instead
+    // of an empty live session that refuses the first prompt.
     expect(initialSavedPreviewRunMode({
       project: defaultCodingAgentProject,
       sessionKeys: { openai: " " },
-    })).toBe("live");
+    })).toBe("replay");
+    expect(initialSavedPreviewRunMode({ project: defaultCodingAgentProject })).toBe("replay");
 
     expect(initialSavedPreviewRunMode({
       project: projectWithDefaultProvider("local"),

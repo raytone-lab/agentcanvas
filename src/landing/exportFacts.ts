@@ -9,11 +9,11 @@
 
 /**
  * Every file a default export writes: the generated files, everything the source globs pull in,
- * the vendored packages, and the six binary assets under `public/`.
+ * the vendored packages, and the binary assets under `public/`.
  *
  * Worth knowing why this is not the number of lines in the tree below it: the tree is a curated
  * view — it collapses `components/agent-preview/` to one row where the export writes 74 files
  * under `src/components/`. The design mock this section follows guessed "18", which is the tree's
  * visible row count and understates the real thing by an order of magnitude.
  */
-export const EXPORT_FILE_COUNT = 209;
+export const EXPORT_FILE_COUNT = 320;
