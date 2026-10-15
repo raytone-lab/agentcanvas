@@ -34,6 +34,11 @@ export const landingPartKeys: readonly LandingPartKey[] = [
   "composer",
 ];
 
+/** The six styles the editor's picker offers, in its order. */
+export type LandingStyleKey = "native" | "inkwash" | "game" | "handdrawn" | "retro" | "tech";
+
+export const landingStyleKeys: readonly LandingStyleKey[] = ["native", "inkwash", "game", "handdrawn", "retro", "tech"];
+
 export type LandingCopy = {
   brandSuffix: string;
   nav: {
@@ -144,6 +149,31 @@ export type LandingCopy = {
   footer: {
     github: string;
     openEditor: string;
+  };
+  /**
+   * The stage layout: the screen wall, the six style cards and the one statement.
+   *
+   * Headline-sized strings are arrays of *phrases*: each phrase is unbreakable and the
+   * browser may only wrap between them, so a display line never breaks inside a word
+   * group (CJK otherwise wraps after any character).
+   */
+  stage: {
+    navStyles: string;
+    navParts: string;
+    navEvents: string;
+    navExport: string;
+    heroTitle: string[];
+    wallAlt: string;
+    stylesKicker: string;
+    stylesTitle: string[];
+    stylesLede: string;
+    paletteLabel: string;
+    /** `{index}` / `{total}`. */
+    styleIndex: string;
+    styles: Record<LandingStyleKey, { name: string; line: string }>;
+    shotAlt: string;
+    statement: string;
+    closingTitle: string[];
   };
   shotMissing: string;
 };
@@ -337,6 +367,32 @@ const zh: LandingCopy = {
   footer: {
     github: "在 GitHub 上查看源码",
     openEditor: "打开编辑器",
+  },
+  stage: {
+    navStyles: "风格",
+    navParts: "组件",
+    navEvents: "事件流",
+    navExport: "导出",
+    heroTitle: ["在画布上", "组一个", "Agent 的界面"],
+    wallAlt: "同一个 Agent 界面在六种风格、二十四套配色下的真实截图",
+    stylesKicker: "同一套组件",
+    stylesTitle: ["换一种风格，", "不止换一层皮"],
+    stylesLede:
+      "每种风格都给每个组件单独设计了形态：图标、头像、思考动效、按钮和卡片的材质都跟着变。" +
+      "下面每一屏都是编辑器里的真实画布。",
+    paletteLabel: "配色",
+    styleIndex: "{index} / {total}",
+    styles: {
+      native: { name: "原生风", line: "系统级的克制。浅玻璃、细描边，像操作系统自带的那一个。" },
+      inkwash: { name: "水墨风", line: "宣纸、墨色与留白。思考是一笔慢慢晕开的墨。" },
+      game: { name: "游戏风", line: "一本冒险日志。金边面板、手绘道具，每次工具调用都是一次任务。" },
+      handdrawn: { name: "手绘风", line: "铅笔线稿配点阵阴影，像设计师在纸上随手画出的原型。" },
+      retro: { name: "复古风", line: "暖纸配线面结合的印刷图标，一本旧时代的工作手册。" },
+      tech: { name: "科技风", line: "冷玻璃、LED 点阵头像，像仪表盘一样精确。" },
+    },
+    shotAlt: "{style}·{palette} 配色下的 AgentCanvas 画布",
+    statement: "你在画布上看到的，就是导出之后跑起来的那一个。",
+    closingTitle: ["现在，", "组你自己的那一个"],
   },
   shotMissing: "截图待补",
 };
@@ -605,6 +661,32 @@ const en: LandingCopy = {
     github: "Source on GitHub",
     openEditor: "Open the editor",
   },
+  stage: {
+    navStyles: "Styles",
+    navParts: "Components",
+    navEvents: "Events",
+    navExport: "Export",
+    heroTitle: ["Compose", "an agent's interface", "on a canvas"],
+    wallAlt: "The same agent interface in six styles and twenty-four palettes, captured from the editor",
+    stylesKicker: "One set of components",
+    stylesTitle: ["A style here", "is more than a skin"],
+    stylesLede:
+      "Every style redraws every component — icons, avatars, the thinking motion, the material of buttons and cards. " +
+      "Each screen below is the editor's real canvas.",
+    paletteLabel: "Palettes",
+    styleIndex: "{index} / {total}",
+    styles: {
+      native: { name: "Native", line: "System-grade restraint. Light glass, fine strokes — the one your OS would ship." },
+      inkwash: { name: "Ink Wash", line: "Rice paper, ink and empty space. Thinking is a stroke that slowly bleeds." },
+      game: { name: "Quest", line: "An adventurer's log. Gilded panels, painted props — every tool call is a quest." },
+      handdrawn: { name: "Sketch", line: "Pencil lines over halftone shadows, like a prototype drawn on paper." },
+      retro: { name: "Retro", line: "Warm paper and printed line-and-fill icons. A field manual from another era." },
+      tech: { name: "Tech", line: "Cold glass and an LED-matrix face. Precise as an instrument panel." },
+    },
+    shotAlt: "The AgentCanvas canvas in {style}, {palette} palette",
+    statement: "What you see on the canvas is exactly what runs after export.",
+    closingTitle: ["Now compose", "your own"],
+  },
   shotMissing: "Screenshot pending",
 };
 
@@ -872,6 +954,32 @@ const ja: LandingCopy = {
   footer: {
     github: "GitHub でソースを見る",
     openEditor: "エディターを開く",
+  },
+  stage: {
+    navStyles: "スタイル",
+    navParts: "コンポーネント",
+    navEvents: "イベント",
+    navExport: "エクスポート",
+    heroTitle: ["キャンバスで", "エージェントの", "画面を組む"],
+    wallAlt: "同じエージェント画面を 6 つのスタイルと 24 の配色で撮った実際のスクリーンショット",
+    stylesKicker: "同じコンポーネントで",
+    stylesTitle: ["スタイルは、", "着せ替え以上のもの"],
+    stylesLede:
+      "どのスタイルもコンポーネントを一つずつ描き直しています。アイコン、アバター、思考の動き、ボタンとカードの質感まで。" +
+      "下の画面はすべてエディタの実際のキャンバスです。",
+    paletteLabel: "配色",
+    styleIndex: "{index} / {total}",
+    styles: {
+      native: { name: "ネイティブ", line: "システム級の控えめさ。薄いガラスと細い線、OS に最初から入っているような一品。" },
+      inkwash: { name: "水墨", line: "和紙と墨と余白。思考はゆっくりにじむ一筆。" },
+      game: { name: "クエスト", line: "冒険の記録帳。金縁のパネルと描かれた道具、ツール呼び出しはひとつのクエスト。" },
+      handdrawn: { name: "スケッチ", line: "鉛筆の線と網点の影。紙にさっと描いたプロトタイプのように。" },
+      retro: { name: "レトロ", line: "温かい紙と線面の印刷アイコン。昔の業務マニュアルのような一冊。" },
+      tech: { name: "テック", line: "冷たいガラスと LED マトリクスの顔。計器盤のように正確。" },
+    },
+    shotAlt: "{style}・{palette} 配色の AgentCanvas キャンバス",
+    statement: "キャンバスで見たものが、そのままエクスポート後に動きます。",
+    closingTitle: ["さあ、", "あなたの一つを組もう"],
   },
   shotMissing: "スクリーンショット準備中",
 };

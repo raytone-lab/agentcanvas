@@ -54,6 +54,21 @@ describe("export fidelity: the package is what was composed", () => {
     expect(dropped).toEqual([]);
   });
 
+  it("carries the editor's icon picks, so the exported app draws the same avatars and marks", () => {
+    // A 科技风 project exported with the orange blob for its agent: the export carried no
+    // icon picks at all and opened on the registry's first option for every slot.
+    const snapshot = createScaffoldExportSnapshot(composeProject(), {
+      iconSet: { "author.agent": "robot-head-tv", "author.user": "user-upload", "tool.file_read": "retro-sheet" },
+    });
+    const exported = snapshot.fileContents["src/exported-project.ts"] ?? "";
+    const icons = JSON.parse(exported.slice(exported.indexOf("{", exported.indexOf("export const iconSet")), exported.lastIndexOf("}") + 1));
+    expect(icons["author.agent"]).toBe("robot-head-tv");
+    expect(icons["tool.file_read"]).toBe("retro-sheet");
+    // The reader's uploaded photo is theirs, not the scaffold's.
+    expect(icons["author.user"]).toBeUndefined();
+    expect(snapshot.fileContents["src/main.tsx"]).toContain("<IconSetProvider initial={iconSet}>");
+  });
+
   it("writes the composed values into exported-project.ts", () => {
     const project = composeProject();
     const snapshot = createScaffoldExportSnapshot(project);
@@ -63,9 +78,10 @@ describe("export fidelity: the package is what was composed", () => {
     // Parsed rather than string-matched: a substring check would pass on a stale comment.
     // Sliced from the assignment, not the file's first brace — that one belongs to the
     // `import type { AgentFrontendProject }` line.
+    // …and up to its own end: the file carries the icon picks after it.
     const body = exported.slice(exported.indexOf("export const project ="));
     const parsed = JSON.parse(
-      body.slice(body.indexOf("{"), body.lastIndexOf("}") + 1),
+      body.slice(body.indexOf("{"), body.indexOf(" as unknown as AgentFrontendProject")),
     ) as typeof project;
 
     expect(parsed.theme.motion.writing).toBe(project.theme.motion.writing);

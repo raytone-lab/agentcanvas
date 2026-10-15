@@ -14,6 +14,8 @@ import type { WorkspaceRefs } from "./useWorkspaceState";
 
 export type PresetGroup = ReturnType<typeof presetGroupsForProject>[number];
 
+import type { IconSet } from "../../agentmatrix";
+
 export type WorkspaceControllerDeps = {
   state: WorkspaceState;
   dispatch: WorkspaceDispatch;
@@ -31,6 +33,8 @@ export type WorkspaceControllerDeps = {
   isWelcome: boolean;
   gitPreviewState: GitPreviewState | undefined;
   rightPanelAvailable: boolean;
+  /** The editor's icon picks, which an export carries so its app draws the same marks. */
+  iconSet: IconSet;
 };
 
 export type PreviewStateCard = StateCard;

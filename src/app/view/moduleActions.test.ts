@@ -92,7 +92,7 @@ describe("canvas module actions", () => {
     /* The outline rule: the long `:is(…)` list that ends in `:hover:not(:has(`.
        The `:not([data-scrolling="true"])` in front of it is the gate that stops
        the mark travelling with a wheel scroll — see `App`'s scroll effect. */
-    const start = css.indexOf('.preview-frame:not([data-scrolling="true"]) :is(.run-progress');
+    const start = css.indexOf('.preview-frame:where([data-editable="true"]):not([data-scrolling="true"]) :is(.run-progress');
     expect(start, "outline rule").toBeGreaterThan(-1);
     /* The `:is(` list, not the `:not(` gate in front of it — the first `(`
        after the anchor now belongs to the gate, which walked one entry

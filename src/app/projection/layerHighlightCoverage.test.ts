@@ -106,7 +106,7 @@ describe("layer row highlights", () => {
        scroll effect), and it is optional in this pattern so the test says what
        it is about — innermost-wins — rather than pinning the gate's spelling. */
     const hoverRules = styles.match(
-      /\.preview-frame(?::not\(\[data-scrolling="true"\]\))? :is\(([^)]*)\):hover:not\(:has\(:is\(([^)]*)\):hover\)\)::after/,
+      /\.preview-frame(?::where\(\[data-editable="true"\]\))?(?::not\(\[data-scrolling="true"\]\))? :is\(([^)]*)\):hover:not\(:has\(:is\(([^)]*)\):hover\)\)::after/,
     );
     expect(hoverRules, "innermost-wins hover rule missing").toBeTruthy();
     const [, targets, guard] = hoverRules!;
@@ -194,7 +194,7 @@ describe("layer row highlights", () => {
      * rules deliberately do not, because a click is not a pointer resting
      * somewhere.
      */
-    const gated = [...styles.matchAll(/\.preview-frame(:not\(\[data-scrolling="true"\]\))? :is\([^)]*\):hover:not\(/g)];
+    const gated = [...styles.matchAll(/\.preview-frame(?::where\(\[data-editable="true"\]\))?(:not\(\[data-scrolling="true"\]\))? :is\([^)]*\):hover:not\(/g)];
     expect(gated.length, "both hover rules").toBe(2);
     for (const match of gated) {
       expect(match[1], `ungated: ${match[0].slice(0, 60)}`).toBeTruthy();

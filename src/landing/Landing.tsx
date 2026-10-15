@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import Lenis from "lenis";
 import {
   ArrowRight,
+  ArrowUpRight,
   CirclePlay,
   Download,
   FileText,
@@ -23,14 +25,13 @@ import { useGSAP } from "@gsap/react";
 
 import { appVersionLabel } from "../appVersion";
 import { useLocale } from "../i18n/LocaleContext";
-import { minimalThemePresetIds, nativeThemePresetIds, themeTokens } from "../theme/themeTokens";
 import { EXPORT_FILE_COUNT } from "./exportFacts";
 import { FileList } from "./FileList";
-import { HeroMark } from "./HeroMark";
 import { LocaleSwitch } from "./LocaleSwitch";
 import { RunSteps } from "./RunSteps";
-import { SlidingTabs } from "./SlidingTabs";
-import { ThemeCompare } from "./ThemeCompare";
+import { ScreenWall } from "./ScreenWall";
+import { Statement } from "./Statement";
+import { StyleStack } from "./StyleStack";
 // `.ui-button` only — importing the `components/ui` barrel would pull Radix dialog,
 // popover, dropdown and friends into the landing bundle for two anchors.
 import "../components/ui/button.css";
@@ -42,9 +43,9 @@ import {
   landingProviders,
   providerGroupCount,
 } from "./providers";
-import { heroVideoPosterSrc, heroVideoSrc } from "./shots";
 import { EDITOR_URL, GITHUB_REPO_URL } from "./siteConfig";
 import "./landing.css";
+import "./landing-stage.css";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
@@ -73,251 +74,190 @@ function GithubMark({ size = 16 }: { size?: number }) {
   );
 }
 
-/** Screenshot frame that degrades to a labelled placeholder when the file is absent. */
-function Shot({
-  src,
-  alt,
-  missingLabel,
-  loading = "lazy",
-}: {
-  src: string;
-  alt: string;
-  missingLabel: string;
-  loading?: "eager" | "lazy";
-}) {
-  const [failed, setFailed] = useState(false);
-
-  return (
-    <div className="lp-shot">
-      {failed ? (
-        <div className="lp-shot-missing">
-          <strong>{missingLabel}</strong>
-          <code>public{src}</code>
-        </div>
-      ) : (
-        <img src={src} alt={alt} loading={loading} decoding="async" onError={() => setFailed(true)} />
-      )}
-    </div>
-  );
-}
-
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(
-    () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-
-  useEffect(() => {
-    if (typeof matchMedia !== "function") {
-      return;
-    }
-    const query = matchMedia("(prefers-reduced-motion: reduce)");
-    const onChange = () => setReduced(query.matches);
-    query.addEventListener("change", onChange);
-    return () => query.removeEventListener("change", onChange);
-  }, []);
-
-  return reduced;
-}
-
 /**
- * The recorded editor demo.
- *
- * Falls back to the poster still in two cases: the viewer asked for reduced motion, or
- * the video failed to load. The pause control is not optional decoration — the clip
- * autoplays and loops well past five seconds, which WCAG 2.2.2 says must be stoppable.
+ * A display line as unbreakable phrases: the browser may wrap only *between* phrases, so a
+ * headline never breaks inside a word group — CJK otherwise wraps after any character
+ * ("组一 / 个 Agent").
  */
-function HeroDemo({
-  videoSrc,
-  posterSrc,
-  alt,
-  pauseLabel,
-  playLabel,
-  missingLabel,
-}: {
-  videoSrc: string;
-  posterSrc: string;
-  alt: string;
-  pauseLabel: string;
-  playLabel: string;
-  missingLabel: string;
-}) {
-  const reducedMotion = usePrefersReducedMotion();
-  const [failed, setFailed] = useState(false);
-  const [playing, setPlaying] = useState(true);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  if (reducedMotion || failed) {
-    return <Shot src={posterSrc} alt={alt} missingLabel={missingLabel} loading="eager" />;
-  }
-
-  const toggle = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.paused) {
-      void video.play();
-      setPlaying(true);
-    } else {
-      video.pause();
-      setPlaying(false);
-    }
-  };
-
+function Phrases({ phrases }: { phrases: readonly string[] }) {
   return (
-    <div className="lp-shot lp-shot--video">
-      <video
-        ref={videoRef}
-        src={videoSrc}
-        poster={posterSrc}
-        aria-label={alt}
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="metadata"
-        onError={() => setFailed(true)}
-      />
-      <button
-        type="button"
-        className="lp-media-toggle"
-        onClick={toggle}
-        aria-label={playing ? pauseLabel : playLabel}
-      >
-        {playing ? (
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-            <rect x="2" y="1.5" width="3" height="9" rx="1" />
-            <rect x="7" y="1.5" width="3" height="9" rx="1" />
-          </svg>
-        ) : (
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-            <path d="M3 1.8 10 6 3 10.2Z" />
-          </svg>
-        )}
-      </button>
-    </div>
-  );
-}
-
-/**
- * A paint chip per theme, built from the real token values in `src/theme/themeTokens.ts`.
- *
- * Two bands only: page canvas and accent. A three-band version including `surface.panel`
- * was tried and dropped — in every light theme the canvas and panel are within a few
- * percent of each other (#F4F6FA against #FFFFFF, say), so the middle band carried no
- * information and the chip read as a white rectangle with a stripe. Canvas and accent are
- * the two values that actually tell the themes apart.
- *
- * Values may be `color-mix()` expressions, so they are handed to CSS as custom properties
- * rather than parsed here.
- */
-function ThemeSwatch({ id }: { id: keyof typeof themeTokens }) {
-  const theme = themeTokens[id];
-  return (
-    <li className="lp-theme">
-      <span
-        className="lp-theme-chip"
-        aria-hidden="true"
-        style={{
-          ["--chip-canvas" as string]: theme.surface.canvas,
-          ["--chip-accent" as string]: theme.accent.action,
-        }}
-      >
-        <i data-band="canvas" />
-        <i data-band="accent" />
-      </span>
-      <span className="lp-theme-name">{theme.name}</span>
-    </li>
+    <>
+      {phrases.map((phrase, index) => (
+        <span className="lp-phrase" key={index}>
+          {phrase}
+        </span>
+      ))}
+    </>
   );
 }
 
 export function Landing() {
   const { locale, setLocale } = useLocale();
   const copy = landingCopy[locale];
+  const stage = copy.stage;
   const [scrolled, setScrolled] = useState(false);
+  const [wallPaused, setWallPaused] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
+  /*
+   * Smooth scroll, driven by GSAP's ticker so Lenis and ScrollTrigger read the same frame —
+   * two clocks is the usual source of a one-frame jump at a scrubbed boundary. Not created
+   * under reduced motion: native scrolling is the honest answer there.
+   */
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const lenis = new Lenis({ lerp: 0.11, wheelMultiplier: 1 });
+    lenis.on("scroll", ScrollTrigger.update);
+    const tick = (time: number) => lenis.raf(time * 1000);
+    gsap.ticker.add(tick);
+    gsap.ticker.lagSmoothing(0);
+    // In-page anchors go through Lenis too, or they jump while everything else glides.
+    const onClick = (event: MouseEvent) => {
+      const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#"]');
+      if (!link) return;
+      const target = document.querySelector(link.getAttribute("href") ?? "");
+      if (!target) return;
+      event.preventDefault();
+      lenis.scrollTo(target as HTMLElement, { offset: -72 });
+    };
+    document.addEventListener("click", onClick);
+    return () => {
+      document.removeEventListener("click", onClick);
+      gsap.ticker.remove(tick);
+      lenis.destroy();
+    };
+  }, []);
+
   /**
-   * Scroll motion, deliberately limited to two things: ledger rows entering, and the
-   * callout labels landing on the screenshot one after another. Nothing ambient, nothing
-   * looping, nothing decorative — the reference this page is modelled on treats a pulsing
-   * dot as a defect, and DESIGN.md §7.1 caps motion at 240ms with no bounce.
+   * Every scroll-linked motion on the page, and what each one says:
    *
-   * The hidden state is set from JS rather than CSS on purpose: if the bundle fails, the
-   * page renders as plain visible content instead of a blank column.
+   *   screen stands up    a style card's screen rises from 22° to face the reader as the card
+   *                       arrives — "here is this one, shown to you"
+   *   covered card sinks  the card being covered slides up 12% inside its own frame and dims,
+   *                       so only one style is ever in front
+   *   wall pauses         the hero's drift stops once the hero is covered
+   *   statement lights    the one sentence brightens piece by piece with the scroll
+   *   rows enter          ledger rows below fade up once, in batches
+   *
+   * Hidden starting states are set here, never in CSS, so a failed bundle leaves a plain
+   * readable page rather than a blank one.
    */
   useGSAP(
     () => {
-      const ANIMATED = ".lp-reveal, .lp-map-row";
       const media = gsap.matchMedia();
 
       media.add("(prefers-reduced-motion: no-preference)", () => {
-        gsap.set(ANIMATED, { opacity: 0, y: 10 });
+        const cards = gsap.utils.toArray<HTMLElement>(".lp-stack-card");
+        cards.forEach((card, index) => {
+          const screen = card.querySelector(".lp-style-stage");
+          if (screen && index > 0) {
+            gsap.fromTo(
+              screen,
+              { rotateX: 22, yPercent: 10, transformPerspective: 1600, transformOrigin: "50% 100%" },
+              {
+                rotateX: 0,
+                yPercent: 0,
+                ease: "none",
+                scrollTrigger: { trigger: card, start: "top bottom", end: "top top", scrub: true },
+              },
+            );
+          }
+          const next = cards[index + 1];
+          if (!next) return;
+          const inner = card.querySelector(".lp-stack-inner");
+          const dim = card.querySelector(".lp-stack-dim");
+          const cover = { trigger: next, start: "top bottom", end: "top top", scrub: true };
+          if (inner) gsap.to(inner, { yPercent: -12, ease: "none", scrollTrigger: cover });
+          if (dim) gsap.fromTo(dim, { opacity: 0 }, { opacity: 1, ease: "none", scrollTrigger: cover });
+        });
 
-        const reveal = (batch: Element[]) =>
-          gsap.to(batch, {
-            opacity: 1,
-            y: 0,
-            duration: 0.24,
-            ease: "power2.out",
-            stagger: 0.05,
-            overwrite: true,
+        if (cards[1]) {
+          ScrollTrigger.create({
+            trigger: cards[1],
+            start: "top top",
+            onEnter: () => setWallPaused(true),
+            onLeaveBack: () => setWallPaused(false),
           });
+        }
 
-        // `top bottom`: reveal as soon as any part of a row enters the viewport. A later
-        // start looks better in a slow scroll but leaves rows blank for anyone who lands
-        // mid-page or jumps by anchor.
-        ScrollTrigger.batch(ANIMATED, { start: "top bottom", once: true, onEnter: reveal });
+        const pieces = gsap.utils.toArray<HTMLElement>(".lp-statement-piece");
+        if (pieces.length) {
+          gsap.fromTo(
+            pieces,
+            { opacity: 0.16 },
+            {
+              opacity: 1,
+              ease: "none",
+              stagger: 0.12,
+              scrollTrigger: { trigger: ".lp-statement", start: "top top", end: "bottom bottom", scrub: true },
+            },
+          );
+        }
 
-        /**
-         * The hero video and the two compare stills load after mount and change the page
-         * height, which leaves every trigger below them measuring against a stale layout —
-         * the documented cause of "content never appears". Refresh on each media load, and
-         * again on window load.
-         */
+        const ANIMATED = ".lp-reveal, .lp-map-row";
+        gsap.set(ANIMATED, { opacity: 0, y: 24 });
+        ScrollTrigger.batch(ANIMATED, {
+          start: "top bottom",
+          once: true,
+          onEnter: (batch) =>
+            gsap.to(batch, { opacity: 1, y: 0, duration: 0.9, ease: "expo.out", stagger: 0.06, overwrite: true }),
+        });
+
+        // Images settle the layout after mount; triggers measured before that are stale.
         const refresh = () => ScrollTrigger.refresh();
-        const mediaEls = gsap.utils.toArray<HTMLElement>("img, video", rootRef.current);
+        const mediaEls = gsap.utils.toArray<HTMLElement>("img", rootRef.current);
         mediaEls.forEach((el) => el.addEventListener("load", refresh, { once: true }));
-        mediaEls.forEach((el) => el.addEventListener("loadeddata", refresh, { once: true }));
         window.addEventListener("load", refresh, { once: true });
-
-        /**
-         * Failsafe. Hiding content and waiting for a scroll trigger means any missed
-         * refresh leaves the page blank, which is a far worse outcome than a missing
-         * entrance animation. After a beat, anything still hidden is simply shown.
-         */
+        // Anything a missed refresh left hidden is shown after a beat — a missing entrance is
+        // a far smaller failure than a blank block.
         const failsafe = window.setTimeout(() => {
           const stuck = gsap.utils
             .toArray<HTMLElement>(ANIMATED, rootRef.current)
-            .filter((el) => Number(getComputedStyle(el).opacity) < 0.9);
-          if (stuck.length > 0) {
-            gsap.set(stuck, { opacity: 1, y: 0, clearProps: "transform" });
-          }
-        }, 1500);
+            .filter((el) => Number(getComputedStyle(el).opacity) < 0.9 && el.getBoundingClientRect().top < window.innerHeight);
+          if (stuck.length) gsap.set(stuck, { opacity: 1, y: 0, clearProps: "transform" });
+        }, 1800);
 
         return () => {
           window.clearTimeout(failsafe);
           window.removeEventListener("load", refresh);
-          mediaEls.forEach((el) => {
-            el.removeEventListener("load", refresh);
-            el.removeEventListener("loadeddata", refresh);
-          });
+          mediaEls.forEach((el) => el.removeEventListener("load", refresh));
         };
       });
 
-      // Reduced motion: no entrance at all, everything simply present.
       media.add("(prefers-reduced-motion: reduce)", () => {
-        gsap.set(ANIMATED, { opacity: 1, y: 0 });
+        gsap.set(".lp-reveal, .lp-map-row, .lp-statement-piece", { opacity: 1, y: 0 });
       });
 
       return () => media.revert();
     },
-    { scope: rootRef },
+    { scope: rootRef, dependencies: [locale] },
   );
 
+  /*
+   * The header takes the tone of what is under it. Over a dark card (游戏风, or any card
+   * switched to a dark palette) a paper-glass bar reads as a grey stripe, so it turns to ink
+   * glass. Read from whatever sits just below the bar, on scroll and after a palette click.
+   */
+  const [headerTone, setHeaderTone] = useState<"light" | "dark">("light");
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    let frame = 0;
+    const read = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        setScrolled(window.scrollY > 8);
+        const under = document.elementFromPoint(window.innerWidth / 2, 80);
+        const card = under?.closest<HTMLElement>(".lp-stack-card");
+        setHeaderTone(card?.dataset.appearance === "dark" ? "dark" : "light");
+      });
+    };
+    read();
+    window.addEventListener("scroll", read, { passive: true });
+    document.addEventListener("click", read);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", read);
+      document.removeEventListener("click", read);
+    };
   }, []);
 
   // `<html lang>` is set by LocaleProvider, which covers both entry points.
@@ -328,16 +268,18 @@ export function Landing() {
         {copy.nav.skipToContent}
       </a>
 
-      {/* Floating capsules rather than a full-width bar: the page's ground stays visible
-          behind them, which is what keeps a sticky header from feeling like chrome. */}
-      <header className="lp-header" data-scrolled={scrolled}>
+      <header className="lp-header" data-scrolled={scrolled} data-tone={headerTone}>
         <div className="lp-shell lp-header-inner">
           <a className="lp-brand" href="/">
             <img className="lp-brand-mark" src="/agent-canvas-mark.svg" alt="" aria-hidden="true" />
             <span className="lp-brand-name">Agent Canvas</span>
           </a>
-          {/* No enclosing capsule and no solid pill for GitHub: a language switch and one
-              link do not need two layers of container to be findable. */}
+          <nav className="lp-sections" aria-label="Sections">
+            <a href="#lp-styles">{stage.navStyles}</a>
+            <a href="#lp-parts">{stage.navParts}</a>
+            <a href="#lp-events">{stage.navEvents}</a>
+            <a href="#lp-export">{stage.navExport}</a>
+          </nav>
           <div className="lp-nav">
             <LocaleSwitch
               locale={locale}
@@ -360,51 +302,64 @@ export function Landing() {
       </header>
 
       <main id="lp-main">
-        <section className="lp-shell lp-hero">
-          {/* Decorative only — the mark carries no information the headline does not already
-              state, and it sits behind the text rather than beside it so the hero keeps its
-              single column and the demo below stays the hero's real visual. */}
-          <HeroMark src="/agent-canvas-mark.svg" className="lp-hero-mark" />
-          <p className="lp-kicker">
-            {copy.hero.eyebrowTags.map((tag) => (
-              <span key={tag}>{tag}</span>
-            ))}
-          </p>
-          <h1 className="lp-hero-title">{copy.hero.title}</h1>
-          <p className="lp-hero-lede">{copy.hero.lede}</p>
-          <div className="lp-hero-actions">
-            <a className="ui-button lp-cta" data-variant="primary" data-size="lg" href={EDITOR_URL}>
-              {copy.hero.primaryCta}
-              <ArrowRight size={16} aria-hidden="true" />
-            </a>
-            <a
-              className="ui-button lp-cta"
-              data-variant="secondary"
-              data-size="lg"
-              href={GITHUB_REPO_URL}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Star size={16} aria-hidden="true" />
-              {copy.hero.secondaryCta}
-            </a>
-          </div>
-          <p className="lp-hero-note">{copy.hero.note}</p>
-          <figure className="lp-hero-shot">
-            <HeroDemo
-              videoSrc={heroVideoSrc}
-              posterSrc={heroVideoPosterSrc}
-              alt={copy.hero.shotAlt}
-              pauseLabel={copy.hero.demoPause}
-              playLabel={copy.hero.demoPlay}
-              missingLabel={copy.shotMissing}
-            />
-            <figcaption>{copy.hero.demoCaption}</figcaption>
-          </figure>
-        </section>
+        {/* The stack: the hero, the styles' introduction and the six style cards are one
+            pile of full-screen cards, each sliding up over the last — every hand-off on this
+            half of the page is the same gesture. */}
+        <div className="lp-stack">
+          <section className="lp-stack-card lp-hero-card" aria-labelledby="lp-hero-title">
+            <ScreenWall label={stage.wallAlt} paused={wallPaused} />
+            <div className="lp-hero-scrim" aria-hidden="true" />
+            <div className="lp-stack-inner lp-hero-inner">
+              <p className="lp-kicker lp-rise" style={{ animationDelay: "0ms" }}>
+                {copy.hero.eyebrowTags.map((tag) => (
+                  <span key={tag}>{tag}</span>
+                ))}
+              </p>
+              <h1 className="lp-hero-heading lp-display" id="lp-hero-title">
+                {stage.heroTitle.map((phrase, index) => (
+                  <span className="lp-line" key={index}>
+                    <span className="lp-line-inner" style={{ animationDelay: `${120 + index * 90}ms` }}>
+                      {phrase}
+                    </span>
+                  </span>
+                ))}
+              </h1>
+              <p className="lp-hero-lede lp-rise" style={{ animationDelay: "420ms" }}>
+                {copy.hero.lede}
+              </p>
+              <div className="lp-hero-actions lp-rise" style={{ animationDelay: "500ms" }}>
+                <a className="lp-button" data-variant="solid" href={EDITOR_URL}>
+                  {copy.hero.primaryCta}
+                  <ArrowRight size={16} aria-hidden="true" />
+                </a>
+                <a className="lp-button" data-variant="ghost" href={GITHUB_REPO_URL} target="_blank" rel="noreferrer">
+                  <Star size={16} aria-hidden="true" />
+                  {copy.hero.secondaryCta}
+                </a>
+              </div>
+              <p className="lp-hero-note lp-rise" style={{ animationDelay: "560ms" }}>
+                {copy.hero.note}
+              </p>
+            </div>
+            <div className="lp-stack-dim" aria-hidden="true" />
+          </section>
 
-        {/* 1 — Strip. Lowest weight on the page and headingless on purpose: the video
-            above just demonstrated this flow, so these three only need to name it. */}
+          <section className="lp-stack-card lp-intro-card" id="lp-styles" aria-labelledby="lp-styles-title">
+            <div className="lp-stack-inner lp-intro-inner">
+              <p className="lp-eyebrow">{stage.stylesKicker}</p>
+              <h2 className="lp-intro-title lp-display" id="lp-styles-title">
+                <Phrases phrases={stage.stylesTitle} />
+              </h2>
+              <p className="lp-intro-lede">{stage.stylesLede}</p>
+            </div>
+            <div className="lp-stack-dim" aria-hidden="true" />
+          </section>
+
+          <StyleStack copy={stage} />
+        </div>
+
+        <Statement text={stage.statement} locale={locale} />
+
         <section className="lp-strip" aria-labelledby="lp-strip-title">
           {/* The group needs a name for assistive tech even though the design wants no
               visible heading here — and the step titles must sit below it, not become
@@ -427,7 +382,7 @@ export function Landing() {
         {/* 2 — Two-column ledger of hairline rows. This was a heading-left /
             content-right split, which left the aside column empty for most of its
             height once the six real rows were in place. */}
-        <section className="lp-section">
+        <section className="lp-section" id="lp-parts">
           <div className="lp-shell">
             <h2 className="lp-section-title">{copy.parts.title}</h2>
             <p className="lp-section-lede">{copy.parts.lede}</p>
@@ -460,7 +415,7 @@ export function Landing() {
         {/* 3 — The page's technical anchor, and the only contained surface below the
             hero. Providers live in its footer because pasting a key is how you feed it
             real events, not a separate topic. */}
-        <section className="lp-section">
+        <section className="lp-section" id="lp-events">
           <div className="lp-shell">
             <h2 className="lp-section-title">{copy.events.title}</h2>
             <p className="lp-section-lede">{copy.events.lede}</p>
@@ -599,52 +554,8 @@ export function Landing() {
           </div>
         </section>
 
-        {/* 4 — The page's one change of ground colour, carrying its most visual content. */}
-        <section className="lp-band">
-          <div className="lp-shell">
-            <h2 className="lp-section-title">{copy.themes.title}</h2>
-            <p className="lp-section-lede">{copy.themes.lede}</p>
-            <ThemeCompare
-              label={copy.themes.compareLabel}
-              lightBadge={copy.themes.compareLight}
-              darkBadge={copy.themes.compareDark}
-              lightAlt={copy.themes.compareLightAlt}
-              darkAlt={copy.themes.compareDarkAlt}
-            />
-            <p className="lp-note">{copy.themes.compareHint}</p>
-            <SlidingTabs
-              label={copy.themes.tabsLabel}
-              items={[
-                {
-                  value: "native",
-                  label: copy.themes.groupNative,
-                  content: (
-                    <ul className="lp-themes">
-                      {nativeThemePresetIds.map((id) => (
-                        <ThemeSwatch id={id} key={id} />
-                      ))}
-                    </ul>
-                  ),
-                },
-                {
-                  value: "minimal",
-                  label: copy.themes.groupMinimal,
-                  content: (
-                    <ul className="lp-themes">
-                      {minimalThemePresetIds.map((id) => (
-                        <ThemeSwatch id={id} key={id} />
-                      ))}
-                    </ul>
-                  ),
-                },
-              ]}
-            />
-            <p className="lp-note">{copy.themes.styleNote}</p>
-          </div>
-        </section>
-
         {/* 5 — Named files first, the full tree folded away behind a disclosure. */}
-        <section className="lp-section">
+        <section className="lp-section" id="lp-export">
           <div className="lp-shell">
             {/* Title and lede left, the two install commands parked top-right — the one thing on
                 this page a visitor takes away with them, so it sits above the detail. */}
@@ -702,25 +613,18 @@ export function Landing() {
           </div>
         </section>
 
-        {/* 7 — The closing ask. The page previously ran out into the footer with no
-            second CTA anywhere after the hero. */}
-        <section className="lp-closing">
+        <section className="lp-finale">
           <div className="lp-shell">
-            <h2>{copy.closing.title}</h2>
-            <p>{copy.closing.body}</p>
+            <h2 className="lp-finale-title lp-display">
+              <Phrases phrases={stage.closingTitle} />
+            </h2>
+            <p className="lp-finale-body">{copy.closing.body}</p>
             <div className="lp-hero-actions">
-              <a className="ui-button lp-cta" data-variant="primary" data-size="lg" href={EDITOR_URL}>
+              <a className="lp-button" data-variant="solid" data-size="xl" href={EDITOR_URL}>
                 {copy.closing.primaryCta}
-                <ArrowRight size={16} aria-hidden="true" />
+                <ArrowUpRight size={18} aria-hidden="true" />
               </a>
-              <a
-                className="ui-button lp-cta"
-                data-variant="secondary"
-                data-size="lg"
-                href={GITHUB_REPO_URL}
-                target="_blank"
-                rel="noreferrer"
-              >
+              <a className="lp-button" data-variant="ghost" data-size="xl" href={GITHUB_REPO_URL} target="_blank" rel="noreferrer">
                 <Star size={16} aria-hidden="true" />
                 {copy.closing.secondaryCta}
               </a>

@@ -70,7 +70,7 @@ export function createWorkspaceController(deps: WorkspaceControllerDeps) {
   async function generateExport() {
     // The editor project is the source of truth; the exported Pi runtime registers this exact
     // provider/model definition when the generated app starts or sends a prompt.
-    const snapshot = createScaffoldExportSnapshot(activeProject);
+    const snapshot = createScaffoldExportSnapshot(activeProject, { iconSet: ctx.iconSet });
     dispatch({ type: "patch", patch: { exportSnapshot: snapshot } });
     try {
       await downloadScaffold(snapshot);

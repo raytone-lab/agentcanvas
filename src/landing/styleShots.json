@@ -1,0 +1,164 @@
+[
+  {
+    "style": "native",
+    "name": "Native",
+    "palettes": [
+      {
+        "id": "soft-glass",
+        "name": "Soft Glass",
+        "src": "/landing/styles/native-soft-glass.webp"
+      },
+      {
+        "id": "sand-workspace",
+        "name": "Coral Desk",
+        "src": "/landing/styles/native-sand-workspace.webp"
+      },
+      {
+        "id": "warm-graphite",
+        "name": "Warm Graphite",
+        "src": "/landing/styles/native-warm-graphite.webp"
+      },
+      {
+        "id": "cocoa-system",
+        "name": "Cocoa System",
+        "src": "/landing/styles/native-cocoa-system.webp"
+      }
+    ],
+    "cover": "/landing/styles/native.webp"
+  },
+  {
+    "style": "inkwash",
+    "name": "Ink Wash",
+    "palettes": [
+      {
+        "id": "ink-rice",
+        "name": "Rice Paper",
+        "src": "/landing/styles/inkwash-ink-rice.webp"
+      },
+      {
+        "id": "ink-mist",
+        "name": "Morning Mist",
+        "src": "/landing/styles/inkwash-ink-mist.webp"
+      },
+      {
+        "id": "ink-tea",
+        "name": "Aged Tea",
+        "src": "/landing/styles/inkwash-ink-tea.webp"
+      },
+      {
+        "id": "ink-night",
+        "name": "Stone Rubbing",
+        "src": "/landing/styles/inkwash-ink-night.webp"
+      }
+    ],
+    "cover": "/landing/styles/inkwash.webp"
+  },
+  {
+    "style": "game",
+    "name": "Quest",
+    "palettes": [
+      {
+        "id": "game-campfire",
+        "name": "Keep of Embers",
+        "src": "/landing/styles/game-game-campfire.webp"
+      },
+      {
+        "id": "game-moonlit",
+        "name": "Moonlit Archive",
+        "src": "/landing/styles/game-game-moonlit.webp"
+      },
+      {
+        "id": "game-scriptorium",
+        "name": "Scriptorium",
+        "src": "/landing/styles/game-game-scriptorium.webp"
+      },
+      {
+        "id": "game-emberfall",
+        "name": "Emberfall",
+        "src": "/landing/styles/game-game-emberfall.webp"
+      }
+    ],
+    "cover": "/landing/styles/game.webp"
+  },
+  {
+    "style": "handdrawn",
+    "name": "Sketch",
+    "palettes": [
+      {
+        "id": "sketch-grid",
+        "name": "Graph Paper",
+        "src": "/landing/styles/handdrawn-sketch-grid.webp"
+      },
+      {
+        "id": "sketch-paper",
+        "name": "Cream Paper",
+        "src": "/landing/styles/handdrawn-sketch-paper.webp"
+      },
+      {
+        "id": "sketch-kraft",
+        "name": "Kraft Pad",
+        "src": "/landing/styles/handdrawn-sketch-kraft.webp"
+      },
+      {
+        "id": "sketch-slate",
+        "name": "Blackboard",
+        "src": "/landing/styles/handdrawn-sketch-slate.webp"
+      }
+    ],
+    "cover": "/landing/styles/handdrawn.webp"
+  },
+  {
+    "style": "retro",
+    "name": "Retro",
+    "palettes": [
+      {
+        "id": "retro-paper",
+        "name": "Retro Paper",
+        "src": "/landing/styles/retro-retro-paper.webp"
+      },
+      {
+        "id": "retro-linen",
+        "name": "Retro Linen",
+        "src": "/landing/styles/retro-retro-linen.webp"
+      },
+      {
+        "id": "retro-sepia",
+        "name": "Retro Sepia",
+        "src": "/landing/styles/retro-retro-sepia.webp"
+      },
+      {
+        "id": "retro-dusk",
+        "name": "Retro Dusk",
+        "src": "/landing/styles/retro-retro-dusk.webp"
+      }
+    ],
+    "cover": "/landing/styles/retro.webp"
+  },
+  {
+    "style": "tech",
+    "name": "Tech",
+    "palettes": [
+      {
+        "id": "tech-glacier",
+        "name": "Glacier",
+        "src": "/landing/styles/tech-tech-glacier.webp"
+      },
+      {
+        "id": "tech-steel",
+        "name": "Steel",
+        "src": "/landing/styles/tech-tech-steel.webp"
+      },
+      {
+        "id": "tech-paper",
+        "name": "Paper",
+        "src": "/landing/styles/tech-tech-paper.webp"
+      },
+      {
+        "id": "tech-deep",
+        "name": "Deep",
+        "src": "/landing/styles/tech-tech-deep.webp"
+      }
+    ],
+    "cover": "/landing/styles/tech.webp"
+  }
+]

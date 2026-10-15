@@ -1,5 +1,6 @@
 import { appVersion } from "../appVersion";
 import { assertValidProject, sanitizeProjectCredentials, type AgentFrontendProject } from "../schema/agentuxConfig";
+import { UPLOADED_AVATAR_ID, type IconSet } from "../agentmatrix";
 import { withSyncedSkinId } from "../theme/skinEngine";
 import { scaffoldTemplateContent } from "./scaffoldTemplates";
 
@@ -550,17 +551,39 @@ function exportableProject(project: AgentFrontendProject): AgentFrontendProject 
   return withSyncedSkinId(sanitizeProjectCredentials(project));
 }
 
-export function createScaffoldExportSnapshot(input: AgentFrontendProject): ScaffoldExportSnapshot {
+/**
+ * The icon picks the export starts from: the editor's own set, so every avatar and every
+ * gallery choice on the canvas is the one the exported app draws.
+ *
+ * It used to be nothing at all — the exported app opened on `defaultIconSet()`, the
+ * registry's first option per slot, which is 原生风's set: a 科技风 project exported with
+ * the orange blob for its agent and lucide outlines where its own marks had been.
+ *
+ * The reader's uploaded photo is the one pick that does not travel: it is theirs, kept in
+ * their browser, not the scaffold's. That slot falls back to the style's first face.
+ */
+function exportableIconSet(iconSet: IconSet | undefined): IconSet {
+  if (!iconSet) return {};
+  const { ...picks } = iconSet;
+  if (picks["author.user"] === UPLOADED_AVATAR_ID) delete picks["author.user"];
+  return picks;
+}
+
+export function createScaffoldExportSnapshot(
+  input: AgentFrontendProject,
+  options: { iconSet?: IconSet } = {},
+): ScaffoldExportSnapshot {
   assertValidProject(input);
   const project = exportableProject(input);
   const packageJson = createScaffoldPackageJson(project);
   const files = createScaffoldFiles(project);
+  const iconSet = exportableIconSet(options.iconSet);
 
   return {
     packageJson,
     agentuxConfig: project,
     files,
-    fileContents: createScaffoldFileContents(project, files, packageJson),
+    fileContents: createScaffoldFileContents(project, files, packageJson, iconSet),
   };
 }
 
@@ -579,11 +602,17 @@ export function createScaffoldFileContents(
   project: AgentFrontendProject,
   files: readonly string[],
   packageJson: ScaffoldPackageJson = createScaffoldPackageJson(project),
+  iconSet: IconSet = {},
 ): Record<string, string> {
-  return Object.fromEntries(files.map((file) => [file, scaffoldFileContent(file, project, packageJson)]));
+  return Object.fromEntries(files.map((file) => [file, scaffoldFileContent(file, project, packageJson, iconSet)]));
 }
 
-function scaffoldFileContent(file: string, project: AgentFrontendProject, packageJson: ScaffoldPackageJson): string {
+function scaffoldFileContent(
+  file: string,
+  project: AgentFrontendProject,
+  packageJson: ScaffoldPackageJson,
+  iconSet: IconSet,
+): string {
   if (file === "README.md") return readmeContent(project, packageJson);
   if (file === "THIRD_PARTY_NOTICES.md") return thirdPartyNoticesContent(project);
   if (file === "AGENTS.md") return agentsMdContent(project, packageJson);
@@ -616,7 +645,7 @@ function scaffoldFileContent(file: string, project: AgentFrontendProject, packag
     ].join("\n");
   }
   if (file === "src/vite-env.d.ts") return `/// <reference types="vite/client" />\n`;
-  if (file === "src/exported-project.ts") return exportedProjectContent(project);
+  if (file === "src/exported-project.ts") return exportedProjectContent(project, iconSet);
   if (file === "src/demo-events.ts") return demoEventsContent();
   if (file === "src/agent-shell.tsx") return AGENT_SHELL_SOURCE;
   if (file === "src/main.tsx") return MAIN_SOURCE;
@@ -651,14 +680,14 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { LocaleProvider } from "./i18n/LocaleContext";
 import { IconSetProvider, IconStyleProvider, iconStyleForStylePreset } from "./agentmatrix";
 import { AgentApp } from "./agent-shell";
-import { project } from "./exported-project";
+import { iconSet, project } from "./exported-project";
 import "./styles/app.css";
 import "./styles/agentmatrix.css";
 
 createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>
     <LocaleProvider>
-      <IconSetProvider>
+      <IconSetProvider initial={iconSet}>
         <IconStyleProvider value={iconStyleForStylePreset(project.theme.stylePreset)}>
           <AgentApp />
         </IconStyleProvider>
@@ -1780,11 +1809,16 @@ function tsconfigContent(): string {
   )}\n`;
 }
 
-function exportedProjectContent(project: AgentFrontendProject): string {
-  return `import type { AgentFrontendProject } from "./schema/agentuxConfig";
+function exportedProjectContent(project: AgentFrontendProject, iconSet: IconSet): string {
+  return `import type { IconSet } from "./agentmatrix";
+import type { AgentFrontendProject } from "./schema/agentuxConfig";
 
 // Snapshot of what was composed in AgentCanvas. Edit by hand to tweak the export.
 export const project = ${JSON.stringify(project, null, 2)} as unknown as AgentFrontendProject;
+
+// The icon picked for each slot on the canvas — avatars, tool and status marks. A slot
+// left out here opens on the registry's first option.
+export const iconSet: IconSet = ${JSON.stringify(iconSet, null, 2)};
 
 export default project;
 `;

@@ -68,6 +68,21 @@ The Retro style bundles the regular and medium EB Garamond font files from
 The original license is shipped at `public/fonts/eb-garamond-OFL.txt`, including
 in exported scaffolds. The font files are unmodified.
 
+## Noto Sans SC Black (SIL OFL 1.1) — landing page only
+
+The landing page's display type is Noto Sans SC Black from
+[notofonts/noto-cjk](https://github.com/notofonts/noto-cjk), **subset** to the
+characters the landing copy uses (`scripts/subset-landing-display-font.py`) and
+shipped as `public/fonts/landing-display.woff2`. A subset is a Modified Version
+under the OFL; it keeps the original font name only as permitted by the license's
+Reserved Font Name terms (Noto has none) and is not sold on its own. The license is
+shipped at `public/fonts/OFL-NotoSansSC.txt`. Not part of exported scaffolds.
+
+## Lenis (MIT) — landing page only
+
+Smooth scrolling on the landing page uses [Lenis](https://github.com/darkroomengineering/lenis),
+MIT-licensed, installed from npm. Not part of the editor or exported scaffolds.
+
 ## Vendored prebuilt packages
 
 `vendor/agent-ux/` contains prebuilt distributions of the AgentUX SDK packages

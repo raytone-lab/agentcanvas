@@ -1713,6 +1713,7 @@ export function App() {
     isWelcome,
     gitPreviewState,
     rightPanelAvailable,
+    iconSet,
   });
 
   const pendingInlineApprovalTool = activeProject.toolCalls.approval === "inline"
@@ -2371,6 +2372,10 @@ export function App() {
                   // beside it for anything that needs identity. See
                   // `visualStylePreset`.
                   data-skin={activeProject.theme.skinId}
+                  // The editor's hover marks key on this (app.css, "Editor only"):
+                  // set on the editing canvas alone, so the interface preview and
+                  // every exported app — which share this stylesheet — show none.
+                  data-editable={state.surfaceMode === "builder" && !uiPreviewActive ? "true" : undefined}
                   data-style-preset={visualStylePreset(selectedPresetStyle)}
                   data-style-id={selectedPresetStyle}
                   data-appearance={resolveSkin(activeProject.theme.skinId).tokens.appearance}

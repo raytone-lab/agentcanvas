@@ -1,0 +1,745 @@
+/*
+ * The stage layout — the landing page's second pass, layered over `landing.css`.
+ *
+ * Borrowed from the portfolio's "stage" language and moved to paper: heavy display type
+ * carries the hierarchy, the product's real screens are the imagery (and the only
+ * imagery), and the top half of the page is one stack of full-screen cards. What it keeps
+ * from the restraint brief: one hue of signal (AgentCanvas orange, for state only — the
+ * active underline, the reading line), no glows, no decorative gradients, no gradient
+ * text. The single gradient is the scrim that lets the hero's words sit over the wall.
+ *
+ * Motion vocabulary (every animated thing, and what it says, is listed in `Landing.tsx`):
+ *   instant 120ms state · fast 180ms colour/underline · base 320ms entrances
+ *   slow 900ms headline and screen reveals · ease-enter cubic-bezier(.16, 1, .3, 1)
+ */
+
+@font-face {
+  /* Noto Sans SC Black, subset at build time to the landing page's own characters in all
+     three languages (scripts/subset-landing-display-font.py), one file fetched once.
+     SIL Open Font License — public/fonts/OFL-NotoSansSC.txt. */
+  font-family: "AC Display";
+  src: url("/fonts/landing-display.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+.lp-page {
+  --lp-paper: #f4f1ea;
+  --lp-paper-2: #ebe6dc;
+  --lp-ink: #121214;
+  --lp-ink-2: #55524c;
+  --lp-hairline: #dcd6ca;
+  --lp-signal: #ff6a00;
+  --lp-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --lp-chrome: 72px;
+
+  --surface-canvas: var(--lp-paper);
+  --text-primary: var(--lp-ink);
+  --text-secondary: var(--lp-ink-2);
+  --border-subtle: var(--lp-hairline);
+
+  /* The display ladder: hierarchy from size alone, one weight. */
+  --lp-d-hero: clamp(52px, 8.2vw, 138px);
+  --lp-d-1: clamp(44px, 6.4vw, 108px);
+  --lp-d-2: clamp(34px, 4.4vw, 68px);
+  --lp-d-3: clamp(30px, 3.2vw, 48px);
+
+  background: var(--lp-paper);
+  color: var(--lp-ink);
+  overflow-x: clip;
+}
+
+.lp-display {
+  font-family: "AC Display", "PingFang SC", "Hiragino Sans", "Microsoft YaHei", system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+  font-feature-settings: "palt" 1;
+  text-wrap: balance;
+}
+
+.lp-phrase {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* Phrases sit flush in CJK; Latin needs its word space back. On the *end* side, so a
+   phrase that wraps to a new line does not start indented — trailing space at the end of
+   a line is invisible. */
+.lp-phrase:not(:last-child) {
+  margin-inline-end: 0.24em;
+}
+
+:lang(zh) .lp-phrase,
+:lang(ja) .lp-phrase {
+  margin-inline-end: 0;
+}
+
+/* ---- Header: a quiet glass bar over paper ------------------------------- */
+.lp-page .lp-header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  height: var(--lp-chrome);
+  display: flex;
+  align-items: center;
+  background: color-mix(in srgb, var(--lp-paper) 72%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.18s ease;
+}
+
+.lp-page .lp-header[data-scrolled="true"] {
+  border-bottom-color: color-mix(in srgb, var(--lp-hairline) 80%, transparent);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .lp-page .lp-header {
+    background: var(--lp-paper);
+  }
+}
+
+.lp-page .lp-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  width: 100%;
+}
+
+.lp-sections {
+  display: flex;
+  gap: 28px;
+  margin-right: auto;
+  margin-left: 24px;
+}
+
+.lp-sections a {
+  position: relative;
+  color: var(--lp-ink-2);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+
+.lp-sections a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 2px;
+  background: var(--lp-signal);
+  scale: 0 1;
+  transform-origin: left;
+  transition: scale 0.32s var(--lp-ease);
+}
+
+.lp-sections a:hover {
+  color: var(--lp-ink);
+}
+
+.lp-sections a:hover::after {
+  scale: 1 1;
+}
+
+/* ---- Buttons ------------------------------------------------------------ */
+.lp-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 26px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.lp-button[data-size="xl"] {
+  height: 60px;
+  padding: 0 32px;
+  font-size: 17px;
+}
+
+.lp-button[data-variant="solid"] {
+  background: var(--lp-ink);
+  color: var(--lp-paper);
+}
+
+.lp-button[data-variant="solid"]:hover {
+  background: #2a2a2e;
+}
+
+.lp-button[data-variant="ghost"] {
+  border: 1px solid color-mix(in srgb, var(--lp-ink) 22%, transparent);
+  color: var(--lp-ink);
+}
+
+.lp-button[data-variant="ghost"]:hover {
+  border-color: var(--lp-ink);
+}
+
+.lp-button svg {
+  transition: translate 0.32s var(--lp-ease);
+}
+
+.lp-button:hover svg:last-child {
+  translate: 3px 0;
+}
+
+.lp-button[data-variant="ghost"]:hover svg:last-child,
+.lp-button svg:first-child:not(:last-child) {
+  translate: none;
+}
+
+.lp-button:focus-visible,
+.lp-sections a:focus-visible,
+.lp-style-chip:focus-visible {
+  outline: 2px solid var(--lp-signal);
+  outline-offset: 3px;
+}
+
+/* ---- The stack ---------------------------------------------------------- */
+.lp-stack-card {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  min-height: 680px;
+  overflow: clip;
+  background: var(--card-ground, var(--lp-paper));
+  color: var(--card-ink, var(--lp-ink));
+  transition: background-color 0.55s var(--lp-ease), color 0.55s var(--lp-ease);
+}
+
+.lp-stack-inner {
+  position: relative;
+  height: 100%;
+  will-change: transform;
+}
+
+/* The covered card darkens as the next one rises over it — one style in front at a time.
+   Opacity is driven by ScrollTrigger; at rest it is invisible. */
+.lp-stack-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: rgb(18 18 20 / 0.34);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---- Hero: the screen wall --------------------------------------------- */
+.lp-hero-card {
+  background: var(--lp-paper);
+}
+
+.lp-wall {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  perspective: 2200px;
+}
+
+.lp-wall-plane {
+  --wall-lean-x: 0deg;
+  --wall-lean-y: 0deg;
+  position: absolute;
+  top: -30%;
+  left: 34%;
+  width: 92%;
+  height: 160%;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 22px;
+  transform: rotateX(calc(38deg + var(--wall-lean-x))) rotateZ(-20deg) rotateY(var(--wall-lean-y));
+  transform-origin: 50% 40%;
+  transition: transform 0.9s var(--lp-ease);
+}
+
+.lp-wall-column {
+  overflow: hidden;
+  animation: lp-wall-arrive 1.4s var(--lp-ease) both;
+  animation-delay: var(--wall-delay, 0ms);
+}
+
+.lp-wall-track {
+  display: grid;
+  gap: 22px;
+  animation: lp-wall-drift var(--wall-duration, 70s) linear infinite;
+}
+
+.lp-wall-column[data-direction="down"] .lp-wall-track {
+  animation-direction: reverse;
+}
+
+.lp-wall[data-paused] .lp-wall-track {
+  animation-play-state: paused;
+}
+
+.lp-wall-screen {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1101 / 690;
+  object-fit: cover;
+  border-radius: 10px;
+  background: var(--lp-paper-2);
+  box-shadow:
+    0 0 0 1px rgb(18 18 20 / 0.06),
+    0 18px 40px -18px rgb(60 45 25 / 0.28);
+  user-select: none;
+}
+
+@keyframes lp-wall-drift {
+  from { transform: translateY(0); }
+  to { transform: translateY(calc(-50% - 11px)); }
+}
+
+@keyframes lp-wall-arrive {
+  from { opacity: 0; translate: 0 18%; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+/* The readability scrim: paper rising from the side the words are on, so the type sits on
+   a quiet ground without boxing it. The page's only gradient. */
+.lp-hero-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--lp-paper) 0%,
+    var(--lp-paper) 30%,
+    color-mix(in srgb, var(--lp-paper) 82%, transparent) 46%,
+    color-mix(in srgb, var(--lp-paper) 0%, transparent) 68%
+  );
+}
+
+.lp-hero-inner {
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: var(--lp-page-max, 1200px);
+  margin: 0 auto;
+  padding: calc(var(--lp-chrome) + 24px) clamp(20px, 4vw, 40px) 48px;
+}
+
+.lp-hero-card .lp-kicker {
+  margin: 0 0 28px;
+}
+
+.lp-hero-heading {
+  margin: 0;
+  font-size: var(--lp-d-hero);
+  max-width: 9.5em;
+}
+
+/* English words are wider than the same idea in two or three CJK characters, and the
+   middle line ("an agent's interface") ran into the wall at the shared size. */
+:lang(en) .lp-hero-heading {
+  max-width: 10.5em;
+  font-size: clamp(46px, 6.4vw, 108px);
+}
+
+.lp-line {
+  display: block;
+  overflow: clip;
+  padding-bottom: 0.06em;
+  margin-bottom: -0.06em;
+}
+
+.lp-line-inner {
+  display: inline-block;
+  animation: lp-line-in 0.9s var(--lp-ease) both;
+}
+
+@keyframes lp-line-in {
+  from { translate: 0 110%; }
+  to { translate: 0 0; }
+}
+
+.lp-rise {
+  animation: lp-rise-in 0.9s var(--lp-ease) both;
+}
+
+@keyframes lp-rise-in {
+  from { opacity: 0; translate: 0 32px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+.lp-hero-card .lp-hero-lede {
+  max-width: 34em;
+  margin: 32px 0 0;
+  color: var(--lp-ink-2);
+  font-size: clamp(17px, 1.35vw, 20px);
+  line-height: 1.65;
+}
+
+.lp-hero-card .lp-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 36px;
+}
+
+.lp-hero-card .lp-hero-note {
+  margin: 18px 0 0;
+  color: var(--lp-ink-2);
+  font-size: 13.5px;
+}
+
+/* ---- The styles' introduction ----------------------------------------- */
+.lp-intro-card {
+  background: var(--lp-paper-2);
+}
+
+.lp-intro-inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: var(--lp-page-max, 1200px);
+  margin: 0 auto;
+  padding: 0 clamp(20px, 4vw, 40px);
+}
+
+.lp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 28px;
+  color: var(--lp-ink-2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.lp-eyebrow::before {
+  content: "";
+  width: 22px;
+  height: 2px;
+  background: var(--lp-signal);
+}
+
+.lp-intro-title {
+  margin: 0;
+  font-size: var(--lp-d-1);
+}
+
+.lp-intro-lede {
+  max-width: 38em;
+  margin: 40px 0 0;
+  color: var(--lp-ink-2);
+  font-size: clamp(17px, 1.35vw, 20px);
+  line-height: 1.7;
+}
+
+/* ---- A style card ------------------------------------------------------- */
+.lp-style-card .lp-stack-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 4.2fr) minmax(0, 7.8fr);
+  align-items: center;
+  gap: clamp(28px, 4vw, 72px);
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: calc(var(--lp-chrome) + 16px) clamp(20px, 4vw, 48px) 40px;
+}
+
+.lp-style-index {
+  margin: 0 0 22px;
+  color: var(--card-ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.lp-style-name {
+  margin: 0;
+  color: var(--card-ink);
+  font-size: var(--lp-d-1);
+}
+
+.lp-style-line {
+  max-width: 22em;
+  margin: 28px 0 0;
+  color: var(--card-ink-2);
+  font-size: clamp(16px, 1.25vw, 19px);
+  line-height: 1.7;
+}
+
+.lp-style-palettes {
+  margin-top: 40px;
+}
+
+.lp-style-palettes-label {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--card-ink-2);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.lp-style-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lp-style-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px 0 8px;
+  border: 1px solid color-mix(in srgb, var(--card-ink) 16%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--card-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.lp-style-chip:hover {
+  border-color: color-mix(in srgb, var(--card-ink) 40%, transparent);
+}
+
+.lp-style-chip[aria-pressed="true"] {
+  border-color: var(--card-ink);
+  background: color-mix(in srgb, var(--card-ink) 6%, transparent);
+}
+
+.lp-style-chip-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--chip-a) 0 50%, var(--chip-b) 50% 100%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--card-ink) 18%, transparent);
+}
+
+.lp-style-stage {
+  margin: 0;
+  will-change: transform;
+}
+
+.lp-style-screen {
+  position: relative;
+  aspect-ratio: 1101 / 690;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--card-panel);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--card-ink) 10%, transparent),
+    0 40px 80px -40px rgb(40 30 15 / 0.45);
+}
+
+.lp-style-card[data-appearance="dark"] .lp-style-screen {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--card-ink) 16%, transparent),
+    0 40px 80px -40px rgb(0 0 0 / 0.7);
+}
+
+.lp-style-screen img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.55s var(--lp-ease);
+  user-select: none;
+}
+
+.lp-style-screen img[data-active] {
+  opacity: 1;
+}
+
+/* ---- The statement ------------------------------------------------------ */
+.lp-statement {
+  position: relative;
+  height: 240svh;
+  background: var(--lp-paper);
+}
+
+.lp-statement-sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 0 clamp(20px, 6vw, 96px);
+}
+
+.lp-statement-text {
+  max-width: 14em;
+  margin: 0;
+  font-size: var(--lp-d-1);
+  line-height: 1.08;
+  text-align: center;
+}
+
+:lang(en) .lp-statement-text {
+  max-width: 17em;
+}
+
+/* ---- The engineering half, re-set in the display type ------------------- */
+.lp-page .lp-section {
+  padding-block: clamp(96px, 11vw, 176px);
+}
+
+.lp-page .lp-section-title {
+  font-family: "AC Display", "PingFang SC", "Hiragino Sans", system-ui, sans-serif;
+  font-weight: 900;
+  font-size: var(--lp-d-2);
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+}
+
+.lp-page .lp-section-lede {
+  max-width: 40em;
+  margin-top: 22px;
+  font-size: clamp(16px, 1.25vw, 19px);
+  line-height: 1.7;
+}
+
+.lp-page .lp-strip {
+  border-block: 1px solid var(--lp-hairline);
+  background: var(--lp-paper);
+}
+
+/* ---- Finale ------------------------------------------------------------- */
+.lp-finale {
+  padding: clamp(120px, 14vw, 220px) 0 clamp(96px, 10vw, 160px);
+  border-top: 1px solid var(--lp-hairline);
+  background: var(--lp-paper-2);
+}
+
+.lp-finale-title {
+  max-width: 10em;
+  margin: 0;
+  font-size: var(--lp-d-hero);
+}
+
+.lp-finale-body {
+  max-width: 34em;
+  margin: 36px 0 0;
+  color: var(--lp-ink-2);
+  font-size: clamp(17px, 1.35vw, 20px);
+  line-height: 1.65;
+}
+
+.lp-finale .lp-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 44px;
+}
+
+.lp-page .lp-footer {
+  background: var(--lp-paper-2);
+}
+
+/* ---- Narrow screens ----------------------------------------------------- */
+@media (max-width: 1023px) {
+  .lp-sections {
+    display: none;
+  }
+
+  .lp-wall-plane {
+    left: 8%;
+    width: 130%;
+    opacity: 0.55;
+  }
+
+  .lp-hero-scrim {
+    background: linear-gradient(180deg, var(--lp-paper) 0%, color-mix(in srgb, var(--lp-paper) 86%, transparent) 60%, color-mix(in srgb, var(--lp-paper) 30%, transparent) 100%);
+  }
+
+  .lp-style-card .lp-stack-inner {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: center;
+    gap: 32px;
+  }
+
+  .lp-style-palettes {
+    margin-top: 24px;
+  }
+}
+
+/* A phone does not get the stack: a card's content can be taller than the screen, and a
+   sticky card that clips its own content is worse than cards that simply scroll. */
+@media (max-width: 760px) {
+  .lp-stack-card {
+    position: relative;
+    height: auto;
+    min-height: 100svh;
+  }
+
+  .lp-style-card .lp-stack-inner {
+    padding-block: 96px 56px;
+  }
+
+  .lp-statement {
+    height: auto;
+  }
+
+  .lp-statement-sticky {
+    position: relative;
+    height: auto;
+    padding-block: 120px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-wall-track,
+  .lp-wall-column,
+  .lp-line-inner,
+  .lp-rise {
+    animation: none;
+  }
+
+  .lp-wall-plane,
+  .lp-style-screen img,
+  .lp-button svg {
+    transition: none;
+  }
+}
+
+/* The language switch keeps each label on one line: at phone width the header squeezed
+   「日本語」 into two. The brand gives up its name instead of the switch wrapping. */
+.lp-page .lp-nav,
+.lp-page .lp-nav * {
+  white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+  .lp-page .lp-brand-name {
+    display: none;
+  }
+}
+
+/* Over a dark card the bar is ink glass, its text paper. */
+.lp-page .lp-header[data-tone="dark"] {
+  background: color-mix(in srgb, #121214 62%, transparent);
+  border-bottom-color: rgb(255 255 255 / 0.08);
+  color: #f4f1ea;
+}
+
+.lp-page .lp-header[data-tone="dark"] :is(.lp-brand-name, .lp-nav-github, .lp-sections a) {
+  color: rgb(244 241 234 / 0.82);
+}
+
+.lp-page .lp-header[data-tone="dark"] .lp-sections a:hover {
+  color: #f4f1ea;
+}
+
+.lp-page .lp-header {
+  transition: border-color 0.18s ease, background-color 0.32s ease, color 0.32s ease;
+}

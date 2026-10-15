@@ -51,7 +51,7 @@ export function createRunActions(
   async function saveScaffoldPreview(prompt?: string, context?: ComposerSubmitContext) {
     refs.standardStreamRef.current?.cancel();
     const saved = JSON.parse(JSON.stringify(project)) as AgentFrontendProject;
-    const snapshot = createScaffoldExportSnapshot(saved);
+    const snapshot = createScaffoldExportSnapshot(saved, { iconSet: ctx.iconSet });
     const defaultScenarioId = resolveDefaultPreviewScenario(saved);
     const initialRunMode = initialSavedPreviewRunMode({ project: saved, sessionKeys });
     dispatch({
