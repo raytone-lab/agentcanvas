@@ -1,24 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import Lenis from "lenis";
-import {
-  ArrowRight,
-  ArrowUpRight,
-  CirclePlay,
-  Download,
-  FileText,
-  Lock,
-  Network,
-  MessagesSquare,
-  PanelLeft,
-  PanelsTopLeft,
-  PenLine,
-  Shield,
-  Sparkles,
-  Star,
-  Type,
-  Wrench,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight, ArrowUpRight, Download, Star } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -26,41 +8,41 @@ import { useGSAP } from "@gsap/react";
 import { appVersionLabel } from "../appVersion";
 import { useLocale } from "../i18n/LocaleContext";
 import { EXPORT_FILE_COUNT } from "./exportFacts";
-import { FileList } from "./FileList";
+import { EventStream } from "./EventStream";
+import { ExportTree } from "./ExportTree";
+import { Limits } from "./Limits";
 import { LocaleSwitch } from "./LocaleSwitch";
-import { RunSteps } from "./RunSteps";
+import { PartsAnatomy } from "./PartsAnatomy";
+import { ModelProviders } from "./ModelProviders";
 import { ScreenWall } from "./ScreenWall";
+import { SplitHeadline } from "./SplitHeadline";
 import { Statement } from "./Statement";
-import { StyleStack } from "./StyleStack";
+import { StyleBrowser } from "./StyleBrowser";
 // `.ui-button` only — importing the `components/ui` barrel would pull Radix dialog,
 // popover, dropdown and friends into the landing bundle for two anchors.
 import "../components/ui/button.css";
-import { landingCopy, landingPartKeys, type LandingPartKey } from "./copy";
-import { providerMark } from "./providerMarks";
-import {
-  isProtocolOutlier,
-  landingProviderGroups,
-  landingProviders,
-  providerGroupCount,
-} from "./providers";
+import { landingCopy } from "./copy";
 import { EDITOR_URL, GITHUB_REPO_URL } from "./siteConfig";
 import "./landing.css";
 import "./landing-stage.css";
+import "./landing-chapters.css";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
-/** One icon per event family, in the order `events.rows` declares them. */
-const EVENT_ICON: readonly LucideIcon[] = [CirclePlay, Type, Network, Wrench, Shield, FileText];
+/** The three steps, each pointing at the chapter that shows it. */
+const CHAPTER_HREF = ["#lp-parts", "#lp-events", "#lp-export"] as const;
 
-/** Same icon each surface carries in the editor's own preset rail (App.tsx). */
-const PART_ICON: Record<LandingPartKey, LucideIcon> = {
-  sessions: PanelLeft,
-  chat: MessagesSquare,
-  thinking: Sparkles,
-  tools: Wrench,
-  output: PanelsTopLeft,
-  composer: PenLine,
-};
+/**
+ * Pointer position as `--mx` / `--my` on the element under it, for the surfaces whose hover
+ * is a soft light that follows the pointer. One handler on the parent serves every child.
+ */
+function trackPointer(event: ReactPointerEvent<HTMLElement>) {
+  const target = (event.target as HTMLElement).closest<HTMLElement>("[data-spot]");
+  if (!target) return;
+  const rect = target.getBoundingClientRect();
+  target.style.setProperty("--mx", `${event.clientX - rect.left}px`);
+  target.style.setProperty("--my", `${event.clientY - rect.top}px`);
+}
 
 /**
  * Lucide dropped brand marks, so this one glyph is inline (DESIGN.md §7.5 unifies on
@@ -131,13 +113,17 @@ export function Landing() {
   /**
    * Every scroll-linked motion on the page, and what each one says:
    *
-   *   screen stands up    a style card's screen rises from 22° to face the reader as the card
-   *                       arrives — "here is this one, shown to you"
+   *   screen stands up    the style browser's screen rises from 22° to face the reader as
+   *                       its card arrives — "here they are, shown to you"
    *   covered card sinks  the card being covered slides up 12% inside its own frame and dims,
-   *                       so only one style is ever in front
+   *                       so only one card is ever in front
    *   wall pauses         the hero's drift stops once the hero is covered
    *   statement lights    the one sentence brightens piece by piece with the scroll
-   *   rows enter          ledger rows below fade up once, in batches
+   *   blocks enter        chapter doors, ledger rows and limits fade up once, in batches
+   *   tree unpacks        the export tree's lines arrive top to bottom, once, like a listing
+   *
+   * Two more live in their own components, because they own state: the anatomy's pinned
+   * walk through the parts (PartsAnatomy) and the style browser's autoplay (StyleBrowser).
    *
    * Hidden starting states are set here, never in CSS, so a failed bundle leaves a plain
    * readable page rather than a blank one.
@@ -164,11 +150,15 @@ export function Landing() {
           }
           const next = cards[index + 1];
           if (!next) return;
+          // The card over the hero is glass: a dimmed hero would turn the glass grey.
+          const seenThrough = next.classList.contains("lp-intro-card");
           const inner = card.querySelector(".lp-stack-inner");
           const dim = card.querySelector(".lp-stack-dim");
           const cover = { trigger: next, start: "top bottom", end: "top top", scrub: true };
-          if (inner) gsap.to(inner, { yPercent: -12, ease: "none", scrollTrigger: cover });
-          if (dim) gsap.fromTo(dim, { opacity: 0 }, { opacity: 1, ease: "none", scrollTrigger: cover });
+          // Under glass, the hero's words fade as they are covered, so only the screen wall
+          // shows through the frost — blurred type behind the new title reads as smudges.
+          if (inner) gsap.to(inner, { yPercent: -12, opacity: seenThrough ? 0 : 1, ease: "none", scrollTrigger: cover });
+          if (dim && !seenThrough) gsap.fromTo(dim, { opacity: 0 }, { opacity: 1, ease: "none", scrollTrigger: cover });
         });
 
         if (cards[1]) {
@@ -194,7 +184,7 @@ export function Landing() {
           );
         }
 
-        const ANIMATED = ".lp-reveal, .lp-map-row";
+        const ANIMATED = ".lp-reveal";
         gsap.set(ANIMATED, { opacity: 0, y: 24 });
         ScrollTrigger.batch(ANIMATED, {
           start: "top bottom",
@@ -202,6 +192,23 @@ export function Landing() {
           onEnter: (batch) =>
             gsap.to(batch, { opacity: 1, y: 0, duration: 0.9, ease: "expo.out", stagger: 0.06, overwrite: true }),
         });
+
+        const treeLines = gsap.utils.toArray<HTMLElement>(".lp-ship-line");
+        if (treeLines.length) {
+          gsap.fromTo(
+            treeLines,
+            { opacity: 0, x: -10 },
+            {
+              opacity: 1,
+              x: 0,
+              duration: 0.5,
+              ease: "power2.out",
+              stagger: 0.03,
+              clearProps: "transform",
+              scrollTrigger: { trigger: ".lp-ship-panel", start: "top 80%", once: true },
+            },
+          );
+        }
 
         // Images settle the layout after mount; triggers measured before that are stale.
         const refresh = () => ScrollTrigger.refresh();
@@ -225,7 +232,7 @@ export function Landing() {
       });
 
       media.add("(prefers-reduced-motion: reduce)", () => {
-        gsap.set(".lp-reveal, .lp-map-row, .lp-statement-piece", { opacity: 1, y: 0 });
+        gsap.set(".lp-reveal, .lp-statement-piece", { opacity: 1, y: 0 });
       });
 
       return () => media.revert();
@@ -345,252 +352,81 @@ export function Landing() {
           </section>
 
           <section className="lp-stack-card lp-intro-card" id="lp-styles" aria-labelledby="lp-styles-title">
+            {/* The card is a pane of frosted glass: as it slides up, the hero's screen wall
+                stays visible through it, blurred — the same material as the header. */}
+            <div className="lp-intro-frost" aria-hidden="true" />
             <div className="lp-stack-inner lp-intro-inner">
               <p className="lp-eyebrow">{stage.stylesKicker}</p>
-              <h2 className="lp-intro-title lp-display" id="lp-styles-title">
-                <Phrases phrases={stage.stylesTitle} />
-              </h2>
+              <SplitHeadline
+                id="lp-styles-title"
+                className="lp-intro-title lp-display"
+                lines={stage.stylesTitle}
+                locale={locale}
+                effect="sides"
+                trigger="view"
+              />
               <p className="lp-intro-lede">{stage.stylesLede}</p>
             </div>
             <div className="lp-stack-dim" aria-hidden="true" />
           </section>
 
-          <StyleStack copy={stage} />
+          <StyleBrowser copy={stage} />
         </div>
 
         <Statement text={stage.statement} locale={locale} />
 
-        <section className="lp-strip" aria-labelledby="lp-strip-title">
-          {/* The group needs a name for assistive tech even though the design wants no
-              visible heading here — and the step titles must sit below it, not become
-              three more peers of the real section headings. */}
-          <h2 className="lp-sr-only" id="lp-strip-title">
+        {/* The three steps, as the doors to the three chapters below — each one is the
+            chapter's own opening line, so the strip is a table of contents that reads as
+            the pitch. No "01 / 02 / 03": <ol> carries the order. */}
+        <nav className="lp-chapters" aria-labelledby="lp-chapters-title">
+          <h2 className="lp-sr-only" id="lp-chapters-title">
             {copy.how.title}
           </h2>
-          <ol className="lp-shell lp-strip-inner">
-            {copy.how.steps.map((step) => (
-              <li key={step.title}>
-                {/* No "01 / 02 / 03" markers: <ol> already carries the order, and the
-                    printed numerals are a stock generated-landing-page tell. */}
-                <h3>{step.title}</h3>
-                <p>{step.body}</p>
+          <ol className="lp-shell lp-chapters-inner" onPointerMove={trackPointer}>
+            {copy.how.steps.map((step, index) => (
+              <li key={step.title} className="lp-reveal">
+                <a className="lp-chapter" href={CHAPTER_HREF[index]} data-spot>
+                  <span className="lp-chapter-title lp-display">{step.title}</span>
+                  <span className="lp-chapter-body">{step.body}</span>
+                  <ArrowRight className="lp-chapter-arrow" size={18} aria-hidden="true" />
+                </a>
               </li>
             ))}
           </ol>
-        </section>
+        </nav>
 
-        {/* 2 — Two-column ledger of hairline rows. This was a heading-left /
-            content-right split, which left the aside column empty for most of its
-            height once the six real rows were in place. */}
-        <section className="lp-section" id="lp-parts">
-          <div className="lp-shell">
-            <h2 className="lp-section-title">{copy.parts.title}</h2>
-            <p className="lp-section-lede">{copy.parts.lede}</p>
-            {/* No screenshot here. The hero already shows this editor in motion; a static
-                full-width shot of the same screen directly below it said nothing new. */}
-            <ul className="lp-cards">
-              {landingPartKeys.map((key) => {
-                const part = copy.parts.items[key];
-                const Icon = PART_ICON[key];
-                return (
-                  <li className="lp-card lp-reveal" key={key}>
-                    {/* A 16px glyph on the title's line, not a filled tile above it. The
-                        dark-rounded-square-over-centred-text card is the stock template
-                        shape, and the tile was the loudest thing in it. */}
-                    <div className="lp-card-head">
-                      <Icon size={16} aria-hidden="true" />
-                      <h3>{part.name}</h3>
-                    </div>
-                    {/* The real file in src/components/agent-preview/, as plain monospace.
-                        It was a grey pill; a chip around a filename is decoration. */}
-                    <code className="lp-card-ref">{part.component}</code>
-                    <p>{part.body}</p>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </section>
+        <PartsAnatomy copy={copy.parts} stepLabel={copy.how.steps[0].title} />
 
-        {/* 3 — The page's technical anchor, and the only contained surface below the
-            hero. Providers live in its footer because pasting a key is how you feed it
-            real events, not a separate topic. */}
-        <section className="lp-section" id="lp-events">
+        <section className="lp-section lp-chapter-section" id="lp-events">
           <div className="lp-shell">
+            <p className="lp-eyebrow">{copy.how.steps[1].title}</p>
             <h2 className="lp-section-title">{copy.events.title}</h2>
             <p className="lp-section-lede">{copy.events.lede}</p>
-            {/* Stages joined by rules, the last one in ink: the claim as one line. */}
-            <ol className="lp-flow">
-              {copy.events.flow.map((stage) => (
-                <li key={stage.label}>
-                  <span className="lp-flow-label">{stage.label}</span>
-                  {stage.file ? <code>{stage.file}</code> : null}
-                </li>
-              ))}
-            </ol>
+            <EventStream copy={copy.events} />
 
-            {/*
-              * One table, not a rail beside a table.
-              *
-              * The rail and the rows were two parallel six-item lists in separate panes:
-              * the rail's items were evenly spaced, the rows were content-height, so item
-              * N never sat level with row N and the correspondence they were meant to show
-              * was the one thing the layout denied. As the table's first column it aligns
-              * by construction — which is what a table is for — and the hover pairing the
-              * rail needed to imply it becomes unnecessary.
-              */}
-            <div className="lp-mapper">
-              <table className="lp-map">
-                <thead>
-                  <tr>
-                    <th scope="col">{copy.events.columnCategory}</th>
-                    <th scope="col">{copy.events.columnEvent}</th>
-                    <th scope="col">{copy.events.columnMapping}</th>
-                    <th scope="col">{copy.events.columnTarget}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {copy.events.rows.map((row, index) => {
-                    const Icon = EVENT_ICON[index] ?? CirclePlay;
-                    return (
-                      <tr key={row.events.join()} data-zebra={index % 2 === 1 ? "true" : undefined}>
-                        <th scope="row">
-                          <span className="lp-map-icon" aria-hidden="true">
-                            <Icon size={15} />
-                          </span>
-                          {/* Name only. A live count would go stale against a list that
-                              is still growing, and it was the least useful line in the
-                              densest cell. */}
-                          <span className="lp-map-family">{row.label}</span>
-                        </th>
-                        <td>
-                          <span className="lp-map-events">
-                            {row.events.map((event) => (
-                              <code key={event}>{event}</code>
-                            ))}
-                          </span>
-                        </td>
-                        <td className="lp-map-arrow">
-                          {/* Drawn, not typed, so it does not depend on a font shipping
-                              the glyph. */}
-                          <svg viewBox="0 0 56 8" width="56" height="8" fill="none" aria-hidden="true">
-                            <path
-                              d="M0 4h50m0 0-5-3.5m5 3.5-5 3.5"
-                              stroke="currentColor"
-                              strokeWidth="1.2"
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                        </td>
-                        <td>
-                          <strong className="lp-map-target">{row.component}</strong>
-                          <span className="lp-map-note">{row.ui}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            {/* Providers close the chapter: pasting a key is the other way to feed it events. */}
+            <ModelProviders copy={copy.providers} title={<h3 className="lp-subtitle">{copy.providers.title}</h3>} />
           </div>
         </section>
 
-        {/* Providers used to be a footer strip inside the event panel, where it read as an
-            afterthought. It is its own short block now. */}
-        <section className="lp-section lp-section--tight">
+        <section className="lp-section lp-chapter-section" id="lp-export">
           <div className="lp-shell">
-            <div className="lp-head">
-              <div>
-                <h2 className="lp-section-title">{copy.providers.title}</h2>
-                <p className="lp-section-lede">{copy.providers.lede}</p>
-              </div>
-              <p className="lp-head-note">
-                {copy.providers.countNote.replace("{count}", String(landingProviders.length))}
-              </p>
-            </div>
+            <p className="lp-eyebrow">{copy.how.steps[2].title}</p>
+            <h2 className="lp-section-title">{copy.exported.title}</h2>
+            <p className="lp-section-lede">{copy.exported.lede}</p>
 
-            {/* One card: ledger strip, then the grid, then the two facts. The ledger sat in a
-                left column until it was pointed out that three rows beside a three-row grid
-                leaves a tall empty well underneath — as a strip it has no spare height to
-                leave empty. It stays inert: filtering it would drop the grid to a single cell
-                for two of the three groups. */}
-            <div className="lp-providers">
-              <dl className="lp-providers-ledger">
-                {landingProviderGroups.map((group) => (
-                  <div key={group}>
-                    <dt>{copy.providers.groups[group]}</dt>
-                    <dd>{providerGroupCount(group)}</dd>
-                  </div>
-                ))}
-              </dl>
-              <ul className="lp-providers-grid">
-                {landingProviders.map((provider) => (
-                  <li key={provider.id} data-outlier={isProtocolOutlier(provider) || undefined}>
-                    <span className="lp-provider-mark">{providerMark[provider.id]}</span>
-                    <span className="lp-provider-name">{copy.providers.names[provider.id]}</span>
-                    <span className="lp-provider-protocol">{provider.protocol}</span>
-                  </li>
-                ))}
-              </ul>
-              <dl className="lp-providers-facts">
-                <div>
-                  <Network aria-hidden="true" />
-                  <dt>
-                    <span>01</span>
-                    {copy.providers.protocolLabel}
-                  </dt>
-                  <dd>{copy.providers.protocolNote}</dd>
-                </div>
-                <div>
-                  <Lock aria-hidden="true" />
-                  <dt>
-                    <span>02</span>
-                    {copy.providers.keyLabel}
-                  </dt>
-                  <dd>{copy.providers.keyNote}</dd>
-                </div>
-              </dl>
-            </div>
-          </div>
-        </section>
-
-        {/* 5 — Named files first, the full tree folded away behind a disclosure. */}
-        <section className="lp-section" id="lp-export">
-          <div className="lp-shell">
-            {/* Title and lede left, the two install commands parked top-right — the one thing on
-                this page a visitor takes away with them, so it sits above the detail. */}
-            <div className="lp-head lp-head--steps">
-              <div>
-                <h2 className="lp-section-title">{copy.exported.title}</h2>
-                <p className="lp-section-lede">{copy.exported.lede}</p>
-              </div>
-              <RunSteps
-                steps={copy.exported.steps}
-                copyLabel={copy.exported.copyLabel}
-                copiedLabel={copy.exported.copiedLabel}
-              />
-            </div>
-
-            <FileList
+            <ExportTree
               label={copy.exported.coreLabel}
               files={copy.exported.coreFiles}
               tree={copy.exported.tree}
-              expandLabel={copy.exported.expandLabel}
-              expandNote={copy.exported.expandNote.replace(
-                "{count}",
-                String(EXPORT_FILE_COUNT),
-              )}
-              expandAction={copy.exported.expandAction}
-              collapseAction={copy.exported.collapseAction}
+              treeTitle={copy.exported.treeTitle}
+              countNote={copy.exported.expandNote.replace("{count}", String(EXPORT_FILE_COUNT))}
+              scriptsLabel={copy.exported.scriptsLabel}
+              scripts={copy.exported.scripts}
+              steps={copy.exported.steps}
+              copyLabel={copy.exported.copyLabel}
+              copiedLabel={copy.exported.copiedLabel}
             />
-
-            <ul className="lp-scripts" aria-label={copy.exported.scriptsLabel}>
-              {copy.exported.scripts.map((script) => (
-                <li key={script.name}>
-                  <code>npm run {script.name}</code>
-                </li>
-              ))}
-            </ul>
             <p className="lp-note lp-note--wide">{copy.exported.treeNote}</p>
           </div>
         </section>
@@ -600,16 +436,7 @@ export function Landing() {
         <section className="lp-section">
           <div className="lp-shell">
             <h2 className="lp-section-title">{copy.limits.title}</h2>
-            {/* Label left, prose right, one row each. Three equal columns of running text
-                gave the three boundaries no hierarchy and no rhythm. */}
-            <dl className="lp-limits">
-              {copy.limits.items.map((item) => (
-                <div className="lp-reveal" key={item.title}>
-                  <dt>{item.title}</dt>
-                  <dd>{item.body}</dd>
-                </div>
-              ))}
-            </dl>
+            <Limits items={copy.limits.items} />
           </div>
         </section>
 

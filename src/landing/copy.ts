@@ -119,6 +119,8 @@ export type LandingCopy = {
     scriptsLabel: string;
     copyLabel: string;
     copiedLabel: string;
+    /** The tree panel's title bar. */
+    treeTitle: string;
     /** Verbatim from `createScaffoldPackageJson` in src/export/scaffoldManifest.ts. */
     scripts: { name: string; run: string }[];
   };
@@ -127,6 +129,8 @@ export type LandingCopy = {
     lede: string;
     /** Contains `{count}`, filled from `landingProviders.length` so it cannot go stale. */
     countNote: string;
+    /** Caption beside the count when the count is set as a numeral of its own. */
+    countLabel: string;
     /** Ledger rows beside the grid. Counts are derived, never written here. */
     groups: Record<LandingProviderGroup, string>;
     /** Display names keyed by catalog id; protocols live in `providers.ts`, not in copy. */
@@ -168,6 +172,14 @@ export type LandingCopy = {
     stylesTitle: string[];
     stylesLede: string;
     paletteLabel: string;
+    browserLabel: string;
+    styleListLabel: string;
+    /** `{styles}` / `{palettes}`, both counted from styleShots.json. */
+    stylesCount: string;
+    prevStyle: string;
+    nextStyle: string;
+    autoplayPause: string;
+    autoplayPlay: string;
     /** `{index}` / `{total}`. */
     styleIndex: string;
     styles: Record<LandingStyleKey, { name: string; line: string }>;
@@ -190,9 +202,7 @@ const zh: LandingCopy = {
   },
   hero: {
     title: "在画布上组一个 Agent 的界面",
-    lede:
-      "AgentCanvas 是一个可视化编辑器：挑选会话栏、对话区、思考块、工具调用卡、产物预览和输入框，" +
-      "接上事件流实时预览，然后导出成一个能直接跑起来的 Vite + React 项目。",
+    lede: "挑组件、接事件流、实时预览，导出一个能直接跑的 React 项目。",
     primaryCta: "开始体验",
     secondaryCta: "在 GitHub 上 Star",
     note: "浏览器里直接用，不用 clone，不用装依赖。",
@@ -303,10 +313,11 @@ const zh: LandingCopy = {
 └─ vendor/
    ├─ agent-ux/{protocol,runtime,render-core,react}
    └─ agentmatrix/agentcanvas-contract`,
-    treeNote: "内部依赖已经随包打好，不需要额外配置 registry。12 套配色主题、中英双语文案，都跟着导出走。",
+    treeNote: "内部依赖已经随包打好，不需要额外配置 registry。所有风格与配色、中英日三语文案，都跟着导出走。",
     scriptsLabel: "package.json scripts",
     copyLabel: "复制",
     copiedLabel: "已复制",
+    treeTitle: "your-agent.zip",
     scripts: [
       { name: "dev", run: "vite" },
       { name: "build", run: "tsc && vite build" },
@@ -318,6 +329,7 @@ const zh: LandingCopy = {
     title: "接你自己的模型",
     lede: "编辑器里填 Key 就能走一次真实调用，看自己的模型在这套界面里长什么样。",
     countNote: "支持 {count} 种接入方式",
+    countLabel: "种接入方式",
     // Deliberately not "本地模型"/"自定义地址": those are the grid's item names, and the same
     // string standing for both a category and one of its members reads as a duplicate row.
     groups: {
@@ -373,7 +385,7 @@ const zh: LandingCopy = {
     navParts: "组件",
     navEvents: "事件流",
     navExport: "导出",
-    heroTitle: ["在画布上", "组一个", "Agent 的界面"],
+    heroTitle: ["在画布上", "组 Agent 界面"],
     wallAlt: "同一个 Agent 界面在六种风格、二十四套配色下的真实截图",
     stylesKicker: "同一套组件",
     stylesTitle: ["换一种风格，", "不止换一层皮"],
@@ -381,6 +393,13 @@ const zh: LandingCopy = {
       "每种风格都给每个组件单独设计了形态：图标、头像、思考动效、按钮和卡片的材质都跟着变。" +
       "下面每一屏都是编辑器里的真实画布。",
     paletteLabel: "配色",
+    browserLabel: "风格浏览",
+    styleListLabel: "全部风格",
+    stylesCount: "{styles} 种风格 · {palettes} 套配色，还在增加",
+    prevStyle: "上一种风格",
+    nextStyle: "下一种风格",
+    autoplayPause: "暂停自动播放",
+    autoplayPlay: "继续自动播放",
     styleIndex: "{index} / {total}",
     styles: {
       native: { name: "原生风", line: "系统级的克制。浅玻璃、细描边，像操作系统自带的那一个。" },
@@ -409,10 +428,7 @@ const en: LandingCopy = {
   },
   hero: {
     title: "Compose an agent's interface on a canvas",
-    lede:
-      "AgentCanvas is a visual editor. Pick a session sidebar, chat area, thinking block, tool-call cards, " +
-      "an artifact preview panel and a composer; wire an event stream through them to preview it live; " +
-      "then export a Vite + React project that runs as-is.",
+    lede: "Pick the parts, stream real events through them, and export a React project that runs as-is.",
     primaryCta: "Open the editor",
     secondaryCta: "Star on GitHub",
     note: "Runs in the browser. No clone, no install.",
@@ -590,10 +606,11 @@ const en: LandingCopy = {
    ├─ agent-ux/{protocol,runtime,render-core,react}
    └─ agentmatrix/agentcanvas-contract`,
     treeNote:
-      "The internal packages are vendored into the zip, so there is no extra registry to configure. All 12 color themes and the bilingual copy travel with it.",
+      "The internal packages are vendored into the zip, so there is no extra registry to configure. Every style and palette, and the copy in all three languages, travel with it.",
     scriptsLabel: "package.json scripts",
     copyLabel: "Copy",
     copiedLabel: "Copied",
+    treeTitle: "your-agent.zip",
     scripts: [
       { name: "dev", run: "vite" },
       { name: "build", run: "tsc && vite build" },
@@ -605,6 +622,7 @@ const en: LandingCopy = {
     title: "Point it at your own model",
     lede: "Paste a key in the editor and make a real call, to see your own model inside this interface.",
     countNote: "{count} ways to connect",
+    countLabel: "ways to connect",
     groups: {
       cloud: "Hosted APIs",
       local: "Local runtime",
@@ -666,7 +684,7 @@ const en: LandingCopy = {
     navParts: "Components",
     navEvents: "Events",
     navExport: "Export",
-    heroTitle: ["Compose", "an agent's interface", "on a canvas"],
+    heroTitle: ["Compose", "your agent's UI"],
     wallAlt: "The same agent interface in six styles and twenty-four palettes, captured from the editor",
     stylesKicker: "One set of components",
     stylesTitle: ["A style here", "is more than a skin"],
@@ -674,6 +692,13 @@ const en: LandingCopy = {
       "Every style redraws every component — icons, avatars, the thinking motion, the material of buttons and cards. " +
       "Each screen below is the editor's real canvas.",
     paletteLabel: "Palettes",
+    browserLabel: "Style browser",
+    styleListLabel: "All styles",
+    stylesCount: "{styles} styles · {palettes} palettes, and counting",
+    prevStyle: "Previous style",
+    nextStyle: "Next style",
+    autoplayPause: "Pause autoplay",
+    autoplayPlay: "Resume autoplay",
     styleIndex: "{index} / {total}",
     styles: {
       native: { name: "Native", line: "System-grade restraint. Light glass, fine strokes — the one your OS would ship." },
@@ -703,10 +728,7 @@ const ja: LandingCopy = {
   },
   hero: {
     title: "キャンバス上で Agent の画面を組む",
-    lede:
-      "AgentCanvas はビジュアルエディターです。セッションサイドバー、チャット領域、思考ブロック、" +
-      "ツール呼び出しカード、アーティファクトのプレビューパネル、入力欄を選び、イベントストリームを流して" +
-      "その場で確認し、そのまま動く Vite + React プロジェクトとしてエクスポートします。",
+    lede: "部品を選び、イベントを流して確かめ、そのまま動く React プロジェクトに書き出す。",
     primaryCta: "エディターを開く",
     secondaryCta: "GitHub で Star",
     note: "ブラウザだけで動きます。clone もインストールも不要。",
@@ -884,10 +906,11 @@ const ja: LandingCopy = {
    ├─ agent-ux/{protocol,runtime,render-core,react}
    └─ agentmatrix/agentcanvas-contract`,
     treeNote:
-      "内部パッケージは zip に同梱されるので、レジストリの追加設定は不要です。12 種類のカラーテーマと多言語の文言もそのまま付いてきます。",
+      "内部パッケージは zip に同梱されるので、レジストリの追加設定は不要です。すべてのスタイルと配色、3 言語の文言もそのまま付いてきます。",
     scriptsLabel: "package.json scripts",
     copyLabel: "コピー",
     copiedLabel: "コピーしました",
+    treeTitle: "your-agent.zip",
     scripts: [
       { name: "dev", run: "vite" },
       { name: "build", run: "tsc && vite build" },
@@ -899,6 +922,7 @@ const ja: LandingCopy = {
     title: "自分のモデルにつなぐ",
     lede: "エディターでキーを貼れば実際に 1 回呼び出せます。自分のモデルがこの画面でどう見えるか確認できます。",
     countNote: "{count} 通りの接続方法",
+    countLabel: "通りの接続方法",
     groups: {
       cloud: "ホスト型 API",
       local: "ローカル実行",
@@ -960,7 +984,7 @@ const ja: LandingCopy = {
     navParts: "コンポーネント",
     navEvents: "イベント",
     navExport: "エクスポート",
-    heroTitle: ["キャンバスで", "エージェントの", "画面を組む"],
+    heroTitle: ["エージェントの", "UI を組む"],
     wallAlt: "同じエージェント画面を 6 つのスタイルと 24 の配色で撮った実際のスクリーンショット",
     stylesKicker: "同じコンポーネントで",
     stylesTitle: ["スタイルは、", "着せ替え以上のもの"],
@@ -968,6 +992,13 @@ const ja: LandingCopy = {
       "どのスタイルもコンポーネントを一つずつ描き直しています。アイコン、アバター、思考の動き、ボタンとカードの質感まで。" +
       "下の画面はすべてエディタの実際のキャンバスです。",
     paletteLabel: "配色",
+    browserLabel: "スタイル一覧",
+    styleListLabel: "すべてのスタイル",
+    stylesCount: "{styles} スタイル · {palettes} 配色、まだ増えます",
+    prevStyle: "前のスタイル",
+    nextStyle: "次のスタイル",
+    autoplayPause: "自動再生を一時停止",
+    autoplayPlay: "自動再生を再開",
     styleIndex: "{index} / {total}",
     styles: {
       native: { name: "ネイティブ", line: "システム級の控えめさ。薄いガラスと細い線、OS に最初から入っているような一品。" },

@@ -1,38 +1,37 @@
 #!/usr/bin/env node
 /**
- * Record a tour of the editor by driving every module in the left rail.
+ * Record the README tour by driving the real editor, then hand the frames to the compositor.
  *
- *   npm run dev                            # in one terminal
- *   node scripts/capture-editor-tour.mjs
+ *   npm run dev                              # in one terminal
+ *   npm run capture:tour                     # records, composes, encodes
  *
- * Writes two files, because they answer different questions:
+ * Writes:
  *
- *   public/landing/editor-tour.mp4   all 11 rail modules, ~40s, small and sharp.
- *   public/landing/editor-tour.gif   6 modules, ~22s, for the README.
+ *   public/landing/editor-tour.mp4   25s, 1920×1200, the editor on a paper stage with captions
+ *   public/landing/editor-tour.gif   the same cut, 960px wide, for the README
  *
- * The GIF exists because GitHub will not play a repository-local mp4: `![](x.mp4)` renders
- * as a broken link, and only an uploaded attachment URL gets a player. A GIF is the only
- * format that animates inline from a committed file, so the README gets the short one and
- * the mp4 stays for anyone who wants the full pass at full quality.
+ * The GIF exists because GitHub will not play a repository-local mp4: `![](x.mp4)` renders as
+ * a broken link, and only an uploaded attachment URL gets a player. A GIF is the only format
+ * that animates inline from a committed file.
  *
- * Every click is a real click on the real editor — nothing is mocked or re-staged. The
- * pointer arrow is an injected overlay, because headless screenshots contain no cursor and
- * without it the UI appears to change on its own; the interactions underneath are genuine.
+ * The story is the product in five beats, built up from an empty canvas: lay out the
+ * sidebar and composer, add modules, restyle the whole canvas three times, replay an event
+ * stream, open the export. Every click is a real mouse event on the real editor — nothing is
+ * mocked or re-staged. The pointer arrow is an injected overlay, because headless
+ * screenshots contain no cursor and without it the UI appears to change on its own.
  *
- * The recording is in English: the README is English, so a Chinese UI in its lead asset
- * makes the project look like it is not for the reader. The editor defaults to zh, so the
- * locale is seeded into localStorage before the app boots rather than clicked in the
- * topbar — a click would be the first thing in frame, and it would need its own beat.
+ * Recording and acting run concurrently: a screenshot loop writes timestamped frames while
+ * the timeline performs its clicks, so a click never stalls the frame clock. The compositor
+ * (scripts/compose-editor-tour.py) resamples those frames onto a constant frame rate.
  *
- * Re-run after any change to the preset group or option ids, and commit both outputs.
+ * Recorded in English: the README is English. The locale is seeded into localStorage before
+ * the app boots rather than clicked, so the switch is never on screen.
  *
  * Options (env):
- *   URL     editor URL       (default http://localhost:5173/editor.html)
- *   ONLY    "mp4" | "gif"    (default both)
- *   LOCALE  "en" | "zh"      (default "en")
- *   CHROME  browser binary   (default the macOS Google Chrome path)
- *   PORT    devtools port    (default 9225, clear of the other capture scripts)
+ *   URL     editor URL       (default http://localhost:5175/editor.html)
+ *   PORT    devtools port    (default 9225)
  *   FFMPEG  encoder path     (default "ffmpeg" on PATH)
+ *   KEEP    keep the frame directory and print its path
  */
 
 import { spawnSync } from "node:child_process";
@@ -41,286 +40,209 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import {
-  assertReachable,
-  clickPresetOption,
-  clickRailTile,
-  connectPage,
-  evaluate,
-  launchChrome,
-  presetOptionCenter,
-  railTileCenter,
-  sleep,
-} from "./lib/cdp.mjs";
+import { assertReachable, connectPage, evaluate, launchChrome, sleep } from "./lib/cdp.mjs";
 
-const EDITOR_URL = process.env.URL ?? "http://localhost:5173/editor.html";
+const EDITOR_URL = process.env.URL ?? "http://localhost:5175/editor.html";
 const PORT = Number(process.env.PORT ?? 9225);
 const FFMPEG = process.env.FFMPEG ?? "ffmpeg";
-const ONLY = process.env.ONLY;
-const LOCALE = process.env.LOCALE ?? "en";
-/** Must match LocaleContext's STORAGE_KEY. */
 const LOCALE_STORAGE_KEY = "agentcanvas.locale";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = join(ROOT, "public", "landing");
 
 /**
- * 1000px tall, not 900: the rail's last tile (theme) sits near y≈911, so at 900 it falls
- * outside the viewport. The click would still land — `el.click()` ignores visibility — but
- * the pointer would glide off-screen and the theme would appear to change by itself.
- * `assertBeatsVisible` re-checks this at runtime, since the labels are locale-dependent and
- * a longer one that wraps pushes every tile below it further down.
+ * The editor's own viewport, at 1x: the compositor places it on the stage pixel for pixel,
+ * so nothing is resampled. (A fractional device scale renders tiled, offset frames in
+ * headless Chrome and puts real mouse events in the wrong place.)
  */
-const VIEW = { width: 1440, height: 1000, deviceScaleFactor: 1 };
-const FPS = 15;
-const FRAME_MS = Math.round(1000 / FPS);
+const VIEW = { width: 1600, height: 1000, deviceScaleFactor: 1 };
+const DURATION_S = 25;
 
 /**
- * A rail tile, then the option that makes its effect legible in one frame.
- *
- * `rail` is a preset group id, not a visible label: labels are translated, ids are not, so
- * the same timeline records in either locale.
+ * The timeline. `at` is seconds from the first frame; each step is one gesture. Targets are
+ * structural selectors (data attributes, aria labels) resolved at the moment of the step,
+ * because what a step finds depends on what the previous one opened.
  */
-const beat = (at, rail, option, note) => ({ at, rail, option, note });
-
-/**
- * The full pass: every module in rail order.
- *
- * blocks, provider and git carry no preset cards, so those beats only open the group — the
- * panel itself is the thing worth seeing. Theme is last and goes light → warm dark → cool
- * dark: recolouring the whole canvas is the most legible proof that the preview is live, and
- * it reads best as the closing move rather than buried mid-tour.
- */
-const TOUR = [
-  beat(0.8, "conversation", "writing-typewriter", "conversation + typewriter cadence"),
-  beat(4.2, "ux-effects", "thinking-orbit", "reasoning motion"),
-  beat(7.6, "blocks", null, "status surface"),
-  beat(10.4, "tool-calls", "timeline-rail", "tool calls as a timeline rail"),
-  beat(14.0, "media-generation", "media-video-cinema", "generated-media loaders"),
-  beat(17.6, "composer", "prompt-shortcuts", "composer controls"),
-  beat(21.0, "sidebar", "sidebar-search", "session sidebar"),
-  beat(24.4, "output", "output-source-console", "output panel source"),
-  beat(27.8, "provider", null, "provider + model wiring"),
-  beat(30.6, "git", null, "git panel"),
-  beat(33.4, "theme", "warm-graphite", "recolour dark warm"),
-  beat(36.6, "theme", "cyan-grid", "recolour dark cool"),
+const TIMELINE = [
+  { at: 0.9, click: option("sidebar-title") },
+  { at: 1.4, click: option("sidebar-new-button") },
+  { at: 1.9, click: option("sidebar-search") },
+  { at: 2.4, click: option("sidebar-sessions") },
+  { at: 2.9, click: option("sidebar-grouping") },
+  { at: 3.6, click: groupRow("Chat area") },
+  { at: 4.2, click: option("chat-visible") },
+  { at: 4.9, click: groupRow("Composer") },
+  { at: 5.5, click: option("prompt-shortcuts") },
+  { at: 6.0, click: option("model-config") },
+  { at: 6.8, click: `.nav-section-tile[data-nav-section="components"]` },
+  { at: 7.5, click: option("thinking-orbit") },
+  { at: 8.1, click: option("reasoning-writing-typewriter") },
+  { at: 9.2, style: "inkwash" },
+  { at: 11.7, style: "game" },
+  { at: 14.2, style: "tech" },
+  { at: 16.6, click: `button[aria-label="Run preview"]` },
+  { at: 22.0, click: `button[aria-label="Export"]` },
 ];
-const TOUR_S = 39.5;
 
-/**
- * The README cut: the six modules whose change is unmistakable at GIF frame rates.
- *
- * blocks / provider / git are dropped because opening a panel is a subtle frame-to-frame diff
- * and costs the same seconds as a visible one; media-generation and sidebar are dropped for
- * length. The mp4 still covers all eleven.
- */
-const README_CUT = [
-  beat(0.8, "conversation", "writing-typewriter", "conversation + typewriter cadence"),
-  beat(4.2, "ux-effects", "thinking-orbit", "reasoning motion"),
-  beat(7.6, "tool-calls", "timeline-rail", "tool calls as a timeline rail"),
-  beat(11.0, "composer", "prompt-shortcuts", "composer controls"),
-  beat(14.4, "output", "output-source-console", "output panel source"),
-  beat(17.6, "theme", "warm-graphite", "recolour dark warm"),
-  beat(20.2, "theme", "cyan-grid", "recolour dark cool"),
-];
-const README_S = 23.0;
+function option(id) {
+  return `.preset-option-cell[data-option-id="${id}"] .preset-option`;
+}
 
-/**
- * An arrow, not a dot. A dot centred on the target reads as part of the card art and covers
- * the thing being clicked; an arrow anchors its tip on the target and puts its body
- * down-right, out of the way.
- */
+/** A group row in the open section, by its English label (the recording is English). */
+function groupRow(label) {
+  return { row: label };
+}
+
 const POINTER_SETUP = `
   if (!document.getElementById("__demo_pointer")) {
     const style = document.createElement("style");
     style.textContent = \`
       #__demo_pointer {
-        position: fixed; top: 0; left: 0; width: 24px; height: 30px;
+        position: fixed; top: 0; left: 0; width: 26px; height: 32px;
         pointer-events: none; z-index: 2147483647; opacity: 0;
-        transform: var(--at, translate(0, 0));
-        transition: transform 380ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms linear;
-        filter: drop-shadow(0 3px 6px rgba(13, 18, 28, 0.35));
+        transform: var(--at, translate(800px, 520px));
+        transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1), opacity 240ms linear;
+        filter: drop-shadow(0 4px 8px rgba(13, 18, 28, 0.32));
       }
+      #__demo_pointer svg { transition: transform 140ms ease; transform-origin: 2px 2px; }
+      #__demo_pointer[data-down="true"] svg { transform: scale(0.86); }
       #__demo_pointer i {
-        position: absolute; left: 0; top: 0; width: 14px; height: 14px;
-        margin: -7px 0 0 -7px; border-radius: 999px;
-        border: 2px solid rgba(17, 30, 54, 0.5); opacity: 0;
+        position: absolute; left: 0; top: 0; width: 16px; height: 16px;
+        margin: -8px 0 0 -8px; border-radius: 999px;
+        background: rgba(255, 106, 0, 0.28); border: 1.5px solid rgba(255, 106, 0, 0.75); opacity: 0;
       }
-      #__demo_pointer[data-down="true"] i { animation: __demo_ping 440ms ease-out; }
+      #__demo_pointer[data-down="true"] i { animation: __demo_ping 520ms cubic-bezier(0.22, 1, 0.36, 1); }
       @keyframes __demo_ping {
-        from { opacity: 0.95; transform: scale(0.4); }
-        to   { opacity: 0;    transform: scale(2.6); }
+        from { opacity: 1; transform: scale(0.4); }
+        to   { opacity: 0; transform: scale(2.8); }
       }
     \`;
     document.head.appendChild(style);
     const pointer = document.createElement("div");
     pointer.id = "__demo_pointer";
     pointer.innerHTML =
-      '<i></i><svg width="24" height="30" viewBox="0 0 24 30" fill="none">' +
+      '<i></i><svg width="26" height="32" viewBox="0 0 24 30" fill="none">' +
       '<path d="M2 1.5 L2 22 L7.2 17.2 L10.6 25.5 L14.2 24 L10.8 15.8 L17.8 15.4 Z"' +
-      ' fill="#ffffff" stroke="#111e36" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+      ' fill="#ffffff" stroke="#111214" stroke-width="1.6" stroke-linejoin="round"/></svg>';
     document.body.appendChild(pointer);
   }
   return "ok";
 `;
 
-async function movePointer(page, point) {
-  if (!point) return;
-  await evaluate(
+/** Centre of the first match, scrolled into view first; null if absent or not visible. */
+async function centerOf(page, target) {
+  const find =
+    typeof target === "string"
+      ? `document.querySelector(${JSON.stringify(target)})`
+      : `[...document.querySelectorAll(".preset-panel .group-row")].find((r) => r.textContent.trim().startsWith(${JSON.stringify(target.row)}))`;
+  return evaluate(
     page,
-    `const dot = document.getElementById("__demo_pointer");
-     if (dot) {
-       dot.style.setProperty("--at", "translate(${point.x}px, ${point.y}px)");
-       dot.style.opacity = "1";
-     }
-     return "ok";`,
+    `const el = ${find};
+     if (!el) return null;
+     el.scrollIntoView({ block: "nearest", inline: "nearest" });
+     const r = el.getBoundingClientRect();
+     if (!r.width || !r.height) return null;
+     return { x: r.x + r.width / 2, y: r.y + r.height / 2 };`,
   );
 }
 
-async function pressPointer(page) {
+async function glide(page, point) {
   await evaluate(
     page,
-    `const dot = document.getElementById("__demo_pointer");
-     if (dot) {
-       dot.dataset.down = "true";
-       setTimeout(() => { delete dot.dataset.down; }, 420);
-     }
+    `const p = document.getElementById("__demo_pointer");
+     p.style.setProperty("--at", "translate(${point.x}px, ${point.y}px)");
+     p.style.opacity = "1";
      return "ok";`,
   );
+  await page.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: point.x, y: point.y });
 }
 
-/** Move the arrow onto a target, let it land, flash the click ring, then really click. */
-async function performClick(page, kind, target) {
-  const center = kind === "rail" ? await railTileCenter(page, target) : await presetOptionCenter(page, target);
-  await movePointer(page, center);
-  await sleep(400);
-  await pressPointer(page);
-  if (kind === "rail") await clickRailTile(page, target);
-  else await clickPresetOption(page, target);
+async function press(page, point) {
+  await evaluate(
+    page,
+    `const p = document.getElementById("__demo_pointer");
+     p.dataset.down = "true";
+     setTimeout(() => { delete p.dataset.down; }, 260);
+     return "ok";`,
+  );
+  const common = { x: point.x, y: point.y, button: "left", clickCount: 1 };
+  await page.send("Input.dispatchMouseEvent", { type: "mousePressed", ...common });
+  await sleep(70);
+  await page.send("Input.dispatchMouseEvent", { type: "mouseReleased", ...common });
 }
 
-async function record(page, timeline, durationS, frameDir) {
-  const beats = [...timeline];
-  const totalFrames = Math.round(durationS * FPS);
-  const started = Date.now();
-  let index = 0;
-
-  for (let frame = 0; frame < totalFrames; frame += 1) {
-    const elapsed = (Date.now() - started) / 1000;
-
-    while (beats.length > 0 && beats[0].at <= elapsed) {
-      const next = beats.shift();
-      // A target's position depends on what the previous beat opened, so each beat resolves
-      // its own rect immediately before moving the pointer rather than up front.
-      await performClick(page, "rail", next.rail);
-      if (next.option) {
-        await sleep(420);
-        await performClick(page, "option", next.option);
-      }
-      console.log(`  ${elapsed.toFixed(1)}s  ${next.rail.padEnd(6)} ${next.note}`);
+async function click(page, target, label) {
+  const point = await centerOf(page, target);
+  if (!point) {
+    if (process.env.KEEP) {
+      const { data } = await page.send("Page.captureScreenshot", { format: "png" });
+      writeFileSync(join(tmpdir(), "agentcanvas-tour-miss.png"), Buffer.from(data, "base64"));
     }
+    throw new Error(`tour target not found: ${label ?? JSON.stringify(target)}`);
+  }
+  await glide(page, point);
+  await sleep(430);
+  await press(page, point);
+}
 
-    const { data } = await page.send("Page.captureScreenshot", {
-      format: "jpeg",
-      quality: 88,
-      captureBeyondViewport: false,
-    });
-    writeFileSync(join(frameDir, `f-${String(index).padStart(5, "0")}.jpg`), Buffer.from(data, "base64"));
+/** Hover a style card so it opens, then press its apply button. */
+async function applyStyle(page, style) {
+  const card = await centerOf(page, `.style-card[data-style="${style}"]`);
+  if (!card) throw new Error(`no style card "${style}"`);
+  await glide(page, card);
+  await sleep(600);
+  await click(page, `.style-card[data-style="${style}"] .style-card-apply`, `${style} apply`);
+}
+
+async function act(page, started) {
+  for (const step of TIMELINE) {
+    const wait = step.at * 1000 - (Date.now() - started);
+    if (wait > 0) await sleep(wait);
+    const t = ((Date.now() - started) / 1000).toFixed(1);
+    if (step.style) {
+      await applyStyle(page, step.style);
+      console.log(`  ${t}s  style ${step.style}`);
+    } else {
+      await click(page, step.click);
+      console.log(`  ${t}s  ${typeof step.click === "string" ? step.click : step.click.row}`);
+    }
+  }
+}
+
+/**
+ * Frames come from the screencast, which pushes one whenever the page repaints — far
+ * smoother than a screenshot loop, which managed ~12 fps at this size. A still page sends
+ * nothing; the compositor holds the last frame across the gap.
+ */
+async function shoot(page, dir, started) {
+  const stamps = [];
+  let index = 0;
+  const off = page.on("Page.screencastFrame", ({ data, metadata, sessionId }) => {
+    const t = metadata.timestamp - started / 1000;
+    const name = `f-${String(index).padStart(5, "0")}.jpg`;
     index += 1;
-
-    const drift = FRAME_MS * (frame + 1) - (Date.now() - started);
-    if (drift > 0) await sleep(drift);
-  }
-  return index;
+    writeFileSync(join(dir, name), Buffer.from(data, "base64"));
+    stamps.push({ t, name });
+    page.send("Page.screencastFrameAck", { sessionId }).catch(() => {});
+  });
+  await page.send("Page.startScreencast", {
+    format: "jpeg",
+    quality: 92,
+    maxWidth: VIEW.width,
+    maxHeight: VIEW.height,
+    everyNthFrame: 1,
+  });
+  return async () => {
+    await page.send("Page.stopScreencast");
+    off();
+    stamps.sort((a, b) => a.t - b.t);
+    return stamps;
+  };
 }
 
-/**
- * Put the locale in localStorage, then confirm the reload actually rendered in it.
- *
- * Needs a load first: localStorage is per-origin, and there is no origin to write to until
- * the page has been navigated once. The user-data-dir is persistent across runs, so the
- * write is unconditional rather than a default — a previous run may have left "zh" there.
- */
-async function seedLocale(page) {
-  await page.send("Page.navigate", { url: EDITOR_URL });
-  await sleep(1200);
-  await evaluate(
-    page,
-    `window.localStorage.setItem(${JSON.stringify(LOCALE_STORAGE_KEY)}, ${JSON.stringify(LOCALE)});
-     return "ok";`,
-  );
-}
-
-/**
- * Fail before recording if a tile the tour clicks is missing or below the fold.
- *
- * Both failures are near-invisible in the output rather than loud: a missing tile throws
- * only once its beat comes due, ~30s into a pass, and an off-screen one still clicks, so the
- * UI changes with the pointer nowhere near it. Locale changes the label lengths and so the
- * tile positions, which is exactly when this is worth checking.
- */
-async function assertBeatsVisible(page, timeline) {
-  const groups = [...new Set(timeline.map((b) => b.rail))];
-  const bad = [];
-  for (const group of groups) {
-    const center = await railTileCenter(page, group);
-    if (!center) bad.push(`${group} (no tile)`);
-    else if (center.y > VIEW.height) bad.push(`${group} (y=${Math.round(center.y)} > ${VIEW.height})`);
-  }
-  if (bad.length > 0) {
-    throw new Error(`Rail tiles not usable at ${VIEW.width}x${VIEW.height}: ${bad.join(", ")}`);
-  }
-}
-
-/** Reset to the state a fresh load has, so the second pass does not inherit the first's picks. */
-async function reload(page) {
-  await page.send("Page.navigate", { url: EDITOR_URL });
-  await sleep(3800);
-  await evaluate(page, POINTER_SETUP);
-}
-
-function run(args, label) {
-  const result = spawnSync(FFMPEG, args, { stdio: ["ignore", "ignore", "inherit"] });
-  if (result.error || result.status !== 0) {
-    throw new Error(`${label} failed — is ffmpeg on PATH? (set FFMPEG=/path/to/ffmpeg)`);
-  }
-}
-
-function encodeMp4(frameDir, file) {
-  run(
-    [
-      "-y", "-framerate", String(FPS), "-i", join(frameDir, "f-%05d.jpg"),
-      "-c:v", "libx264", "-preset", "slow", "-crf", "26",
-      // yuv420p and an even-dimension filter: Safari and QuickTime refuse odd dimensions.
-      "-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-      "-movflags", "+faststart",
-      file,
-    ],
-    "mp4 encode",
-  );
-}
-
-/**
- * GIF in two passes. A single pass picks its palette from the first frames only, which wrecks
- * the dark themes at the end — they arrive after the palette is fixed and band badly.
- * `stats_mode=diff` weights the palette toward what actually changes between frames.
- */
-function encodeGif(frameDir, file) {
-  const palette = join(frameDir, "palette.png");
-  const scale = "fps=10,scale=1000:-1:flags=lanczos";
-  run(
-    ["-y", "-i", join(frameDir, "f-%05d.jpg"), "-vf", `${scale},palettegen=stats_mode=diff`, palette],
-    "gif palette",
-  );
-  run(
-    [
-      "-y", "-framerate", String(FPS), "-i", join(frameDir, "f-%05d.jpg"), "-i", palette,
-      "-lavfi", `${scale} [x]; [x][1:v] paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle`,
-      "-loop", "0",
-      file,
-    ],
-    "gif encode",
-  );
+function run(cmd, args, label) {
+  const result = spawnSync(cmd, args, { stdio: ["ignore", "inherit", "inherit"] });
+  if (result.error || result.status !== 0) throw new Error(`${label} failed`);
 }
 
 const mb = (file) => `${(statSync(file).size / 1024 / 1024).toFixed(1)} MB`;
@@ -328,50 +250,74 @@ const mb = (file) => `${(statSync(file).size / 1024 / 1024).toFixed(1)} MB`;
 async function main() {
   mkdirSync(OUT, { recursive: true });
   await assertReachable(EDITOR_URL);
-
   const frames = mkdtempSync(join(tmpdir(), "agentcanvas-tour-"));
-  const chrome = launchChrome({
-    port: PORT,
-    userDataDir: join(ROOT, "node_modules", ".cache", "editor-tour"),
-  });
+  const chrome = launchChrome({ port: PORT, userDataDir: join(ROOT, "node_modules", ".cache", "editor-tour") });
 
   try {
     const page = await connectPage({ port: PORT });
     await page.send("Page.enable");
     await page.send("Runtime.enable");
+    await page.send("Page.addScriptToEvaluateOnNewDocument", {
+      source: `try { localStorage.setItem(${JSON.stringify(LOCALE_STORAGE_KEY)}, "en"); } catch {}`,
+    });
     await page.send("Emulation.setDeviceMetricsOverride", { ...VIEW, mobile: false });
-    await seedLocale(page);
-    console.log(`locale: ${LOCALE}`);
+    await page.send("Page.navigate", { url: EDITOR_URL });
+    await sleep(6000);
+    await evaluate(page, POINTER_SETUP);
+    await page.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 800, y: 520 });
 
-    if (ONLY !== "gif") {
-      console.log("recording the full tour (11 modules)");
-      await reload(page);
-      await assertBeatsVisible(page, TOUR);
-      const count = await record(page, TOUR, TOUR_S, frames);
-      console.log(`  captured ${count} frames`);
-      const file = join(OUT, "editor-tour.mp4");
-      encodeMp4(frames, file);
-      console.log(`  wrote ${file} (${mb(file)})`);
-      rmSync(frames, { recursive: true, force: true });
-      mkdirSync(frames, { recursive: true });
-    }
+    // The tour ends on Export, which really downloads a zip; nothing needs to land on disk.
+    await page.send("Page.setDownloadBehavior", { behavior: "deny" });
 
-    if (ONLY !== "mp4") {
-      console.log("recording the README cut (6 modules)");
-      await reload(page);
-      await assertBeatsVisible(page, README_CUT);
-      const count = await record(page, README_CUT, README_S, frames);
-      console.log(`  captured ${count} frames`);
-      const file = join(OUT, "editor-tour.gif");
-      encodeGif(frames, file);
-      console.log(`  wrote ${file} (${mb(file)})`);
-    }
-
+    console.log("recording");
+    const started = Date.now();
+    const finish = await shoot(page, frames, started);
+    await act(page, started);
+    const rest = DURATION_S * 1000 - (Date.now() - started);
+    if (rest > 0) await sleep(rest);
+    const stamps = await finish();
+    writeFileSync(join(frames, "stamps.json"), JSON.stringify(stamps));
+    console.log(`  captured ${stamps.length} frames (${(stamps.length / DURATION_S).toFixed(1)} fps)`);
     page.close();
   } finally {
     chrome.kill();
-    rmSync(frames, { recursive: true, force: true });
   }
+
+  console.log("composing");
+  const composed = join(frames, "out");
+  run("python3", [join(ROOT, "scripts", "compose-editor-tour.py"), frames, composed, String(DURATION_S)], "compose");
+
+  const mp4 = join(OUT, "editor-tour.mp4");
+  run(
+    FFMPEG,
+    [
+      "-y", "-loglevel", "error", "-framerate", "30", "-i", join(composed, "c-%05d.jpg"),
+      "-c:v", "libx264", "-preset", "slow", "-crf", "21", "-pix_fmt", "yuv420p",
+      "-movflags", "+faststart", mp4,
+    ],
+    "mp4 encode",
+  );
+  console.log(`  wrote ${mp4} (${mb(mp4)})`);
+
+  // GIF in two passes: a single pass picks its palette from the first frames only, which
+  // bands the dark styles that arrive later. `stats_mode=diff` weights what changes.
+  const gif = join(OUT, "editor-tour.gif");
+  const palette = join(frames, "palette.png");
+  const scale = "fps=12,scale=960:-1:flags=lanczos";
+  run(FFMPEG, ["-y", "-loglevel", "error", "-i", mp4, "-vf", `${scale},palettegen=stats_mode=diff:max_colors=200`, palette], "gif palette");
+  run(
+    FFMPEG,
+    [
+      "-y", "-loglevel", "error", "-i", mp4, "-i", palette,
+      "-lavfi", `${scale} [x]; [x][1:v] paletteuse=dither=sierra2_4a:diff_mode=rectangle`,
+      "-loop", "0", gif,
+    ],
+    "gif encode",
+  );
+  console.log(`  wrote ${gif} (${mb(gif)})`);
+
+  if (process.env.KEEP) console.log(`frames kept in ${frames}`);
+  else rmSync(frames, { recursive: true, force: true });
 }
 
 main().catch((error) => {

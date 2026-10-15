@@ -10,11 +10,11 @@ standalone React project you can run and own.
 The configurator is the mold. The agent interface you compose inside it is the
 product, and that is what gets exported.
 
-![AgentCanvas editor — picking presets across conversation, reasoning, tool calls, composer, output and theme, with the preview redrawing on every change](public/landing/editor-tour.gif)
+![AgentCanvas editor — composing a sidebar, chat and composer from an empty canvas, adding thinking modules, restyling the whole interface three times, replaying an event stream and exporting](public/landing/editor-tour.gif)
 
-<sub>Six of the eleven modules, recorded by driving the real editor. The full pass over all
-eleven is `public/landing/editor-tour.mp4`; regenerate both with
-`npm run capture:tour`.</sub>
+<sub>25 seconds, recorded by driving the real editor: compose the layout, add modules, restyle
+every component, replay an event stream, export. A sharper 1920×1200 cut is
+`public/landing/editor-tour.mp4`; regenerate both with `npm run capture:tour`.</sub>
 
 ## Why
 

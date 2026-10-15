@@ -347,11 +347,14 @@
   font-size: clamp(46px, 6.4vw, 108px);
 }
 
+/* The mask a line rises out of. Its bottom padding is room for descenders: at 0.06em the
+   clip cut the tail off the g of "Agent". The negative margin gives the room back, so the
+   line spacing is unchanged. */
 .lp-line {
   display: block;
   overflow: clip;
-  padding-bottom: 0.06em;
-  margin-bottom: -0.06em;
+  padding-bottom: 0.2em;
+  margin-bottom: -0.2em;
 }
 
 .lp-line-inner {

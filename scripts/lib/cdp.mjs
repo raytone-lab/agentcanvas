@@ -57,10 +57,15 @@ function openSocket(url) {
   return new Promise((resolveSocket, rejectSocket) => {
     const ws = new WebSocket(url);
     const pending = new Map();
+    const listeners = new Map();
     let id = 0;
 
     ws.addEventListener("message", (event) => {
       const msg = JSON.parse(event.data);
+      if (msg.method) {
+        for (const listener of listeners.get(msg.method) ?? []) listener(msg.params);
+        return;
+      }
       const entry = pending.get(msg.id);
       if (!entry) return;
       pending.delete(msg.id);
@@ -77,6 +82,12 @@ function openSocket(url) {
             pending.set(messageId, { resolve: ok, reject: fail });
             ws.send(JSON.stringify({ id: messageId, method, params }));
           });
+        },
+        /** Subscribe to a CDP event (e.g. "Page.screencastFrame"). Returns an unsubscribe. */
+        on(method, listener) {
+          if (!listeners.has(method)) listeners.set(method, new Set());
+          listeners.get(method).add(listener);
+          return () => listeners.get(method).delete(listener);
         },
         close: () => ws.close(),
       }),
