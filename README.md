@@ -1,5 +1,10 @@
 # AgentCanvas
 
+[![Latest release](https://img.shields.io/github/v/release/raytone-lab/agentcanvas?label=release&color=ff6a00)](https://github.com/raytone-lab/agentcanvas/releases)
+[![Release date](https://img.shields.io/github/release-date/raytone-lab/agentcanvas?label=released)](https://github.com/raytone-lab/agentcanvas/releases)
+[![Changelog](https://img.shields.io/badge/changelog-CHANGELOG.md-555)](CHANGELOG.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-555)](LICENSE)
+
 A visual UX configurator and scaffold generator for Agent frontends.
 
 Compose how an agent presents itself — conversation flow, reasoning disclosure,
