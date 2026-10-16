@@ -589,6 +589,10 @@ p {
   font-size: 13px;
   font-weight: 560;
   text-align: left;
+  /* Home is a link, the rest are buttons; they read as one list. */
+  text-decoration: none;
+  box-sizing: border-box;
+  cursor: pointer;
 }
 
 .brand-menu-item:hover {

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 
 import { SidebarToggleIcon } from "../../components/agent-preview/SessionSidebar";
+import { Dialog, DialogContent } from "../../components/ui/dialog";
 import type { UiCopy } from "../../i18n/uiCopy";
 
 /**
@@ -14,10 +15,18 @@ import type { UiCopy } from "../../i18n/uiCopy";
  * preferences now, because it is set once a session and was the second-widest
  * thing in the chrome.
  */
+/**
+ * The landing page. Relative, because the editor (editor.html) and the landing page
+ * (index.html) ship side by side in one build — so this holds wherever the site is
+ * mounted, at a domain root or under a path.
+ */
+const HOME_HREF = "./";
+
 export function ShellBrand({
   copy,
   title,
   onOpenPreferences,
+  hasUnsavedWork = false,
   collapsed = false,
   onToggleCollapsed,
   /** Own floating card, for the surfaces with no rail to sit in. */
@@ -31,6 +40,12 @@ export function ShellBrand({
    */
   title?: ReactNode;
   onOpenPreferences: () => void;
+  /**
+   * Whether the canvas holds work that leaving would lose. The editor keeps no
+   * save of its own, so Home asks first when this is true and goes straight
+   * there when the canvas is still empty.
+   */
+  hasUnsavedWork?: boolean;
   /** Whether the rail below this row is folded away. */
   collapsed?: boolean;
   /** Omitted on the surfaces with no rail to fold. */
@@ -38,6 +53,7 @@ export function ShellBrand({
   floating?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const menu = useMenuPresence(menuOpen);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -83,17 +99,22 @@ export function ShellBrand({
             aria-label={copy.shell.brandMenu.ariaLabel}
             data-state={menu.state}
           >
-            {/* A placeholder until there is a home page to return to. It is here
-                so the menu's shape is settled before that exists; the row will
-                carry the link and nothing else about it changes. */}
-            <button
-              type="button"
+            {/* A real link to the landing page, so it opens in a new tab on
+                middle- or cmd-click like any other link. A plain click on a
+                canvas with picks on it asks first: nothing here is saved. */}
+            <a
+              href={HOME_HREF}
               className="brand-menu-item"
               role="menuitem"
-              onClick={() => setMenuOpen(false)}
+              onClick={(event) => {
+                setMenuOpen(false);
+                if (!hasUnsavedWork || event.metaKey || event.ctrlKey || event.shiftKey) return;
+                event.preventDefault();
+                setConfirmLeave(true);
+              }}
             >
               {copy.shell.brandMenu.home}
-            </button>
+            </a>
             <button
               type="button"
               className="brand-menu-item"
@@ -108,6 +129,28 @@ export function ShellBrand({
           </div>
         ) : null}
       </div>
+      <Dialog open={confirmLeave} onOpenChange={setConfirmLeave}>
+        <DialogContent
+          title={copy.shell.brandMenu.leaveTitle}
+          description={copy.shell.brandMenu.leaveBody}
+          width={400}
+        >
+          <div className="incomplete-dialog-actions">
+            <button type="button" className="secondary-button" onClick={() => setConfirmLeave(false)}>
+              {copy.shell.brandMenu.leaveStay}
+            </button>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => {
+                window.location.href = HOME_HREF;
+              }}
+            >
+              {copy.shell.brandMenu.leaveGo}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
       {title ? <div className="shell-brand-title">{title}</div> : null}
       {/* Folds the rail away to this row, so the canvas gets the width. The
           same control the canvas's own sidebar uses for the same job, because

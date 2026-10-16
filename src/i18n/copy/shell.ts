@@ -67,6 +67,11 @@ const en = {
     ariaLabel: "Product menu",
     home: "Home",
     settings: "Settings",
+    // Asked before Home leaves a canvas with picks on it: nothing is saved.
+    leaveTitle: "Leave the editor?",
+    leaveBody: "Going back to the home page won't keep what you've built on this canvas.",
+    leaveStay: "Stay",
+    leaveGo: "Go to home page",
   },
   preferences: {
     title: "Preferences",
@@ -303,6 +308,10 @@ const zh: typeof en = {
     ariaLabel: "产品菜单",
     home: "返回首页",
     settings: "设置",
+    leaveTitle: "离开编辑器？",
+    leaveBody: "回到首页后，当前画布上组好的界面不会保留。",
+    leaveStay: "留在编辑器",
+    leaveGo: "回到首页",
   },
   preferences: {
     title: "偏好设置",
@@ -538,6 +547,10 @@ const ja: typeof en = {
     ariaLabel: "プロダクトメニュー",
     home: "ホームへ",
     settings: "設定",
+    leaveTitle: "エディターを離れますか？",
+    leaveBody: "ホームに戻ると、このキャンバスで組んだ内容は保持されません。",
+    leaveStay: "エディターに残る",
+    leaveGo: "ホームへ戻る",
   },
   preferences: {
     title: "環境設定",

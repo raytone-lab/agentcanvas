@@ -2181,6 +2181,7 @@ export function App() {
                     />
                   }
                   onOpenPreferences={() => setPreferencesOpen(true)}
+                  hasUnsavedWork={railSelectedItems.length > 0}
                   collapsed={state.railCollapsed}
                   onToggleCollapsed={() =>
                     dispatch({ type: "patch", patch: { railCollapsed: !state.railCollapsed } })
@@ -2267,6 +2268,7 @@ export function App() {
                 />
               }
               onOpenPreferences={() => setPreferencesOpen(true)}
+              hasUnsavedWork={railSelectedItems.length > 0}
               floating
             />
           )}
